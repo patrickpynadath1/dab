@@ -9,18 +9,22 @@ from transformers import (
     AutoModelForCausalLM,
     BeamSearchScorer,
 )
-from transformers import AutoModelForSequenceClassification, GPT2ForSequenceClassification
+from transformers import (
+    AutoModelForSequenceClassification,
+    GPT2ForSequenceClassification,
+)
 import torch
 from tqdm import tqdm
 import time
 import sys
-
+import os
+import pickle
 from model_with_biases import GPTPromptTuningWithbiasesModelLM
 
 prompt_file = "./sentiment/prompts_15.txt"
 seq_len = int(sys.argv[1])
-sentiment = sys.argv[2] # pos or neg
-output_file = "./sentiment/sentiment/" + sys.argv[2] + ".txt.len" + str(seq_len)
+sentiment = sys.argv[2]  # pos or neg
+
 
 class Config:
     num_train_epochs = 50
@@ -29,11 +33,14 @@ class Config:
     lr_scheduler_type = "linear"
     num_warmup_steps = 5
     max_train_steps = num_train_epochs
-    
+
     # Prompt-tuning
     # number of prompt tokens
     n_prompt_tokens = 10
     init_from_vocab = True
+
+save_dir ="sentiment/bias_generations/"
+output_file = f"{save_dir}" + sys.argv[2] + ".txt.len" + str(seq_len)
 args = Config()
 
 batch_size = 20
@@ -47,22 +54,32 @@ model = GPTPromptTuningWithbiasesModelLM.from_pretrained(
     use_full_prompt=False,
 )
 model.cuda()
-discriminator = AutoModelForSequenceClassification.from_pretrained("./checkpoints/replaced_vocab_roberta_for_yelp_polarity")
+discriminator = AutoModelForSequenceClassification.from_pretrained(
+    "./checkpoints/replaced_vocab_roberta_for_yelp_polarity"
+)
 discriminator.cuda()
 model.init_discriminator(discriminator)
 
 
 with open(prompt_file, "r") as f, open(output_file, "w") as g:
     prompts = [line.strip() for line in f]
-
+    total_data = []
     for prompt in tqdm(prompts):
+        prompt_data = {
+            'loss_total': [],
+            'senti_loss': [],
+        }
         prefixs = [prompt] * batch_size
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to("cuda")
         model.set_biases(batch_size, seq_len + inputs.input_ids.shape[1], sentiment)
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model.named_parameters() if "biases" in n or "trainable_weights" in n],
+                "params": [
+                    p
+                    for n, p in model.named_parameters()
+                    if "biases" in n or "trainable_weights" in n
+                ],
                 "weight_decay": args.weight_decay,
             }
         ]
@@ -73,20 +90,33 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
         start_time = time.time()
         for i in range(8):
             if i % 1 == 0:
-                loss, output_ids, gpt_logit, senti_losses = model.soft_forward(**inputs, labels=inputs.input_ids, use_full_prompt=False)
+                loss, output_ids, gpt_logit, senti_losses = model.soft_forward(
+                    **inputs, labels=inputs.input_ids, use_full_prompt=False
+                )
+                prompt_data['loss_total'].append(loss.item())
                 print("Decoding: ", loss)
                 sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
                 print(sentences)
-                print(time.time()-start_time)
+                print(time.time() - start_time)
 
             loss.backward()
             if i % 1 == 0:
                 optimizer.step()
-                noise = [torch.normal(mean=0.01, std=0.01, size=model.biases[0].shape,
-                                     device='cuda', requires_grad=False) for _ in range(len(model.biases))]
+                noise = [
+                    torch.normal(
+                        mean=0.01,
+                        std=0.01,
+                        size=model.biases[0].shape,
+                        device="cuda",
+                        requires_grad=False,
+                    )
+                    for _ in range(len(model.biases))
+                ]
                 for i in range(len(model.biases)):
                     model.biases[i].data = model.biases[i].data + noise[i]
+            
             if i % 1 == 0:
+                prompt_data['senti_loss'].append(senti_losses)
                 print(f"loss: {loss}")
                 for idx in range(batch_size):
                     print(f"loss {idx}: senti loss: {senti_losses[idx]}")
@@ -94,10 +124,14 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
                         print(f"update minimum loss{idx}")
                         minimum_loss[idx] = senti_losses[idx]
                         stored_sentence[idx] = sentences[idx]
-        
+
         end_time = time.time()
         print("minimum loss: ", minimum_loss)
         print("stored sentence: ", stored_sentence)
         print("time: ", end_time - start_time)
-        g.write('\n'.join(stored_sentence) + "\n\n")
+        g.write("\n".join(stored_sentence) + "\n\n")
         g.flush()
+        total_data.append(prompt_data)
+    with open(f"{save_dir}data_{sentiment}.pkl", "wb") as f:
+        pickle.dump(total_data, f)
+
