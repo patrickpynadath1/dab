@@ -46,7 +46,7 @@ def main(args):
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above
 
-    prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
+    prompts = [line.strip() for line in open(total_conf["detoxic_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
 
     def energy_fn(x):
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sampler", type=str, default="bolt")
     parser.add_argument("--sentiment", type=str, default="pos")
-    parser.add_argument("--save_dir", type=str, default="results/sentiment")
+    parser.add_argument("--save_dir", type=str, default="results/detoxify")
     parser.add_argument("--config_dir", type=str, default="configs")
     parser.add_argument("--sampler_setup", type=str, default="default")
     args = parser.parse_args()

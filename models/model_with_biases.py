@@ -53,7 +53,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
 
-    def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5):
+    def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5, **kwargs):
         self.seq_len = seq_len
         self.biases = nn.ParameterList(
             [
@@ -177,6 +177,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         senti_label=None,
+        **kwargs
     ):
         if senti_label is not None:
             if type(senti_label) == int:

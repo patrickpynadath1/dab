@@ -11,7 +11,9 @@ from transformers import (
      StoppingCriteriaList,
      MaxLengthCriteria,
  )
-from utils.bleuloss import batch_log_bleulosscnn_ae, my_bleulosscnn_ae, my_bleuloss_STG
+from .bleuloss import (batch_log_bleulosscnn_ae, 
+                       my_bleulosscnn_ae, 
+                       my_bleuloss_STG)
 
 class GPTPromptTuningWithbiasesModelMixin:
     @classmethod
@@ -53,7 +55,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
     
-    def set_biases(self, batch_size, seq_len):
+    def set_biases(self, batch_size, seq_len, **kwargs):
         self.seq_len = seq_len
         self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).cuda()
 
@@ -154,6 +156,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         keywords=None,
+        **kwargs
     ):
         
         if not inference:
@@ -188,7 +191,7 @@ class FullPrompt(nn.Module):
         return self.full_prompts_matrix
 
 
-class GPTPromptTuningWithbiasesModelLM(GPTPromptTuningWithbiasesModelMixin, GPT2LMHeadModel):
+class GPTPromptTuningWithBiasModelLM(GPTPromptTuningWithbiasesModelMixin, GPT2LMHeadModel):
     def __init__(self, config):
         super().__init__(config)
 

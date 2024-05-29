@@ -32,8 +32,11 @@ def check_existing_setup(old_conf, new_conf):
     return True
 
 
-def initialize_best_loss(batch_size):
-    minimum_loss = [100000] * batch_size
+def initialize_best_loss(batch_size, use_senti=True):
+    if use_senti:
+        minimum_loss = [100000] * batch_size
+    else: 
+        minimum_loss = [-1] * batch_size
     stored_sentence = [""] * batch_size
     return minimum_loss, stored_sentence
 
@@ -47,4 +50,18 @@ def updating_best_loss(batch_size,
         if loss[i] < min_loss_list[i]: 
             min_loss_list[i] = loss[i]
             stored_sentence_list[i] = sentences[i]
+    return
+
+
+def updating_best_keywords(cur_iter, 
+                          batch_size, 
+                          sentences, 
+                          success_idx,
+                          keywords_word,
+                          stored_sentence_list):
+    for idx in range(batch_size):
+        if success_idx[idx] == -1:
+            if any([keyword in sentences[idx] for keyword in keywords_word]):
+                success_idx[idx] = cur_iter
+                stored_sentence_list[idx] = sentences[idx] 
     return

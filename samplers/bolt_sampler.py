@@ -20,10 +20,12 @@ class BoltSampler(BaseSampler):
     def initialize_batch(self, 
                          model, 
                          seq_length, 
-                         sentiment, 
+                         sentiment=None, 
                          **kwargs): 
         # initializing the biases for the model 
-        model.set_biases(self.batch_size, seq_length, sentiment)
+        model.set_biases(seq_len=seq_length, 
+                         attribute=sentiment,
+                         **kwargs)
         optimizer_grouped_parameters = [
             {
                 "params": [
@@ -51,7 +53,8 @@ class BoltSampler(BaseSampler):
         loss, output_ids, *otheroutputs = model.soft_forward(
                     **inputs, 
                     labels=inputs.input_ids, 
-                    use_full_prompt=False
+                    use_full_prompt=False,
+                    **kwargs
                 )
         loss.backward()
         self.cur_optimizer.step()

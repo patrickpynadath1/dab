@@ -5,7 +5,15 @@ base_model_args:
   pretrained_model_name_or_path: gpt2-large
 sentiment_prompts: prompts/sentiment_prompts_15.txt 
 detoxic_prompts: prompts/detoxic_prompts_1k.txt
-keywork_prompts: prompts/keyword_prompts_15.txt
+keyword_prompts: prompts/keywords_prompts_15.txt
 batch_size: 20
 seq_len: 20
-num_steps: 10
+num_steps: 100
+keywords_dict:
+  computer : ["router", "Linux", "keyboard", "server"]
+  legal : ["plea", "subpoena", "transcript", "bankrupt"]
+  military : ["torpedo", "headquarters", "infantry", "battlefield"]
+  politics : ["court", "culture", "communism", "capitalism"]
+  religion : ["Bible", "church", "priest", "saint"]
+  science : ["microscope", "mass", "mineral", "scientist"]
+  space : ["meteor", "planet", "satellite", "astronaut"]

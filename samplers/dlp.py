@@ -18,7 +18,9 @@ class LangevinSampler(nn.Module):
                          batch_size,
                          seq_length, 
                          **kwargs):
-        model.set_biases(batch_size, seq_length, sentiment)
+        model.set_biases(batch_size=batch_size, 
+                         seq_len=seq_length, 
+                         attribute=sentiment)
         probs = torch.ones(batch_size, 
                            seq_length, 
                            50257).cuda() * .5
