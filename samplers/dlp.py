@@ -12,10 +12,13 @@ class LangevinSampler(nn.Module):
         self.a_s = []
         self.hops = []
     
-    def initialize_batch(self, 
+    def initialize_batch(self,
+                         model, 
+                         sentiment,
                          batch_size,
                          seq_length, 
                          **kwargs):
+        model.set_biases(batch_size, seq_length, sentiment)
         probs = torch.ones(batch_size, 
                            seq_length, 
                            50257).cuda() * .5

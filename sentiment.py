@@ -37,8 +37,8 @@ def main(args):
     ### initializing samplers
     if args.sampler == "bolt":
         sampler = BoltSampler(**total_conf)
-    elif args.sampler == "langevin":
-        sampler = LangevinSampler(model, **total_conf)
+    elif args.sampler == "dlp":
+        sampler = LangevinSampler(**total_conf)
 
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above

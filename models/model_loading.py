@@ -18,8 +18,11 @@ def load_sentiment_discriminator():
     return discriminator
 
 
-def load_toxicity_discriminator(): 
-    return 
+def load_toxicity_discriminator():
+    discriminator = AutoModelForSequenceClassification.from_pretrained(
+            "./checkpoints/replaced_vocab_roberta_for_jigsaw"
+        )  
+    return discriminator
 
 
 def load_keyword_discriminator(): 
