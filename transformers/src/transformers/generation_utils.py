@@ -2721,6 +2721,34 @@ class GenerationMixin:
         ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
         ```"""
         # init values
+
+        def masked_gumbell_softmax(logits, mask, bias_idx, tau=1): 
+            gumbels = (
+                -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
+            )
+            gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
+            exp_gumbel = gumbels.exp()
+            y_soft =(exp_gumbel * diff_mask[:, bias_idx, :]) / (exp_gumbel * diff_mask[:, bias_idx, :]).sum(dim=-1, keepdim=True) 
+            next_tokens = torch.argmax(y_soft, dim=-1)
+            y_hard = torch.nn.functional.one_hot(next_tokens, num_classes=self.config.vocab_size).float().to(logits.device)
+            ret = y_hard - y_soft.detach() + y_soft
+            return ret, next_tokens
+
+        def masked_softmax(logits, mask, bias_index): 
+            exp_logits = logits.exp()
+            y_soft =(exp_logits * diff_mask[:, bias_idx, :]) / (exp_logits * diff_mask[:, bias_idx, :]).sum(dim=-1, keepdim=True) 
+            next_tokens = torch.argmax(y_soft, dim=-1)
+            y_hard = torch.nn.functional.one_hot(next_tokens, num_classes=self.config.vocab_size).float().to(logits.device)
+            ret = y_hard - y_soft.detach() + y_soft
+            return ret, next_tokens
+
+        def masked_ste(logits, mask, bias_index): 
+            y_soft = logits * diff_mask[:, bias_idx, :]
+            next_tokens = torch.argmax(y_soft, dim=-1)
+            y_hard = torch.nn.functional.one_hot(next_tokens, num_classes=self.config.vocab_size).float().to(logits.device)
+            ret = y_hard - y_soft.detach() + y_soft
+            return ret, next_tokens
+
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
@@ -2846,11 +2874,15 @@ class GenerationMixin:
             # argmax
             # where it could break currently: all the scores are negative
             # cur_sampled_next_token_soft = torch.nn.functional.dim(next_tokens_scores) 
+            # cur_sampled_next_token, next_tokens = masked_gumbell_softmax(next_tokens_scores, diff_mask, bias_idx)
+            cur_sampled_next_token, next_tokens = masked_softmax(next_tokens_scores, diff_mask, bias_idx)
+            # cur_sampled_next_token, next_tokens = masked_ste(next_tokens_scores, diff_mask, bias_idx)
+            
             cur_sampled_next_token_soft = next_tokens_scores.exp() 
             cur_sampled_next_token_soft = (cur_sampled_next_token_soft * diff_mask[:, bias_idx, :]) / (cur_sampled_next_token_soft * diff_mask[:, bias_idx, :]).sum(dim=-1, keepdim=True)
-            next_tokens = torch.argmax(cur_sampled_next_token_soft, dim=-1)
-            cur_sampled_next_token_onehot = torch.nn.functional.one_hot(next_tokens, num_classes=self.config.vocab_size).float().to(input_ids.device)
-            cur_sampled_next_token = cur_sampled_next_token_onehot - cur_sampled_next_token_soft.detach() + cur_sampled_next_token_soft
+            # next_tokens = torch.argmax(cur_sampled_next_token_soft, dim=-1)
+            # cur_sampled_next_token_onehot = torch.nn.functional.one_hot(next_tokens, num_classes=self.config.vocab_size).float().to(input_ids.device)
+            # cur_sampled_next_token = cur_sampled_next_token_onehot - cur_sampled_next_token_soft.detach() + cur_sampled_next_token_soft
             soft_tokens = torch.cat((soft_tokens, cur_sampled_next_token_soft.unsqueeze(1)), dim=1)
             sampled_next_tokens = torch.cat((sampled_next_tokens, cur_sampled_next_token.unsqueeze(1)), dim=1)
             logits_seq = torch.cat((logits_seq, next_tokens_scores.unsqueeze(1)), dim=1)

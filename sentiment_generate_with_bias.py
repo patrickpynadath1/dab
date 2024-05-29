@@ -29,7 +29,7 @@ sentiment = sys.argv[2]  # pos or neg
 class Config:
     num_train_epochs = 50
     weight_decay = 0.01
-    learning_rate = 0.025
+    learning_rate = 0.001
     lr_scheduler_type = "linear"
     num_warmup_steps = 5
     max_train_steps = num_train_epochs
@@ -64,6 +64,7 @@ model.init_discriminator(discriminator)
 with open(prompt_file, "r") as f, open(output_file, "w") as g:
     prompts = [line.strip() for line in f]
     total_data = []
+    total_min_loss = []
     for prompt in tqdm(prompts):
         prompt_data = {
             'loss_total': [],
@@ -83,7 +84,8 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
                 "weight_decay": args.weight_decay,
             }
         ]
-        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+        optimizer = torch.optim.SGD(optimizer_grouped_parameters, lr=args.learning_rate)
+        # optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
         model.eval()
         minimum_loss = [100000] * batch_size
         stored_sentence = [""] * batch_size
@@ -122,11 +124,12 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
                     print(f"loss {idx}: senti loss: {senti_losses[idx]}")
                     if senti_losses[idx] < minimum_loss[idx]:
                         print(f"update minimum loss{idx}")
-                        minimum_loss[idx] = senti_losses[idx]
+                        minimum_loss[idx] = senti_losses[idx].detach().item()
                         stored_sentence[idx] = sentences[idx]
 
         end_time = time.time()
         print("minimum loss: ", minimum_loss)
+        total_min_loss.append(minimum_loss)
         print("stored sentence: ", stored_sentence)
         print("time: ", end_time - start_time)
         g.write("\n".join(stored_sentence) + "\n\n")
@@ -135,3 +138,5 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
     with open(f"{save_dir}data_{sentiment}.pkl", "wb") as f:
         pickle.dump(total_data, f)
 
+    with open(f"{save_dir}best_losses_{sentiment}.pkl", "wb") as f:
+        pickle.dump(total_min_loss, f)

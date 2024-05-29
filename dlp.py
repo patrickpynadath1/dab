@@ -15,15 +15,20 @@ class LangevinSampler(nn.Module):
     def compute_delta(self, x, model): 
         x = x.requires_grad_()
         model_out = model(x)
-        loss, output_ids, gpt_logit, senti_losses = model_out
+        # for output of sentiment 
+        # will be loss, output ids, gpt logits, senti losses 
+        # for output of toxicity, will be same 
+        # for output of keyword generations, will be just 
+        # loss and output ids 
+        loss, output_ids, *otheroutputs = model_out
         gx = torch.autograd.grad(loss, x, allow_unused=True)[0]
         wx = gx * (2. * x - 1)
-        return wx.detach(), loss, output_ids.cpu(), senti_losses.cpu()
+        return wx.detach(), loss, output_ids.cpu(), otheroutputs
 
     def step(self, x, model):
         x_cur = x
         EPS = 1e-10
-        forward_delta, loss, output_ids, senti_losses = self.compute_delta(x_cur, model)
+        forward_delta, cur_energy, output_ids, otheroutputs = self.compute_delta(x_cur, model)
         term2 = 1./(2*self.step_size) # for binary {0,1}, the L2 norm is always 1        
         flip_prob = torch.exp(forward_delta-term2)/(torch.exp(forward_delta-term2)+1)
         rr = torch.rand_like(x_cur)
@@ -32,12 +37,10 @@ class LangevinSampler(nn.Module):
         if self.mh:
             probs = flip_prob*ind + (1 - flip_prob) * (1. - ind)
             lp_forward = torch.sum(torch.log(probs+EPS),dim=-1)
-            reverse_delta, _, _, _ = self.compute_delta(x_delta, model)
+            reverse_delta, delta_energy, _, _ = self.compute_delta(x_delta, model)
             flip_prob = torch.exp(reverse_delta-term2)/(torch.exp(reverse_delta-term2)+1)
             probs = flip_prob*ind + (1 - flip_prob) * (1. - ind)
             lp_reverse = torch.sum(torch.log(probs+EPS),dim=-1)
-            delta_energy, _, _, _ = model(x_delta)
-            cur_energy, _, _, _ = model(x_cur)
             m_term = (delta_energy.squeeze() - cur_energy.squeeze())
             la = m_term + lp_reverse - lp_forward
             a = (la.exp() > torch.rand_like(la)).float()
@@ -47,4 +50,4 @@ class LangevinSampler(nn.Module):
             # print("hops")
             # print((x_delta - x_cur).sum(dim=-1).mean())
             x_cur = x_delta
-        return x_cur, loss, output_ids, senti_losses
+        return x_cur, cur_energy, output_ids, otheroutputs
