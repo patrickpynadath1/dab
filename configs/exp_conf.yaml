@@ -1,0 +1,11 @@
+base_model_args: 
+  n_tokens: 10 
+  initialize_from_vocab: true 
+  use_full_prompt: false
+  pretrained_model_name_or_path: gpt2-large
+sentiment_prompts: prompts/sentiment_prompts_15.txt 
+detoxic_prompts: prompts/detoxic_prompts_1k.txt
+keywork_prompts: prompts/keyword_prompts_15.txt
+batch_size: 20
+seq_len: 20
+num_steps: 10

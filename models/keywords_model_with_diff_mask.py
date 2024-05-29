@@ -11,7 +11,7 @@ from transformers import (
      StoppingCriteriaList,
      MaxLengthCriteria,
  )
-from bleuloss import batch_log_bleulosscnn_ae, my_bleulosscnn_ae, my_bleuloss_STG
+from utils.bleuloss import batch_log_bleulosscnn_ae, my_bleulosscnn_ae, my_bleuloss_STG
 
 class GPTPromptTuningWithbiasesModelMixin:
     @classmethod
@@ -55,9 +55,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     
     def set_biases(self, batch_size, seq_len):
         self.seq_len = seq_len
-        self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).cuda()
+        # self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).cuda()
 
-        self.trainable_weights = None
+        # self.trainable_weights = None
 
         self.labels = torch.LongTensor([1]).cuda()
         self.logits_processor = LogitsProcessorList(
@@ -70,6 +70,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                 MinLengthLogitsProcessor(seq_len, eos_token_id=self.config.eos_token_id),
             ]
         )
+        self.biases = None
+        self.trainable_weights = None  
         self.stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=seq_len)])
 
     def _extend_labels(self, labels, ignore_index=-100) -> torch.Tensor:
@@ -154,18 +156,19 @@ class GPTPromptTuningWithbiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         keywords=None,
+        diff_mask=None,
     ):
         
         if not inference:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_diff_mask(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, diff_mask=diff_mask)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_diff_mask(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, diff_mask=diff_mask)
         else:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_diff_mask(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, diff_mask=diff_mask)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_diff_mask(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, diff_mask=diff_mask)
         keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
 
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)

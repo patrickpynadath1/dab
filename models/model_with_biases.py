@@ -395,7 +395,7 @@ class FullPrompt(nn.Module):
         return self.full_prompts_matrix
 
 
-class GPTPromptTuningWithbiasesModelLM(
+class GPTPromptTuningWithBiasModelLM(
     GPTPromptTuningWithbiasesModelMixin, GPT2LMHeadModel
 ):
     def __init__(self, config):

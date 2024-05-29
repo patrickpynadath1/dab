@@ -13,7 +13,7 @@ from transformers import (
 )
 
 
-class GPTPromptTuningWithbiasesModelMixin:
+class GPTPromptTuningWithMaskModelMixin:
     @classmethod
     def from_pretrained(
         cls,
@@ -394,8 +394,8 @@ class FullPrompt(nn.Module):
         return self.full_prompts_matrix
 
 
-class GPTPromptTuningWithbiasesModelLM(
-    GPTPromptTuningWithbiasesModelMixin, GPT2LMHeadModel
+class GPTPromptTuningWithMaskModelLM(
+    GPTPromptTuningWithMaskModelMixin, GPT2LMHeadModel
 ):
     def __init__(self, config):
         super().__init__(config)

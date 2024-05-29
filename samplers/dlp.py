@@ -4,13 +4,23 @@ import torch.distributions as dists
 import numpy as np
 
 class LangevinSampler(nn.Module):
-    def __init__(self, step_size, mh=True):
+    def __init__(self, step_size, mh=True, **kwargs):
         super().__init__()
         self.step_size = step_size  
 
         self.mh = mh
         self.a_s = []
         self.hops = []
+    
+    def initialize_batch(self, 
+                         batch_size,
+                         seq_length, 
+                         **kwargs):
+        probs = torch.ones(batch_size, 
+                           seq_length, 
+                           50257).cuda() * .5
+        diff_mask = torch.bernoulli(probs)
+        return diff_mask
 
     def compute_delta(self, x, model): 
         x = x.requires_grad_()
@@ -25,10 +35,10 @@ class LangevinSampler(nn.Module):
         wx = gx * (2. * x - 1)
         return wx.detach(), loss, output_ids.cpu(), otheroutputs
 
-    def step(self, x, model):
+    def step(self, x, energy_fn, **kwargs):
         x_cur = x
         EPS = 1e-10
-        forward_delta, cur_energy, output_ids, otheroutputs = self.compute_delta(x_cur, model)
+        forward_delta, cur_energy, output_ids, otheroutputs = self.compute_delta(x_cur, energy_fn)
         term2 = 1./(2*self.step_size) # for binary {0,1}, the L2 norm is always 1        
         flip_prob = torch.exp(forward_delta-term2)/(torch.exp(forward_delta-term2)+1)
         rr = torch.rand_like(x_cur)
@@ -37,7 +47,7 @@ class LangevinSampler(nn.Module):
         if self.mh:
             probs = flip_prob*ind + (1 - flip_prob) * (1. - ind)
             lp_forward = torch.sum(torch.log(probs+EPS),dim=-1)
-            reverse_delta, delta_energy, _, _ = self.compute_delta(x_delta, model)
+            reverse_delta, delta_energy, _, _ = self.compute_delta(x_delta, energy_fn)
             flip_prob = torch.exp(reverse_delta-term2)/(torch.exp(reverse_delta-term2)+1)
             probs = flip_prob*ind + (1 - flip_prob) * (1. - ind)
             lp_reverse = torch.sum(torch.log(probs+EPS),dim=-1)
@@ -47,7 +57,5 @@ class LangevinSampler(nn.Module):
             self.a_s.append(a.mean().item())
             x_cur = x_delta * a[:, None] + x_cur * (1. - a[:, None])
         else:
-            # print("hops")
-            # print((x_delta - x_cur).sum(dim=-1).mean())
             x_cur = x_delta
         return x_cur, cur_energy, output_ids, otheroutputs
