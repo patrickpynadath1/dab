@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument("--sentiment", type=str, default="pos")
     parser.add_argument("--save_dir", type=str, default="results/detoxify")
     parser.add_argument("--config_dir", type=str, default="configs")
-    parser.add_argument("--sampler_setup", type=str, default="default")
+    parser.add_argument("--sampler_setup", type=str, default="detoxic")
     args = parser.parse_args()
 
     main(args)

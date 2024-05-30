@@ -108,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument("--keyword", type=str, default="computer")
     parser.add_argument("--save_dir", type=str, default="results/keywords")
     parser.add_argument("--config_dir", type=str, default="configs")
-    parser.add_argument("--sampler_setup", type=str, default="default")
+    parser.add_argument("--sampler_setup", type=str, default="keyword")
     args = parser.parse_args()
 
     main(args)
