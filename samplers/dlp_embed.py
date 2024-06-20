@@ -56,18 +56,19 @@ class LangevinSampler(nn.Module):
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
                               torch.arange(topk_ids.size(1))[None, :],
                                 sampled_dist_ids]
-        return loss, output_ids, actual_ids, senti_losses
+        return loss, output_ids, actual_ids, senti_losses.detach().cpu().numpy()
     
     def compute_bias(self, 
                      sampled_ids):
-        # this is batch x seq_len x embed_dim
-        cur_embeds = self.embed_map(sampled_ids)
+        with torch.no_grad():
+            # this is batch x seq_len x embed_dim
+            cur_embeds = self.embed_map(sampled_ids)
 
-        # compute ||embed - sampled_embed||^2 using foil 
-        t1 = torch.einsum('ve -> v', [self.embed_map.weight ** 2])[None, None, :]
-        t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
-        t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
-        bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
+            # compute ||embed - sampled_embed||^2 using foil 
+            t1 = torch.einsum('ve -> v', [self.embed_map.weight ** 2])[None, None, :]
+            t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
+            t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
+            bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
         return bias 
 
 
