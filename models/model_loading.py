@@ -4,11 +4,11 @@ from transformers import (
 
 )
 from .model_with_biases import GPTPromptTuningWithBiasModelLM as GPTBiasLM_senti
-from .model_with_diff_mask import GPTPromptTuningWithMaskModelLM as GPTDiffMaskLM_senti
+from .model_with_biases_mod import GPTPromptTuningWithBiasModelLM as GPTDiffMaskLM_senti
 from .keywords_model_with_biases import GPTPromptTuningWithBiasModelLM as GPTBiasLM_keywords
 from .keywords_model_with_diff_mask import GPTPromptTuningWithMaskModelLM as GPTMaskLM_keywords
 
-def load_tokenizer(model="gpt2"): 
+def load_tokenizer(model="gpt2-large"): 
     tokenizer = GPT2TokenizerFast.from_pretrained(model)
     return tokenizer
 

@@ -30,3 +30,12 @@ def load_sampler_conf(args):
             return yaml.load(stream, Loader=loader)
         except yaml.YAMLError as exc:
             print(exc)
+
+
+# idea: have several default files for bolt, dlp, and experiment
+# read for each experiment and each sampler, have a subparser or something to the cmdline 
+# there should be four main cmdline args: sampler, experiment, and config file which points to the default 
+# after this, the args are determined by cmdline
+
+def setup_cmdline_args(default_path_dct):
+    return 

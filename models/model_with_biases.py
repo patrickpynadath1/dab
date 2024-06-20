@@ -53,25 +53,26 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
 
-    def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5, **kwargs):
+    def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5, device="cpu", **kwargs):
         self.seq_len = seq_len
+        self.device = device
         self.biases = nn.ParameterList(
             [
                 nn.Parameter(init_noise_rate * torch.randn(batch_size, 1280))
                 for i in range(seq_len + 5)
             ]
-        ).cuda()
+        ).to(device)
 
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
-        ).cuda()
+        ).to(device)
 
         if attribute == "pos":
-            self.labels = torch.LongTensor([1]).cuda()
+            self.labels = torch.LongTensor([1]).to(device) 
         elif attribute == "neg":
-            self.labels = torch.LongTensor([0]).cuda()
+            self.labels = torch.LongTensor([0]).to(device) 
         elif attribute == "non_toxic":
-            self.labels = torch.LongTensor([0]).cuda()  # non-toxic
+            self.labels = torch.LongTensor([0]).to(device)    # non-toxic
         else:
             raise Exception("Invalid attribute")
         self.logits_processor = LogitsProcessorList(
@@ -181,9 +182,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     ):
         if senti_label is not None:
             if type(senti_label) == int:
-                self.labels = torch.LongTensor([senti_label]).cuda()
+                self.labels = torch.LongTensor([senti_label]).to(self.device)
             else:
-                self.labels = torch.LongTensor(senti_label).cuda()
+                self.labels = torch.LongTensor(senti_label).to(self.device)
 
         if not inference:
             if use_full_prompt:
@@ -328,9 +329,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     ):
         if senti_label is not None:
             if type(senti_label) == int:
-                self.labels = torch.LongTensor([senti_label]).cuda()
+                self.labels = torch.LongTensor([senti_label])  
             else:
-                self.labels = torch.LongTensor(senti_label).cuda()
+                self.labels = torch.LongTensor(senti_label)  
         for i in range(gpt_logit.size(1)):
             if i < input_ids.size(1):
                 continue
@@ -369,7 +370,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         if self.sim_count is None:
             self.sim_count = torch.tril(
                 torch.ones(sim_lm_embs.shape), diagonal=-1
-            ).cuda()
+            )  
         sim_loss = torch.sum(sim_lm_embs * self.sim_count) / torch.sum(self.sim_count)
         loss = 1 * senti_loss + 5 * ppl_loss + 0 * sim_loss
 

@@ -58,18 +58,19 @@ class GPTPromptTuningWithbiasesModelMixin:
                    seq_len, 
                    attribute, 
                    prompt_length,
+                   device,
                    init_noise_rate=0.5, **kwargs):
         self.seq_len = seq_len
-
+        self.device = device
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
-        )
+        ).to(device)
         if attribute == "pos":
-            self.labels = torch.LongTensor([1])   
+            self.labels = torch.LongTensor([1]).to(device)
         elif attribute == "neg":
-            self.labels = torch.LongTensor([0])   
+            self.labels = torch.LongTensor([0]).to(device) 
         elif attribute == "non_toxic":
-            self.labels = torch.LongTensor([0])     # non-toxic
+            self.labels = torch.LongTensor([0]).to(device) # non-toxic
         else:
             raise Exception("Invalid attribute")
         self.logits_processor = LogitsProcessorList(
@@ -180,9 +181,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     ):
         if senti_label is not None:
             if type(senti_label) == int:
-                self.labels = torch.LongTensor([senti_label])   
+                self.labels = torch.LongTensor([senti_label]).to(self.device)
             else:
-                self.labels = torch.LongTensor(senti_label)   
+                self.labels = torch.LongTensor(senti_label).to(self.device)
 
         if not inference:
             if use_full_prompt:

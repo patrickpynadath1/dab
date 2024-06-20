@@ -19,13 +19,13 @@ perplexity = load("perplexity", module_type="metric")
 
 def load_cola_model(cola_model = "textattack/roberta-base-CoLA"):
     tokenizer = RobertaTokenizerFast.from_pretrained(cola_model)
-    model = RobertaForSequenceClassification.from_pretrained(cola_model).cuda() 
+    model = RobertaForSequenceClassification.from_pretrained(cola_model)
     return tokenizer, model
 
 
 def load_external_sentiment(sentiment_model = "VictorSanh/roberta-base-finetuned-yelp-polarity"):
     tokenizer = RobertaTokenizerFast.from_pretrained(sentiment_model)
-    model = RobertaForSequenceClassification.from_pretrained(sentiment_model).cuda()
+    model = RobertaForSequenceClassification.from_pretrained(sentiment_model)
     return tokenizer, model
 
 
@@ -35,7 +35,7 @@ def calc_cola(sentence_batch, cola_tokenizer, cola_model):
     with torch.no_grad():
         for gen_sent_text in sentence_batch:
             for cur_sent in gen_sent_text: 
-                inputs = cola_tokenizer(cur_sent, return_tensors="pt", padding=True).to("cuda")
+                inputs = cola_tokenizer(cur_sent, return_tensors="pt", padding=True)
                 outputs = cola_model(**inputs)
                 pred = outputs.logits.argmax(dim=1)
                 logits = outputs.logits.softmax(dim=1)
@@ -93,52 +93,52 @@ def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
     return logits
 
 
-def compute_toxicity_score(sentence_batch): 
-    from googleapiclient import discovery
-    from googleapiclient.errors import HttpError
-    import time
-    responses = {f"gen-{j}": None for j in range(len(sentence_batch))}
-    not_done = np.array([1.0 / len(sentence_batch) for gen in sentence_batch])
+# def compute_toxicity_score(sentence_batch): 
+#     from googleapiclient import discovery
+#     from googleapiclient.errors import HttpError
+#     import time
+#     responses = {f"gen-{j}": None for j in range(len(sentence_batch))}
+#     not_done = np.array([1.0 / len(sentence_batch) for gen in sentence_batch])
 
-    def response_callback(request_id, response, exception):
-        responses[request_id] = (response, exception)
-        if exception is None:
-            not_done[int(request_id.split("-")[-1])] = 0
-        if exception is not None:
-            not_done[int(request_id.split("-")[-1])] = 1
-            print(request_id, exception)
+#     def response_callback(request_id, response, exception):
+#         responses[request_id] = (response, exception)
+#         if exception is None:
+#             not_done[int(request_id.split("-")[-1])] = 0
+#         if exception is not None:
+#             not_done[int(request_id.split("-")[-1])] = 1
+#             print(request_id, exception)
 
-    API_KEY = "AIzaSyBrt7heMQ2suJxtsqCCSA5bXkjhFgBRb0w"
+#     API_KEY = "AIzaSyBrt7heMQ2suJxtsqCCSA5bXkjhFgBRb0w"
 
-    client = discovery.build(
-        "commentanalyzer",
-        "v1alpha1",
-        developerKey=API_KEY,
-        discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
-        static_discovery=False,
-    )
-    toxicity_scores = []
+#     client = discovery.build(
+#         "commentanalyzer",
+#         "v1alpha1",
+#         developerKey=API_KEY,
+#         discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+#         static_discovery=False,
+#     )
+#     toxicity_scores = []
 
-    for idx, sentence in enumerate(sentence_batch):
-        batch_request = client.new_batch_http_request() 
-        analyze_request = {
-                            "comment": {"text": sentence},
-                            "requestedAttributes": {"TOXICITY": {}},
-                            "spanAnnotations": True,
-                            "languages": ["en"],
-                        }
-        batch_request.add(
-            client.comments().analyze(body=analyze_request),
-            callback=response_callback,
-            request_id=f"gen-{idx}",
-        )
-    batch_request.execute()
-    for req_id, (response, exception) in responses.items():
-        prob = response["attributeScores"]["TOXICITY"]["spanScores"][0][
-                "score"
-            ]["value"]
-        toxicity_scores.append(prob)
-    return toxicity_scores
+#     for idx, sentence in enumerate(sentence_batch):
+#         batch_request = client.new_batch_http_request() 
+#         analyze_request = {
+#                             "comment": {"text": sentence},
+#                             "requestedAttributes": {"TOXICITY": {}},
+#                             "spanAnnotations": True,
+#                             "languages": ["en"],
+#                         }
+#         batch_request.add(
+#             client.comments().analyze(body=analyze_request),
+#             callback=response_callback,
+#             request_id=f"gen-{idx}",
+#         )
+#     batch_request.execute()
+#     for req_id, (response, exception) in responses.items():
+#         prob = response["attributeScores"]["TOXICITY"]["spanScores"][0][
+#                 "score"
+#             ]["value"]
+#         toxicity_scores.append(prob)
+#     return toxicity_scores
 
 
 

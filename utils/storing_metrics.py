@@ -11,7 +11,7 @@ def initialize_metric_storing(total_conf,
         # if it does, just save the metrics there
         # if it doesn't, create a new directory
         existing_conf = yaml.safe_load(open(f"{save_dir}_{counter}/conf.yaml", 'r'))
-        if check_existing_setup(total_conf, existing_conf):
+        if check_existing_setup(existing_conf, total_conf):
             return f"{save_dir}_{counter}" 
         counter += 1 
     os.makedirs(f"{save_dir}_{counter}")

@@ -2969,6 +2969,7 @@ class GenerationMixin:
         trainable_weights=None,
         reverse=False,
         seq_len=50,
+        is_dlp = False,
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
         r"""
@@ -3152,7 +3153,10 @@ class GenerationMixin:
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
             if not use_hidden_states_biases:
-                next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]
+                if is_dlp:
+                    next_tokens_scores = next_tokens_scores + weight * biases[:, bias_idx, :]
+                else: 
+                    next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]
             else:
                 next_tokens_scores = next_tokens_scores + weight * self.lm_head(biases[bias_idx])
 
