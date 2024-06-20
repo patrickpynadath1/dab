@@ -80,5 +80,5 @@ def sentiment_exp_loop(total_conf):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-        total_sentences.append(stored_sentence)
+        total_sentences.extend(stored_sentence)
     return total_conf, total_sentences
