@@ -8,7 +8,8 @@ detoxic_prompts: prompts/detoxic_prompts_1k.txt
 keyword_prompts: prompts/keywords_prompts_15.txt
 batch_size: 20
 seq_len: 20
-num_steps: 100
+num_steps: 8
+sentiment: pos
 keywords_dict:
   computer : ["router", "Linux", "keyboard", "server"]
   legal : ["plea", "subpoena", "transcript", "bankrupt"]
@@ -17,3 +18,4 @@ keywords_dict:
   religion : ["Bible", "church", "priest", "saint"]
   science : ["microscope", "mass", "mineral", "scientist"]
   space : ["meteor", "planet", "satellite", "astronaut"]
+keyword: computer

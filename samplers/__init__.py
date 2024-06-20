@@ -1,3 +1,3 @@
 from .bolt_sampler import BoltSampler
-from .dlp import LangevinSampler
+from .dlp_embed import LangevinSampler
 
