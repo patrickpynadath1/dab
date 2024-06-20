@@ -12,55 +12,53 @@ from models import (
     load_sentiment_discriminator, 
     load_tokenizer
 )
+import torch
 
+def sentiment_exp_loop(total_conf):
 
-def main(args):
-    ### LOADING CONFIGS
-    sampler_conf = load_sampler_conf(args)
-    exp_conf = load_exp_conf(args)
 
     ### LOADING MODELS
-    model = load_base_model(args.sampler, **exp_conf["base_model_args"]).cuda()
-    discriminator = load_sentiment_discriminator().cuda()
+    model = load_base_model(total_conf['sampler'], **total_conf["base_model_args"]).to(total_conf["device"])
+    discriminator = load_sentiment_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
 
-    ### COMBINING ALL CONF FOR SAVING
-    total_conf = {**sampler_conf, **exp_conf}
-    total_conf['sentiment'] = args.sentiment
-    total_conf['sampler'] = args.sampler 
-
     # initialize the directory for storing data
-    save_dir = f"{args.save_dir}/{args.sampler}"
+    if total_conf['prev_run_dir'] is None: 
+        save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
+        total_conf['prev_run_dir'] = save_dir
+    else: 
+        save_dir = total_conf['prev_run_dir']
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
     ### initializing samplers
-    if args.sampler == "bolt":
+    if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
-    elif args.sampler == "dlp":
+    elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
-
-    ### INITIALIZE METADATA COLLECTION
-    # TODO: do the above
 
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
 
-    def energy_fn(x):
-        loss, output_ids, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs.input_ids, use_full_prompt=False, diff_mask=x
+    def energy_fn_wrapper(x, inputs):
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257)
+        x_full = torch.concat([prompt_bias, x], dim=1)
+        loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
+            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
         )
-        return loss, output_ids, gpt_logit, senti_losses
+        return loss, output_ids, onehot_generates, gpt_logit, senti_losses
 
     for prompt in prompts:
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
-        inputs = inputs.to("cuda")
+        inputs = inputs
+        energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         cur_batch = sampler.initialize_batch(
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
             sentiment=total_conf["sentiment"],
-            batch_size=total_conf["batch_size"]
+            batch_size=total_conf["batch_size"], 
+            prompt_length=inputs.input_ids.shape[1],
         )
         model.eval()
         minimum_loss, stored_sentence = initialize_best_loss(total_conf["batch_size"])
@@ -84,15 +82,3 @@ def main(args):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sampler", type=str, default="bolt")
-    parser.add_argument("--sentiment", type=str, default="pos")
-    parser.add_argument("--save_dir", type=str, default="results/sentiment")
-    parser.add_argument("--config_dir", type=str, default="configs")
-    parser.add_argument("--sampler_setup", type=str, default="sentiment")
-    args = parser.parse_args()
-
-    main(args)
