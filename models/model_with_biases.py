@@ -55,7 +55,6 @@ class GPTPromptTuningWithbiasesModelMixin:
 
     def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5, device="cpu", **kwargs):
         self.seq_len = seq_len
-        self.device = device
         self.biases = nn.ParameterList(
             [
                 nn.Parameter(init_noise_rate * torch.randn(batch_size, 1280))

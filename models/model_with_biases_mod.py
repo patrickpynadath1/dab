@@ -61,7 +61,6 @@ class GPTPromptTuningWithbiasesModelMixin:
                    device,
                    init_noise_rate=0.5, **kwargs):
         self.seq_len = seq_len
-        self.device = device
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
