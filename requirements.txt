@@ -142,7 +142,6 @@ testpath==0.6.0
 threadpoolctl==3.1.0
 tinycss2==1.2.1
 tokenizers==0.13.3
-torch==1.11.0
 torchaudio==0.11.0
 torchsummary==1.5.1
 torchvision==0.12.0

@@ -29,7 +29,8 @@ class LangevinSampler(nn.Module):
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
                          prompt_length=prompt_length, 
-                         attribute=sentiment)
+                         attribute=sentiment,
+                         device=self.device)
         initial_bias = torch.zeros(batch_size, 
                            seq_length - prompt_length, 
                            50257).to(self.device)
