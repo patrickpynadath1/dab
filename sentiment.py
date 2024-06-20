@@ -18,11 +18,12 @@ def sentiment_exp_loop(total_conf):
 
 
     ### LOADING MODELS
+    print("here")
     model = load_base_model(total_conf['sampler'], **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_sentiment_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
-
+    print("finished loading models")
     # initialize the directory for storing data
     if total_conf['prev_run_dir'] is None: 
         save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
