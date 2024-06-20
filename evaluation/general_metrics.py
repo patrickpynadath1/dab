@@ -37,7 +37,7 @@ def calc_cola(sentence_batch, cola_tokenizer, cola_model):
     with torch.no_grad():
         for gen_sent_text in sentence_batch:
             for cur_sent in gen_sent_text: 
-                inputs = cola_tokenizer(cur_sent, return_tensors="pt", padding=True)
+                inputs = cola_tokenizer(cur_sent, return_tensors="pt", padding=True).to(cola_model.device)
                 outputs = cola_model(**inputs)
                 pred = outputs.logits.argmax(dim=1)
                 logits = outputs.logits.softmax(dim=1)
@@ -87,8 +87,7 @@ def compute_perplexity(sentence_batch):
 
 def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
     with torch.no_grad():
-        inputs = ext_tokenizer(sentence_batch, return_tensors="pt", padding=True)
-        inputs.to("cuda")
+        inputs = ext_tokenizer(sentence_batch, return_tensors="pt", padding=True).to(ext_clf.device)
         outputs = ext_clf(**inputs)
         logits = outputs.logits.softmax(dim=-1).cpu().numpy()
         del outputs

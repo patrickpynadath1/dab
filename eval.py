@@ -27,11 +27,13 @@ def eval_loop(total_conf, generated_sentences):
     }
     cola_tokenizer, cola_model = load_cola_model()
     ext_tokenizer, ext_clf = load_external_sentiment()
+    cola_model.to(total_conf['device'])
+    ext_clf.to(total_conf['device'])
     while cur_idx < len(generated_sentences): 
         print(cur_idx)
         batch = generated_sentences[cur_idx:cur_idx+batch_size]
         
-        # metrics['perp'].append(compute_perplexity(batch))
+        metrics['perp'].append(compute_perplexity(batch))
         metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
         metrics['self_bleu'].append(calc_self_bleu(batch))
         metrics[total_conf['exp']].append(exp_specific_metrics(total_conf['exp'], batch, 
