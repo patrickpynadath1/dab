@@ -20,6 +20,7 @@ def conf_subparser(subparser, sampler):
 
 
 if __name__ == "__main__":
+    print("here")
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='sampler')
     dlp_sampler = subparsers.add_parser('dlp')
