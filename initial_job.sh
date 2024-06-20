@@ -7,13 +7,13 @@ echo "Running initial job script"
 
 # should be run from the project directory 
 cd $SLURM_SUBMIT_DIR
-pip install -r requirements.txt
+# pip install -r requirements.txt
 
 
-# initial setup for transformers 
-cd transformers
-pip install -e .
-cd ..
+# # initial setup for transformers 
+# cd transformers
+# pip install -e .
+# cd ..
 
 # first try 
 python main.py --exp sentiment --device cuda --eval_on_fin bolt; 
