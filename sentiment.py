@@ -40,7 +40,7 @@ def sentiment_exp_loop(total_conf):
     output_file = open(f"{save_dir}/output.txt", "w")
     total_sentences = []
     def energy_fn_wrapper(x, inputs):
-        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257)
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
             **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
