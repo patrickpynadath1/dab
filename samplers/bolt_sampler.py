@@ -65,8 +65,8 @@ class BoltSampler(BaseSampler):
             size=model.biases[0].shape,
             requires_grad=False,
              **self.noise_kw
-            )
-            for _ in range(len(model.biases)).to(self.device)
+            ).to(self.device)
+            for _ in range(len(model.biases))
         ]
         for i in range(len(model.biases)):
             model.biases[i].data = model.biases[i].data + noise[i]
