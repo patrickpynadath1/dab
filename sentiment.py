@@ -38,7 +38,7 @@ def sentiment_exp_loop(total_conf):
 
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
-
+    total_sentences = []
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257)
         x_full = torch.concat([prompt_bias, x], dim=1)
@@ -80,3 +80,5 @@ def sentiment_exp_loop(total_conf):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
+        total_sentences.append(stored_sentence)
+    return total_conf, total_sentences
