@@ -7,7 +7,8 @@ class LangevinSampler(nn.Module):
     def __init__(self, 
                  weight_val, 
                  k_val, 
-                 proposal_temp, 
+                 proposal_temp,
+                 device, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -15,6 +16,7 @@ class LangevinSampler(nn.Module):
         self.hops = []
         self.k_val = k_val 
         self.temp = proposal_temp
+        self.device = device
     
     def initialize_batch(self,
                          model, 
@@ -30,7 +32,7 @@ class LangevinSampler(nn.Module):
                          attribute=sentiment)
         initial_bias = torch.zeros(batch_size, 
                            seq_length - prompt_length, 
-                           50257)
+                           50257).to(self.device)
         self.embed_map = model.get_input_embeddings()
         return initial_bias
 
@@ -45,7 +47,7 @@ class LangevinSampler(nn.Module):
                      torch.arange(gx.size(1))[None, :, None], 
                      topk_ids]
         # gx_topk = torch.gather(gx, -1, topk_ids)
-        token_dist = torch.ones_like(gx_topk)  
+        token_dist = torch.ones_like(gx_topk).to(self.device) 
         token_dist[:, :, 0] = 0
         logits = gx_topk * token_dist
         proposal_dist = torch.distributions.Categorical(logits = -1 * logits / self.temp)

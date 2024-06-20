@@ -14,33 +14,31 @@ from models import (
 )
 
 
-def main(args):
-    ### LOADING CONFIGS
-    sampler_conf = load_sampler_conf(args)
-    exp_conf = load_exp_conf(args)
+def detoxify_loop(total_conf):
+
 
     ### LOADING MODELS
-    model = load_base_model(args.sampler, **exp_conf["base_model_args"]).cuda()
-    discriminator = load_toxicity_discriminator().cuda()
+    model = load_base_model(total_conf['sampler'], **total_conf["base_model_args"]).to(total_conf["device"])
+    discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
 
-    ### COMBINING ALL CONF FOR SAVING
-    total_conf = {**sampler_conf, **exp_conf}
+    # ### ADDITIONAL CONFIGS 
+    # total_conf['sentiment'] = "non_toxic"
+    # total_conf['sampler'] = args.sampler
+    # total_conf['init_noise_rate'] = .7 
 
-    ### ADDITIONAL CONFIGS 
-    total_conf['sentiment'] = "non_toxic"
-    total_conf['sampler'] = args.sampler
-    total_conf['init_noise_rate'] = .7 
-
-    # initialize the directory for storing data
-    save_dir = f"{args.save_dir}/{args.sampler}"
+    if total_conf['prev_run_dir'] is None: 
+        save_dir = f"{total_conf['save_dir']}/{total_conf['sampler']}"
+        total_conf['prev_run_dir'] = save_dir
+    else: 
+        save_dir = total_conf['prev_run_dir']
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
     ### INITIALIZING SAMPLERS
-    if args.sampler == "bolt":
+    if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
-    elif args.sampler == "dlp":
+    elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
 
     ### INITIALIZE METADATA COLLECTION
@@ -89,15 +87,3 @@ def main(args):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sampler", type=str, default="bolt")
-    parser.add_argument("--sentiment", type=str, default="pos")
-    parser.add_argument("--save_dir", type=str, default="results/detoxify")
-    parser.add_argument("--config_dir", type=str, default="configs")
-    parser.add_argument("--sampler_setup", type=str, default="detoxic")
-    args = parser.parse_args()
-
-    main(args)

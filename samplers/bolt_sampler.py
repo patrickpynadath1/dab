@@ -10,12 +10,14 @@ class BoltSampler(BaseSampler):
                  batch_size, 
                  optimizer, 
                  optimizer_conf, 
-                 noise_conf, **kwargs):
+                 noise_conf, 
+                 device, **kwargs):
         super(BoltSampler, self).__init__()
         self.batch_size = batch_size
         self.optimizer = optimizer
         self.optimizer_kw = optimizer_conf
         self.noise_kw = noise_conf
+        self.device = device
 
     def initialize_batch(self, 
                          model, 
@@ -25,6 +27,7 @@ class BoltSampler(BaseSampler):
         # initializing the biases for the model 
         model.set_biases(seq_len=seq_length, 
                          attribute=sentiment,
+                         device=self.device,
                          **kwargs)
         optimizer_grouped_parameters = [
             {

@@ -1,3 +1,4 @@
+import faulthandler; faulthandler.enable()
 import argparse
 import yaml
 import pickle
@@ -32,7 +33,7 @@ def main(args):
         print(cur_idx)
         batch = generated_sentences[cur_idx:cur_idx+batch_size]
         
-        metrics['perp'].append(compute_perplexity(batch))
+        # metrics['perp'].append(compute_perplexity(batch))
         metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
         metrics['self_bleu'].append(calc_self_bleu(batch))
         metrics[args.exp].append(exp_specific_metrics(args.exp, batch, 
@@ -54,4 +55,5 @@ if __name__ == "__main__":
     parser.add_argument("--results_dir", type=str, default="results")
     args = parser.parse_args()
     args.run_dir = f"{args.results_dir}/{args.exp}/{args.sampler}_{args.run_num}"
+    # print('asd')
     main(args)

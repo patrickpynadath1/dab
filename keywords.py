@@ -14,35 +14,34 @@ from models import (
 )
 
 
-def main(args):
+def keywords_loop(total_conf):
     ### LOADING CONFIGS
-    sampler_conf = load_sampler_conf(args)
-    exp_conf = load_exp_conf(args)
-
     ### LOADING MODELS
-    model = load_base_model(args.sampler, 
+    model = load_base_model(total_conf['sampler'], 
                             use_senti=False, 
-                            **exp_conf["base_model_args"]).cuda()
-    discriminator = load_toxicity_discriminator().cuda()
+                            **total_conf["base_model_args"]).to(total_conf["device"])
+    discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
 
-    ### COMBINING ALL CONF FOR SAVING
-    total_conf = {**sampler_conf, **exp_conf}
-
     ### ADDITIONAL CONFIGS 
-    total_conf['keyword'] = args.keyword
-    total_conf['sampler'] = args.sampler
-    total_conf['init_noise_rate'] = .7 
+    # total_conf['keyword'] = args.keyword
+    # total_conf['sampler'] = args.sampler
+    # total_conf['init_noise_rate'] = .7 
 
     # initialize the directory for storing data
-    save_dir = f"{args.save_dir}/{args.sampler}"
+    if total_conf['prev_run_dir'] is None: 
+        save_dir = f"{total_conf['save_dir']}/{total_conf['sampler']}"
+        total_conf['prev_run_dir'] = save_dir
+    else: 
+        save_dir = total_conf['prev_run_dir']
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
+
     ### INITIALIZING SAMPLERS
-    if args.sampler == "bolt":
+    if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
-    elif args.sampler == "dlp":
+    elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
 
     ### INITIALIZE METADATA COLLECTION
@@ -50,9 +49,9 @@ def main(args):
 
     prompts = [line.strip() for line in open(total_conf["keyword_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
-    keywords_list = total_conf["keywords_dict"][args.keyword]
+    keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
-    keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].cuda()
+    keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
 
     def energy_fn(x):
         loss, output_ids = model.soft_forward(
@@ -100,15 +99,3 @@ def main(args):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sampler", type=str, default="bolt")
-    parser.add_argument("--keyword", type=str, default="computer")
-    parser.add_argument("--save_dir", type=str, default="results/keywords")
-    parser.add_argument("--config_dir", type=str, default="configs")
-    parser.add_argument("--sampler_setup", type=str, default="keyword")
-    args = parser.parse_args()
-
-    main(args)
