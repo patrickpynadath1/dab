@@ -13,5 +13,5 @@ pip install -e .
 cd ..
 
 # first try 
-python main.py --exp sentiment --device cuda bolt; 
-python main.py --exp sentiment --device cuda dlp; 
+python main.py --exp sentiment --device cuda bolt --eval_on_fin; 
+python main.py --exp sentiment --device cuda dlp --eval_on_fin; 
