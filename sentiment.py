@@ -47,11 +47,11 @@ def sentiment_exp_loop(total_conf):
             **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
-
+    print("reached prompt loop")
     for prompt in prompts:
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
-        inputs = inputs
+        inputs = inputs.to(total_conf["device"])
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         cur_batch = sampler.initialize_batch(
             model=model,
@@ -62,6 +62,7 @@ def sentiment_exp_loop(total_conf):
         )
         model.eval()
         minimum_loss, stored_sentence = initialize_best_loss(total_conf["batch_size"])
+        print('reached step loop')
         for i in range(total_conf["num_steps"]):
             cur_batch, loss, output_ids, otheroutputs = sampler.step(
                 x=cur_batch, model=model, energy_fn=energy_fn, inputs=inputs
@@ -82,3 +83,4 @@ def sentiment_exp_loop(total_conf):
         del output_ids
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
+        print("finished one prompt")
