@@ -23,13 +23,9 @@ def sentiment_exp_loop(total_conf):
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
     # initialize the directory for storing data
-    if total_conf['prev_run_dir'] is None: 
-        save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
-        total_conf['prev_run_dir'] = save_dir
-    else: 
-        save_dir = total_conf['prev_run_dir']
+    save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
     save_dir = initialize_metric_storing(total_conf, save_dir)
-
+    total_conf['prev_run_dir'] = save_dir
     ### initializing samplers
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
