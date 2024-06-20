@@ -61,6 +61,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                    device,
                    init_noise_rate=0.5, **kwargs):
         self.seq_len = seq_len
+
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
@@ -303,8 +304,12 @@ class GPTPromptTuningWithbiasesModelMixin:
 
         print("senti_loss:", senti_loss)
         print("ppl_loss:", ppl_loss)
-
-        return loss, output_ids, onehot_generates, gpt_logit, senti_losses
+        
+        return (loss, 
+                output_ids, 
+                onehot_generates, 
+                gpt_logit, 
+                senti_losses)
 
     def soft_forward_without_decoding(
         self,

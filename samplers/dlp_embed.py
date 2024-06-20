@@ -25,7 +25,7 @@ class LangevinSampler(nn.Module):
                          seq_length,
                          prompt_length,
                          **kwargs):
-        
+        self.prompt_length = prompt_length
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
                          prompt_length=prompt_length, 
@@ -42,7 +42,9 @@ class LangevinSampler(nn.Module):
                      energy_fn): 
         
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
-        gx = torch.autograd.grad(loss, onehot)[0].detach()
+        gx = torch.autograd.grad(loss, onehot, allow_unused=True)
+        gx = gx[0].detach()[:, self.prompt_length:, :]
+        logits = logits[:, self.prompt_length:, :]
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
