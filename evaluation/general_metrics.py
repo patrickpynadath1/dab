@@ -19,6 +19,7 @@ perplexity = load("perplexity", module_type="metric")
 
 
 def load_cola_model(cola_model = "textattack/roberta-base-CoLA"):
+    print(cola_model)
     tokenizer = RobertaTokenizerFast.from_pretrained(cola_model)
     model = RobertaForSequenceClassification.from_pretrained(cola_model)
     return tokenizer, model
