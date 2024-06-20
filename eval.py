@@ -14,9 +14,7 @@ def exp_specific_metrics(exp, batch, **kwargs):
         return [] 
     return  []
 
-def main(args):
-    total_conf = yaml.safe_load(open(f"{args.run_dir}/conf.yaml", 'r'))
-    generated_sentences = open(f"{args.run_dir}/output.txt", 'r').readlines()
+def eval_loop(total_conf, generated_sentences):
 
     cur_idx = 0
     batch_size = total_conf['batch_size']
@@ -25,7 +23,7 @@ def main(args):
         'perp': [],
         'cola': [],
         'self_bleu': [],
-        args.exp: []
+        total_conf['exp']: []
     }
     cola_tokenizer, cola_model = load_cola_model()
     ext_tokenizer, ext_clf = load_external_sentiment()
@@ -36,24 +34,11 @@ def main(args):
         # metrics['perp'].append(compute_perplexity(batch))
         metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
         metrics['self_bleu'].append(calc_self_bleu(batch))
-        metrics[args.exp].append(exp_specific_metrics(args.exp, batch, 
+        metrics[total_conf['exp']].append(exp_specific_metrics(total_conf['exp'], batch, 
                                                       ext_tokenizer=ext_tokenizer, 
                                                       ext_clf=ext_clf))
 
 
         cur_idx += batch_size
-    pickle.dump(metrics, open(f"{args.run_dir}/eval_metrics.pkl", 'wb'))
-    return 
-
-
-if __name__ == "__main__": 
-    parser = argparse.ArgumentParser()
-    # the run dir where all the generated sentences are stored
-    parser.add_argument("--run_num", type=int, required=True)
-    parser.add_argument("--exp", type=str, choices=['sentiment', 'toxicity', 'keywords'], required=True)
-    parser.add_argument("--sampler", type=str, choices=['bolt', 'dlp'], default='bolt')
-    parser.add_argument("--results_dir", type=str, default="results")
-    args = parser.parse_args()
-    args.run_dir = f"{args.results_dir}/{args.exp}/{args.sampler}_{args.run_num}"
-    # print('asd')
-    main(args)
+    pickle.dump(metrics, open(f"{total_conf['prev_run_dir']}/eval_metrics.pkl", 'wb'))
+    return

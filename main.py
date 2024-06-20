@@ -1,7 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-# from eval import *
+from eval import eval_loop
 import argparse
 import yaml
 
@@ -42,8 +42,12 @@ if __name__ == "__main__":
     
     total_conf = args.__dict__
     if args.exp == "sentiment": 
-        sentiment_exp_loop(total_conf)
+        res = sentiment_exp_loop(total_conf)
     elif args.exp == "toxicity":
-        detoxify_loop(total_conf)
+        res = detoxify_loop(total_conf)
     elif args.exp == "keywords":
-        keywords_loop(total_conf)
+        res = keywords_loop(total_conf)
+
+    total_conf, generated_sentences = res 
+    if args.eval_on_fin: 
+        eval_loop(total_conf, generated_sentences)
