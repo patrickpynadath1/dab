@@ -3,9 +3,12 @@
 
 module load anaconda/2020.11-py38
 
+echo "Running initial job script"
+
 # should be run from the project directory 
 cd $SLURM_SUBMIT_DIR
 pip install -r requirements.txt
+
 
 # initial setup for transformers 
 cd transformers
