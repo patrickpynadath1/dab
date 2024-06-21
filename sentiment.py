@@ -77,4 +77,6 @@ def sentiment_exp_loop(total_conf):
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
         total_sentences.extend(stored_sentence)
+    del model 
+    del discriminator
     return total_conf, total_sentences
