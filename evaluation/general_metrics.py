@@ -84,7 +84,7 @@ def get_unique_ngram(sentence_batch, n):
 
 
 def compute_perplexity(sentence_batch):
-    results = perplexity.compute(predictions=sentence_batch, model_id='gpt-xl')
+    results = perplexity.compute(predictions=sentence_batch, model_id='gpt2-xl')
     return results['perplexities']
 
 
