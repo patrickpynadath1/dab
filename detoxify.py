@@ -59,7 +59,8 @@ def detoxify_loop(total_conf):
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
             sentiment=total_conf["sentiment"],
-            batch_size=total_conf["batch_size"]
+            batch_size=total_conf["batch_size"],
+            prompt_length=inputs.input_ids.shape[1],
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
