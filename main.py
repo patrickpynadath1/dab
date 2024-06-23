@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
     parser.add_argument("--save_dir", type=str, default="results")
-    parser.add_argument("--exp", type=str, choices=['sentiment', 'toxicity', 'keywords'], required=True)
+    parser.add_argument("--exp", type=str, choices=['sentiment', 'detoxify', 'keywords'], required=True)
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     total_conf = args.__dict__
     if args.exp == "sentiment": 
         res = sentiment_exp_loop(total_conf)
-    elif args.exp == "toxicity":
+    elif args.exp == "detoxify":
         res = detoxify_loop(total_conf)
     elif args.exp == "keywords":
         res = keywords_loop(total_conf)
