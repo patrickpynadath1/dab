@@ -70,7 +70,7 @@ def detoxify_loop(total_conf):
                 x=cur_batch, model=model, energy_fn=energy_fn, inputs=inputs
             )
             losses_to_eval = otheroutputs[-1]
-            sentences = tokenizer.decode(output_ids, skip_special_tokens=True)
+            sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             updating_best_loss(
                 total_conf["batch_size"],
                 losses_to_eval,
