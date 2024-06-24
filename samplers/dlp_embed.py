@@ -10,6 +10,7 @@ class LangevinSampler(nn.Module):
                  proposal_temp,
                  device,
                  use_diverse_initialization=False,
+                 diverse_type='beam',
                  num_beams=200, 
                  num_beam_groups=200,
                  diversity_penalty=.8, 
@@ -68,6 +69,7 @@ class LangevinSampler(nn.Module):
         new_inputs = model.generate(
             **inputs,
             num_return_sequences=batch_size,
+            top_k=batch_size,
             num_beams=self.num_beams,
             num_beam_groups=self.num_beam_groups,
             bad_words_ids=[[198, 628]],
