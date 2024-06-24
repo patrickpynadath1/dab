@@ -85,7 +85,7 @@ class LangevinSampler(nn.Module):
         self.embed_map = model.get_input_embeddings()
         inputs.input_ids = new_inputs
         inputs.attention_mask = torch.ones_like(new_inputs).to(self.device)
-        return new_inputs, initial_bias
+        return inputs, initial_bias
 
     def compute_p_lm(self, 
                      cur_bias, 
