@@ -10,9 +10,9 @@ class LangevinSampler(nn.Module):
                  proposal_temp,
                  device,
                  use_diverse_initialization=False,
-                 num_beams=100, 
-                 num_beam_groups=50,
-                 diversity_penalty=0.5, 
+                 num_beams=200, 
+                 num_beam_groups=200,
+                 diversity_penalty=.8, 
                  diverse_addition_length=3, 
                  **kwargs):
         super().__init__()
