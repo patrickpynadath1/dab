@@ -52,7 +52,6 @@ def keywords_loop(total_conf):
     keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
     keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-
     def energy_fn(x):
         loss, output_ids = model.soft_forward(
                 **inputs, 
