@@ -8,7 +8,12 @@ class LangevinSampler(nn.Module):
                  weight_val, 
                  k_val, 
                  proposal_temp,
-                 device, 
+                 device,
+                 use_diverse_initialization=False,
+                 num_beams=100, 
+                 num_beam_groups=50,
+                 diversity_penalty=0.5, 
+                 diverse_addition_length=3, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -17,6 +22,11 @@ class LangevinSampler(nn.Module):
         self.k_val = k_val 
         self.temp = proposal_temp
         self.device = device
+        self.use_diverse_initialization=use_diverse_initialization
+        self.diverse_addition_length = diverse_addition_length
+        self.num_beams = num_beams
+        self.num_beam_groups = num_beam_groups
+        self.diversity_penalty = diversity_penalty
     
     def initialize_batch(self,
                          model, 
@@ -24,18 +34,58 @@ class LangevinSampler(nn.Module):
                          batch_size,
                          seq_length,
                          prompt_length,
+                         inputs,
                          **kwargs):
-        self.prompt_length = prompt_length
+        if self.use_diverse_initialization: 
+            return self.diverse_initialization(model, 
+                                                sentiment,
+                                                batch_size, 
+                                                seq_length, 
+                                                prompt_length, 
+                                                inputs)
+        else: 
+            self.prompt_length = prompt_length
+            model.set_biases(batch_size=batch_size, 
+                            seq_len=seq_length,
+                            prompt_length=prompt_length, 
+                            attribute=sentiment,
+                            device=self.device)
+            initial_bias = torch.zeros(batch_size, 
+                            seq_length - prompt_length, 
+                            50257).to(self.device)
+            self.embed_map = model.get_input_embeddings()
+            return inputs, initial_bias
+    
+    def diverse_initialization(self,
+                         model, 
+                         sentiment,
+                         batch_size,
+                         seq_length,
+                         prompt_length,
+                         inputs,
+                         **kwargs): 
+        self.prompt_length = prompt_length + self.diverse_addition_length
+        new_inputs = model.generate(
+            **inputs,
+            num_return_sequences=batch_size,
+            num_beams=self.num_beams,
+            num_beam_groups=self.num_beam_groups,
+            bad_words_ids=[[198, 628]],
+            max_new_tokens=self.diverse_addition_length,
+            diversity_penalty=self.diversity_penalty,
+        )
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
-                         prompt_length=prompt_length, 
+                         prompt_length=self.prompt_length, 
                          attribute=sentiment,
                          device=self.device)
         initial_bias = torch.zeros(batch_size, 
-                           seq_length - prompt_length, 
+                           seq_length - self.prompt_length, 
                            50257).to(self.device)
         self.embed_map = model.get_input_embeddings()
-        return initial_bias
+        inputs.input_ids = new_inputs
+        inputs.attention_mask = torch.ones_like(new_inputs).to(self.device)
+        return new_inputs, initial_bias
 
     def compute_p_lm(self, 
                      cur_bias, 

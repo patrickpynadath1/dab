@@ -21,7 +21,8 @@ class BoltSampler(BaseSampler):
 
     def initialize_batch(self, 
                          model, 
-                         seq_length, 
+                         seq_length,
+                         inputs, 
                          sentiment=None, 
                          **kwargs): 
         # initializing the biases for the model 
@@ -45,7 +46,7 @@ class BoltSampler(BaseSampler):
         else: 
             self.cur_optimizer = AdamW(optimizer_grouped_parameters, 
                                        **self.optimizer_kw)
-        return optimizer_grouped_parameters
+        return inputs, optimizer_grouped_parameters
     
     def step(self, 
              x,
