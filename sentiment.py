@@ -12,7 +12,9 @@ from models import (
     load_sentiment_discriminator, 
     load_tokenizer
 )
+import pickle 
 import torch
+import time 
 
 def sentiment_exp_loop(total_conf):
 
@@ -31,7 +33,7 @@ def sentiment_exp_loop(total_conf):
         sampler = BoltSampler(**total_conf)
     elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
-
+    times = []
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
     total_sentences = []
@@ -47,6 +49,7 @@ def sentiment_exp_loop(total_conf):
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
+        start = time.time()
         cur_batch = sampler.initialize_batch(
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
@@ -69,6 +72,8 @@ def sentiment_exp_loop(total_conf):
                 minimum_loss,
                 stored_sentence,
             )
+        end = time.time()
+        times.append(end - start)
 
         ### Freeing CUDA space
         del inputs 
@@ -79,4 +84,5 @@ def sentiment_exp_loop(total_conf):
         total_sentences.extend(stored_sentence)
     del model 
     del discriminator
+    pickle.dump(open(f"{save_dir}/times.pkl", "wb"))
     return total_conf, total_sentences
