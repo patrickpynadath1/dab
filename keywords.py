@@ -5,6 +5,7 @@ from utils import (
     initialize_best_loss,
     updating_best_keywords
 )
+import torch
 from samplers import BoltSampler, LangevinSampler
 import argparse
 from models import (
@@ -46,26 +47,29 @@ def keywords_loop(total_conf):
 
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above
+    total_sentences = []
 
     prompts = [line.strip() for line in open(total_conf["keyword_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
     keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
     keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-    def energy_fn(x):
-        loss, output_ids = model.soft_forward(
-                **inputs, 
-                labels=inputs.input_ids, 
-                use_full_prompt=False, 
-                diff_mask=x, 
-                keywords=keywords_token
-            ) 
-        return loss, output_ids
     
+    
+    def energy_fn_wrapper(x, inputs):
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
+        x_full = torch.concat([prompt_bias, x], dim=1)
+        loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
+            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
+        )
+        return loss, output_ids, onehot_generates, gpt_logit, senti_losses
+    
+
     for prompt in prompts:
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to("cuda")
+        energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         cur_batch = sampler.initialize_batch(
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
@@ -96,5 +100,7 @@ def keywords_loop(total_conf):
         del inputs 
         del cur_batch
         del output_ids
+        total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
+    return total_conf, total_sentences
