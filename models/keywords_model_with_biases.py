@@ -55,12 +55,13 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
     
-    def set_biases(self, batch_size, seq_len, **kwargs):
+    def set_biases(self, batch_size, seq_len, device='cpu', **kwargs):
         self.seq_len = seq_len
 
+        self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).to(device)
         self.trainable_weights = None
 
-        self.labels = torch.LongTensor([1]).cuda()
+        self.labels = torch.LongTensor([1]).to(device)
         self.logits_processor = LogitsProcessorList(
             [
                 RepetitionPenaltyLogitsProcessor(penalty=1.2),

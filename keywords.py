@@ -60,7 +60,7 @@ def keywords_loop(total_conf):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
+            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full, keywords=keywords_token
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
     
@@ -68,12 +68,14 @@ def keywords_loop(total_conf):
     for prompt in prompts:
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
-        inputs = inputs.to("cuda")
+        inputs = inputs.to(total_conf["device"])
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         cur_batch = sampler.initialize_batch(
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
-            batch_size=total_conf["batch_size"]
+            batch_size=total_conf["batch_size"], 
+            prompt_length=inputs.input_ids.shape[1], 
+            sentiment=None
         )
         model.eval()
         success_idx, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=False)

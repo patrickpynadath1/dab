@@ -394,7 +394,7 @@ class FullPrompt(nn.Module):
             config.n_head,
             n_tokens,
             config.n_embd // config.n_head,
-        ).to("cuda")
+        ).to(self.device)
         self.full_prompts_matrix.requires_grad = True
         self.full_prompts_matrix = nn.parameter.Parameter(self.full_prompts_matrix)
 
