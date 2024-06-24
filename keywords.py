@@ -31,11 +31,7 @@ def keywords_loop(total_conf):
     # total_conf['init_noise_rate'] = .7 
 
     # initialize the directory for storing data
-    if total_conf['prev_run_dir'] is None: 
-        save_dir = f"{total_conf['save_dir']}/{total_conf['sampler']}"
-        total_conf['prev_run_dir'] = save_dir
-    else: 
-        save_dir = total_conf['prev_run_dir']
+    save_dir = f"{total_conf['save_dir']}/detoxify/{total_conf['sampler']}"
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
 
