@@ -22,6 +22,7 @@ class LangevinSampler(nn.Module):
         self.hops = []
         self.k_val = k_val 
         self.temp = proposal_temp
+        self.diverse_type = diverse_type
         self.device = device
         self.use_diverse_initialization=use_diverse_initialization
         self.diverse_addition_length = diverse_addition_length
@@ -66,16 +67,26 @@ class LangevinSampler(nn.Module):
                          inputs,
                          **kwargs): 
         self.prompt_length = prompt_length + self.diverse_addition_length
-        new_inputs = model.generate(
-            **inputs,
-            num_return_sequences=batch_size,
-            top_k=batch_size,
-            num_beams=self.num_beams,
-            num_beam_groups=self.num_beam_groups,
-            bad_words_ids=[[198, 628]],
-            max_new_tokens=self.diverse_addition_length,
-            diversity_penalty=self.diversity_penalty,
-        )
+        inputs.input_ids = inputs.input_ids[0, :].unsqueeze(0)
+        inputs.attention_mask = torch.ones_like(inputs.input_ids).to(self.device)
+        if self.diverse_type == 'beam': 
+            new_inputs = model.generate(
+                **inputs,
+                num_return_sequences=batch_size,
+                top_k=batch_size,
+                num_beams=self.num_beams,
+                num_beam_groups=self.num_beam_groups,
+                bad_words_ids=[[198, 628]],
+                max_new_tokens=self.diverse_addition_length,
+                diversity_penalty=self.diversity_penalty,
+            )
+        elif self.diverse_type == 'contrastive': 
+            new_inputs = model.generate(
+                **inputs, 
+                num_return_sequences=batch_size,
+                top_k=batch_size,
+
+            )
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
                          prompt_length=self.prompt_length, 
