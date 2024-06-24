@@ -1,7 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-# from eval import eval_loop
+from eval import eval_loop
 import argparse
 import yaml
 
@@ -32,7 +32,6 @@ if __name__ == "__main__":
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
-
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
@@ -49,5 +48,5 @@ if __name__ == "__main__":
         res = keywords_loop(total_conf)
 
     total_conf, generated_sentences = res 
-    # if args.eval_on_fin: 
-    #     eval_loop(total_conf, generated_sentences)
+    if args.eval_on_fin: 
+        eval_loop(total_conf, generated_sentences)

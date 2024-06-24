@@ -65,14 +65,15 @@ def keywords_loop(total_conf):
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
-        energy_fn = lambda x : energy_fn_wrapper(x, inputs)
-        cur_batch = sampler.initialize_batch(
+        inputs, cur_batch = sampler.initialize_batch(
             model=model,
             seq_length=total_conf["seq_len"] + inputs.input_ids.shape[1],
             batch_size=total_conf["batch_size"], 
             prompt_length=inputs.input_ids.shape[1], 
+            inputs=inputs,
             sentiment=None
         )
+        energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
         success_idx, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=False)
         for i in range(total_conf["num_steps"]):
