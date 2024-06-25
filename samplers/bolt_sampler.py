@@ -55,7 +55,7 @@ class BoltSampler(BaseSampler):
              **kwargs): 
         self.cur_optimizer.zero_grad()
         loss, output_ids, *otheroutputs = model.soft_forward(
-                    input_ids=inputs, 
+                    input=inputs, 
                     labels=inputs, 
                     use_full_prompt=False,
                     **kwargs
