@@ -69,24 +69,23 @@ class LangevinSampler(nn.Module):
         self.prompt_length = prompt_length + self.diverse_addition_length
         # inputs.input_ids = inputs.input_ids[0, :]
         # inputs.attention_mask = torch.ones_like(inputs.input_ids).to(self.device)
-        if self.diverse_type == 'beam': 
-            new_inputs = model.generate(
-                input_ids=inputs.input_ids[0, :].unsqueeze(0),
-                num_return_sequences=batch_size,
-                top_k=batch_size,
-                num_beams=self.num_beams,
-                num_beam_groups=self.num_beam_groups,
-                bad_words_ids=[[198], [628]],
-                max_new_tokens=self.diverse_addition_length,
-                diversity_penalty=self.diversity_penalty,
-            )
-        elif self.diverse_type == 'contrastive': 
-            new_inputs = model.generate(
-                **inputs, 
-                num_return_sequences=batch_size,
-                top_k=batch_size,
-
-            )
+        new_inputs = model.generate(
+            input_ids=inputs.input_ids[0, :].unsqueeze(0),
+            num_return_sequences=self.num_beam_groups,
+            top_k=batch_size,
+            num_beams=self.num_beams,
+            num_beam_groups=self.num_beam_groups,
+            bad_words_ids=[[198], [628]],
+            max_new_tokens=self.diverse_addition_length,
+            diversity_penalty=self.diversity_penalty,
+        )
+        new_inputs = new_inputs.to(self.device)
+        # running the discriminator to get the best sentences 
+        # disc_embeds = model.discriminator.get_input_embeddings()(new_inputs)
+        disc_logits = model.discriminator(new_inputs).logits
+        loss = disc_logits[:, 1] - disc_logits[:, 0]
+        best_idx = torch.topk(loss, batch_size).indices
+        new_inputs = new_inputs[best_idx]
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
                          prompt_length=self.prompt_length,
