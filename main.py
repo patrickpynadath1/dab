@@ -24,6 +24,8 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='sampler')
     dlp_sampler = subparsers.add_parser('dlp')
     bolt_sampler = subparsers.add_parser('bolt')
+    eval_only = subparsers.add_parser('eval_only')
+    
 
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
@@ -40,13 +42,18 @@ if __name__ == "__main__":
         args.__dict__.update(yaml.safe_load(open(f"{args.prev_run_dir}/conf.yaml", 'r')))
     
     total_conf = args.__dict__
-    if args.exp == "sentiment": 
-        res = sentiment_exp_loop(total_conf)
-    elif args.exp == "detoxify":
-        res = detoxify_loop(total_conf)
-    elif args.exp == "keywords":
-        res = keywords_loop(total_conf)
 
-    total_conf, generated_sentences = res 
-    if args.eval_on_fin: 
+    if args.sampler != "eval_only": 
+        if args.exp == "sentiment": 
+            res = sentiment_exp_loop(total_conf)
+        elif args.exp == "detoxify":
+            res = detoxify_loop(total_conf)
+        elif args.exp == "keywords":
+            res = keywords_loop(total_conf)
+
+        total_conf, generated_sentences = res 
+        if args.eval_on_fin: 
+            eval_loop(total_conf, generated_sentences)
+    else: 
+        generated_sentences = open(f"{args.prev_run_dir}/output.txt", "r").readlines()
         eval_loop(total_conf, generated_sentences)

@@ -11,8 +11,8 @@ class LangevinSampler(nn.Module):
                  device,
                  use_diverse_initialization=False,
                  diverse_type='beam',
-                 num_beams=200, 
-                 num_beam_groups=200,
+                 num_beams=20, 
+                 num_beam_groups=20,
                  diversity_penalty=.8, 
                  diverse_addition_length=3, 
                  **kwargs):
@@ -67,18 +67,19 @@ class LangevinSampler(nn.Module):
                          inputs,
                          **kwargs): 
         self.prompt_length = prompt_length + self.diverse_addition_length
-        inputs.input_ids = inputs.input_ids[0, :].unsqueeze(0)
-        inputs.attention_mask = torch.ones_like(inputs.input_ids).to(self.device)
+        # inputs.input_ids = inputs.input_ids[0, :]
+        # inputs.attention_mask = torch.ones_like(inputs.input_ids).to(self.device)
         if self.diverse_type == 'beam': 
             new_inputs = model.generate(
-                **inputs,
+                input_ids=inputs.input_ids[0, :].unsqueeze(0),
                 num_return_sequences=batch_size,
                 top_k=batch_size,
                 num_beams=self.num_beams,
                 num_beam_groups=self.num_beam_groups,
-                bad_words_ids=[[198, 628]],
+                bad_words_ids=[[198], [628]],
                 max_new_tokens=self.diverse_addition_length,
                 diversity_penalty=self.diversity_penalty,
+                return_dict_in_generate=True,
             )
         elif self.diverse_type == 'contrastive': 
             new_inputs = model.generate(
@@ -89,16 +90,14 @@ class LangevinSampler(nn.Module):
             )
         model.set_biases(batch_size=batch_size, 
                          seq_len=seq_length,
-                         prompt_length=self.prompt_length, 
+                         prompt_length=self.prompt_length,
                          attribute=sentiment,
                          device=self.device)
         initial_bias = torch.zeros(batch_size, 
                            seq_length - self.prompt_length, 
                            50257).to(self.device)
         self.embed_map = model.get_input_embeddings()
-        inputs.input_ids = new_inputs
-        inputs.attention_mask = torch.ones_like(new_inputs).to(self.device)
-        return inputs, initial_bias
+        return new_inputs, initial_bias
 
     def compute_p_lm(self, 
                      cur_bias, 
