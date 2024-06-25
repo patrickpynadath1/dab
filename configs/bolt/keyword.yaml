@@ -1,8 +1,11 @@
 optimizer: adam 
 optimizer_conf: 
-  lr: .04 
+  lr: .4 
   eps: 1e-8
   weight_decay: .01
+  lr_scheduler_type: linear 
+  num_warmup_steps: 5
+  max_train_steps: 50
 noise_conf: 
   mean: 0.01 
   std: 0.01 

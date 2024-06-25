@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--conf_file", type=str, default=None)
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
@@ -42,7 +43,8 @@ if __name__ == "__main__":
     initial_prev_run_dir = args.prev_run_dir
     if args.prev_run_dir != None: 
         args.__dict__.update(yaml.safe_load(open(f"{args.prev_run_dir}/conf.yaml", 'r')))
-    
+    if args.conf_file != None:
+        args.__dict__.update(yaml.safe_load(open(args.conf_file, 'r')))
     total_conf = args.__dict__
     if initial_mode != "eval_only": 
         if args.exp == "sentiment": 
