@@ -11,8 +11,8 @@ class LangevinSampler(nn.Module):
                  device,
                  use_diverse_initialization=False,
                  diverse_type='beam',
-                 num_beams=20, 
-                 num_beam_groups=20,
+                 num_beams=100, 
+                 num_beam_groups=100,
                  diversity_penalty=.8, 
                  diverse_addition_length=3, 
                  **kwargs):
@@ -79,7 +79,6 @@ class LangevinSampler(nn.Module):
                 bad_words_ids=[[198], [628]],
                 max_new_tokens=self.diverse_addition_length,
                 diversity_penalty=self.diversity_penalty,
-                return_dict_in_generate=True,
             )
         elif self.diverse_type == 'contrastive': 
             new_inputs = model.generate(
