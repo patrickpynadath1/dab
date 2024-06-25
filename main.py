@@ -55,7 +55,8 @@ if __name__ == "__main__":
         total_conf, generated_sentences = res 
         if args.eval_on_fin: 
             eval_loop(total_conf, generated_sentences)
-    else: 
+    else:
+        total_conf['prev_run_dir'] = initial_prev_run_dir
         generated_sentences = open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
         print("eval gen sentences")
         eval_loop(total_conf, generated_sentences)
