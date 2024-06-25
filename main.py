@@ -39,6 +39,7 @@ if __name__ == "__main__":
     conf_subparser(bolt_sampler, 'bolt')
     args = parser.parse_args()
     initial_mode = args.sampler
+    initial_prev_run_dir = args.prev_run_dir
     if args.prev_run_dir != None: 
         args.__dict__.update(yaml.safe_load(open(f"{args.prev_run_dir}/conf.yaml", 'r')))
     
@@ -55,6 +56,6 @@ if __name__ == "__main__":
         if args.eval_on_fin: 
             eval_loop(total_conf, generated_sentences)
     else: 
-        generated_sentences = open(f"{args.prev_run_dir}/output.txt", "r").readlines()
+        generated_sentences = open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
         print("eval gen sentences")
         eval_loop(total_conf, generated_sentences)
