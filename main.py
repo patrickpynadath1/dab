@@ -38,12 +38,12 @@ if __name__ == "__main__":
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
     args = parser.parse_args()
+    initial_mode = args.sampler
     if args.prev_run_dir != None: 
         args.__dict__.update(yaml.safe_load(open(f"{args.prev_run_dir}/conf.yaml", 'r')))
     
     total_conf = args.__dict__
-    print(args.sampler)
-    if args.sampler != "eval_only": 
+    if initial_mode != "eval_only": 
         if args.exp == "sentiment": 
             res = sentiment_exp_loop(total_conf)
         elif args.exp == "detoxify":
