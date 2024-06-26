@@ -32,6 +32,7 @@ def keywords_loop(total_conf):
 
     # initialize the directory for storing data
     save_dir = f"{total_conf['save_dir']}/keywords/{total_conf['sampler']}"
+    total_conf['prev_run_dir'] = save_dir
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
 
