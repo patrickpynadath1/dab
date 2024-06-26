@@ -146,9 +146,7 @@ class LangevinSampler(nn.Module):
     ### function for sampling POSITIONS along the sequence 
     def sample_position_kw(self, 
                            keyword_tokens,
-                           tokens,
-                           one_hot, 
-                           logits):
+                           tokens):
         # first, compute a distribution over the positions
         cur_embeds = self.embed_map(tokens)
         keyword_embeds = self.embed_map(keyword_tokens)
