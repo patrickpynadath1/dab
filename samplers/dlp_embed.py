@@ -142,3 +142,19 @@ class LangevinSampler(nn.Module):
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
         bias = self.compute_bias(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
+    
+    ### function for sampling POSITIONS along the sequence 
+    def sample_position_kw(self, 
+                           keyword_tokens,
+                           tokens,
+                           one_hot, 
+                           logits):
+        # first, compute a distribution over the positions
+        cur_embeds = self.embed_map(tokens)
+        keyword_embeds = self.embed_map(keyword_tokens)
+        # right now, doing dot product 
+        # can change later 
+        position_logits = torch.einsum('bse, e -> bs', [cur_embeds, keyword_embeds])
+        position_dist = torch.distributions.Categorical(logits=position_logits)
+        sampled_pos = position_dist.sample()
+        return sampled_pos
