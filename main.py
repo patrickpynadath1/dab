@@ -38,6 +38,8 @@ if __name__ == "__main__":
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
+    eval_only.add_argument('--start_idx', type=int, default=0)
+    eval_only.add_argument('--end_idx', type=int, default=-1)
     args = parser.parse_args()
     initial_mode = args.sampler
     initial_prev_run_dir = args.prev_run_dir
@@ -60,5 +62,5 @@ if __name__ == "__main__":
     else:
         total_conf['prev_run_dir'] = initial_prev_run_dir
         generated_sentences = open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
-        print("eval gen sentences")
-        eval_loop(total_conf, generated_sentences)
+        print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
+        eval_loop(total_conf, generated_sentences[total_conf['start_idx']:total_conf['end_idx']])

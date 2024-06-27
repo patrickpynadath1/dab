@@ -42,5 +42,5 @@ def eval_loop(total_conf, generated_sentences):
 
 
         cur_idx += batch_size
-    pickle.dump(metrics, open(f"{total_conf['prev_run_dir']}/eval_metrics.pkl", 'wb'))
+    pickle.dump(metrics, open(f"{total_conf['prev_run_dir']}/eval_metrics_{total_conf['start_idx']}_{total_conf['end_idx']}.pkl", 'wb'))
     return
