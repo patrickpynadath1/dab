@@ -2,3 +2,5 @@ weight_val: 1.0
 k_val: 100 
 proposal_temp: .1
 use_diverse_initialization: false
+filter_type: topp
+p_val: 0.9
