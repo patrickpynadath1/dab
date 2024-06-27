@@ -14,7 +14,8 @@ class LangevinSampler(nn.Module):
                  num_beams=100, 
                  num_beam_groups=100,
                  diversity_penalty=.8, 
-                 diverse_addition_length=3, 
+                 diverse_addition_length=3,
+                 is_kw=False, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -29,6 +30,7 @@ class LangevinSampler(nn.Module):
         self.num_beams = num_beams
         self.num_beam_groups = num_beam_groups
         self.diversity_penalty = diversity_penalty
+        self.is_kw=is_kw
     
     def initialize_batch(self,
                          model, 
@@ -120,6 +122,36 @@ class LangevinSampler(nn.Module):
                                 sampled_dist_ids]
         return loss, output_ids, actual_ids, senti_losses.detach().cpu().numpy()
     
+
+    def compute_p_lm_kw(self, 
+                        cur_bias, 
+                        energy_fn, 
+                        kw_tokens,
+                        cur_iter): 
+        ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
+        if cur_iter == 0: 
+            self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
+        kw_losses = self.keyword_loss(onehot, self.kw_target_idx, kw_tokens)
+        loss = kw_losses.sum()
+        gx = torch.autograd.grad(loss, onehot, allow_unused=True)
+        gx = gx[0].detach()[:, self.prompt_length:, :]
+        logits = logits[:, self.prompt_length:, :]
+        topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
+        gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
+                     torch.arange(gx.size(1))[None, :, None], 
+                     topk_ids]
+        # gx_topk = torch.gather(gx, -1, topk_ids)
+        token_dist = torch.ones_like(gx_topk).to(self.device) 
+        token_dist[:, :, 0] = 0
+        logits = gx_topk * token_dist
+        proposal_dist = torch.distributions.Categorical(logits = -1 * logits / self.temp)
+        sampled_dist_ids = proposal_dist.sample()
+        actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
+                              torch.arange(topk_ids.size(1))[None, :],
+                                sampled_dist_ids]
+        return loss, output_ids, actual_ids, kw_losses.detach().cpu().numpy()
+    
+
     def compute_bias(self, 
                      sampled_ids):
         with torch.no_grad():
@@ -134,14 +166,27 @@ class LangevinSampler(nn.Module):
         return bias 
 
 
+    def step(self, **kwargs): 
+        if self.is_kw: 
+            return self.step_hard(**kwargs)
+        else: 
+            return self.step_soft(**kwargs)
+
     # first, compute the autoregressive generation
     # this should give the one hot vector, the loss, and the gradient
     # use the gradient to compute the distribution over the top-k tokens 
-    def step(self, x, energy_fn, **kwargs):
+    def step_soft(self, x, energy_fn, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
         bias = self.compute_bias(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
+    
+    def step_hard(self, x, energy_fn, 
+                kw_tokens, cur_iter, **kwargs):
+        cur_bias = x
+        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens[0], cur_iter)
+        bias = self.compute_bias(sampled_ids)
+        return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
     def sample_position_kw(self, 
@@ -156,3 +201,9 @@ class LangevinSampler(nn.Module):
         position_dist = torch.distributions.Categorical(logits=position_logits)
         sampled_pos = position_dist.sample()
         return sampled_pos
+
+    def keyword_loss(self, onehot, target_kw_idx, kw_token): 
+        cur_embeds = torch.einsum('bv, ve -> be', [onehot[torch.arange(onehot.size(0)), target_kw_idx, :], 
+                                  self.embed_map.weight])
+        target_embeds = self.embed_map(kw_token)
+        return torch.norm(cur_embeds - target_embeds, dim=-1)

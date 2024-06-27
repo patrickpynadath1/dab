@@ -155,7 +155,9 @@ class GPTPromptTuningWithBiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         keywords=None,
-        biases=None, 
+        biases=None,
+        keywords_idx=None,
+        keywords_token=None,
         **kwargs
     ):
         
@@ -169,16 +171,15 @@ class GPTPromptTuningWithBiasesModelMixin:
                 output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
             else:
                 output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
-        keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
+        
 
+            
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
-        loss = 0.3 * keywords_loss + 1 * ppl_loss
-
-        print("keywords_loss:", keywords_loss)
+        loss = ppl_loss
         print("ppl_loss:", ppl_loss)
 
-        return loss, output_ids, onehot_generates, logits, keywords_loss
+        return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):
     def __init__(self, n_tokens: int = 20, random_range: float = 0.5, config = None):

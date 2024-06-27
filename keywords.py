@@ -15,6 +15,11 @@ from models import (
 )
 
 
+def keyword_loss(logits, target_kw_idx, kw_token): 
+    return - logits.softmax(dim=-1)[torch.arange(logits.size(0)), target_kw_idx, kw_token].sum()
+
+
+
 def keywords_loop(total_conf):
     ### LOADING CONFIGS
     ### LOADING MODELS
@@ -40,7 +45,7 @@ def keywords_loop(total_conf):
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
     elif total_conf['sampler'] == "dlp":
-        sampler = LangevinSampler(**total_conf)
+        sampler = LangevinSampler(**total_conf, is_kw=True)
 
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above
@@ -51,15 +56,15 @@ def keywords_loop(total_conf):
     keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
     keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-    
+    keywords_token_dlp = keywords_token[0]
     
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
-        loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
+        loss, output_ids, onehot_generates, gpt_logit = model.soft_forward(
             **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full, keywords=keywords_token
         )
-        return loss, output_ids, onehot_generates, gpt_logit, senti_losses
+        return loss, output_ids, onehot_generates, gpt_logit
     
 
     for prompt in prompts:
@@ -83,7 +88,8 @@ def keywords_loop(total_conf):
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                keywords=keywords_token
+                kw_tokens=keywords_token_dlp, 
+                cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             updating_best_keywords(cur_iter=i,
@@ -104,3 +110,6 @@ def keywords_loop(total_conf):
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
     return total_conf, total_sentences
+
+
+
