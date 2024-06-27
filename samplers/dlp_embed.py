@@ -137,6 +137,7 @@ class LangevinSampler(nn.Module):
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
+        topk_ids = torch.concat(kw_tokens.repeat(topk_ids.size(0), topk_ids.size(1), 1))
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
                      topk_ids]
