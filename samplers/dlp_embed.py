@@ -10,7 +10,8 @@ class LangevinSampler(nn.Module):
                  device,
                  filter_type,
                  p_val,
-                 k_val, 
+                 k_val,
+                 filter_logit,
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -21,6 +22,7 @@ class LangevinSampler(nn.Module):
         self.device = device
         self.filter_type = filter_type
         self.p_val = p_val
+        self.filter_logit= filter_logit
     
     def initialize_batch(self,
                          model, 
@@ -43,54 +45,71 @@ class LangevinSampler(nn.Module):
         return inputs, initial_bias
         
 
-    def get_top_k_logits(self, 
-                         loss, 
-                         onehot, 
-                         logits): 
+    def calc_grad(self, loss, onehot): 
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
+        return gx
+    
+    def get_unfiltered_dist(self, gx, cur_token_ids):
+        token_dist = torch.ones_like(gx).to(self.device)
+        token_dist[torch.arange(token_dist.size(0))[:, None, None],
+                    torch.arange(token_dist.size(1))[None, :, None], 
+                    cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = 0 
+        unfiltered_dist = - gx * token_dist
+        return unfiltered_dist
+
+
+    def get_top_k_dlp_dist(self, 
+                         loss, 
+                         onehot,
+                         cur_token_ids,
+                         logits): 
+        gx = self.calc_grad(loss, onehot)
         logits = logits[:, self.prompt_length:, :]
-        topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
-        gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
-                     torch.arange(gx.size(1))[None, :, None], 
-                     topk_ids]
-        token_dist = torch.ones_like(gx_topk).to(self.device) 
-        token_dist[:, :, 0] = 0
-        dist_logits = gx_topk * token_dist
-        return dist_logits, topk_ids
+        unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
+        if self.filter_logit == "gpt":
+            topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
+        else: 
+            topk_ids = torch.topk(unfiltered_dist, self.k_val, dim=-1).indices
+        filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
+                                                  torch.arange(unfiltered_dist.size(1))[None, :, None],
+                                                    topk_ids]
+        return filtered_dist_logits, topk_ids
     
 
     # first need to sort the logits 
     # then need to do torch cum sum in order to figure out where the p cut off is 
     # then need to take the top p logits, where the dimension is the largest out of all sequences 
     # 
-    def get_top_p_logits(self, 
+    def get_top_p_dlp_dist(self, 
                          loss,
                          onehot,
+                         cur_token_ids,
                          logits):
-        gx = torch.autograd.grad(loss, onehot, allow_unused=True)
-        gx = gx[0].detach()[:, self.prompt_length:, :]
-        logits = logits[:, self.prompt_length:, :].softmax(dim=-1)
-        sorted_logits, sorted_indices = torch.sort(logits, dim=-1, descending=True)
+        gx = self.calc_grad(loss, onehot)
+        logits = logits[:, self.prompt_length:, :]
+        unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
+        if self.filter_logit == "gpt":
+            logits_to_filter = logits.softmax(dim=-1)
+        else: 
+            logits_to_filter = unfiltered_dist.softmax(dim=-1)
+        
+        sorted_logits, sorted_indices = torch.sort(logits_to_filter, dim=-1, descending=True)
         cumsum_logits = torch.cumsum(sorted_logits, dim=-1)
         cumsum_cutoff_idx = ((cumsum_logits > self.p_val) * 1.0).argmax(dim=-1)
         cumsum_cutoff_idx = torch.where(cumsum_cutoff_idx == 0, cumsum_cutoff_idx, 1)
         max_cutoff_idx = cumsum_cutoff_idx.max()
+        topk_ids = sorted_indices[:, :, :max_cutoff_idx]
+        dist_logits_premask = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
+                                              torch.arange(unfiltered_dist.size(1))[None, :, None],
+                                              topk_ids]
 
-
-        # calculating the logits by the standard dlp method 
-        topk_ids = sorted_indices[:, :max_cutoff_idx]
-        gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
-                     torch.arange(gx.size(1))[None, :, None], 
-                     topk_ids]
-        token_dist = torch.ones_like(gx_topk).to(self.device) 
-        token_dist[:, :, 0] = 0
-        dist_logits_premask = gx_topk * token_dist
-
-        # now need to mask out the logits that are not in the top p
+        # now need to mask out the logits that are not in the top p by setting to -inf
         tmp_mask = dist_logits_premask / ((cumsum_logits < self.p_val)*1.0)[:, :, :max_cutoff_idx]
-        # this gets multipled by -1 later, so need to make it pos inf for right now 
-        masked_logits = torch.where(tmp_mask == float('-inf'), torch.tensor(float('inf'), dtype=tmp_mask.dtype), tmp_mask)
+        masked_logits = torch.where(tmp_mask == float('inf'), 
+                                    torch.tensor(float('-inf'), 
+                                                 dtype=tmp_mask.dtype), 
+                                    tmp_mask)
         # making sure at least one index is a scalar value, or else the torch.distributions.Categorical will throw an error
         masked_logits[:, :, 0] = dist_logits_premask[:, :, 0]
         return masked_logits, topk_ids
@@ -101,9 +120,9 @@ class LangevinSampler(nn.Module):
 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         if self.filter_type == "topk":
-            dist_logits, topk_ids = self.get_top_k_logits(loss, onehot, logits)
+            dist_logits, topk_ids = self.get_top_k_dlp_dist(loss, onehot, output_ids, logits)
         elif self.filter_type == "topp":
-            dist_logits, topk_ids = self.get_top_p_logits(loss, onehot, logits)
+            dist_logits, topk_ids = self.get_top_p_dlp_dist(loss, onehot, output_ids, logits)
         proposal_dist = torch.distributions.Categorical(logits = -1 * dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
