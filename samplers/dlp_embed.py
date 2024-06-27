@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.distributions as dists
 import numpy as np
-
+EPS = 1e-10
 class LangevinSampler(nn.Module):
     def __init__(self, 
                  weight_val, 
@@ -54,7 +54,7 @@ class LangevinSampler(nn.Module):
         token_dist = torch.ones_like(gx).to(self.device)
         token_dist[torch.arange(token_dist.size(0))[:, None, None],
                     torch.arange(token_dist.size(1))[None, :, None], 
-                    cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = 0 
+                    cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = EPS 
         unfiltered_dist = - gx * token_dist
         return unfiltered_dist
 
@@ -97,7 +97,7 @@ class LangevinSampler(nn.Module):
         sorted_logits, sorted_indices = torch.sort(logits_to_filter, dim=-1, descending=True)
         cumsum_logits = torch.cumsum(sorted_logits, dim=-1)
         cumsum_cutoff_idx = ((cumsum_logits > self.p_val) * 1.0).argmax(dim=-1)
-        cumsum_cutoff_idx = torch.where(cumsum_cutoff_idx == 0, cumsum_cutoff_idx, 1)
+        cumsum_cutoff_idx = torch.where(cumsum_cutoff_idx == 0, 1, cumsum_cutoff_idx)
         max_cutoff_idx = cumsum_cutoff_idx.max()
         topk_ids = sorted_indices[:, :, :max_cutoff_idx]
         dist_logits_premask = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
@@ -123,7 +123,7 @@ class LangevinSampler(nn.Module):
             dist_logits, topk_ids = self.get_top_k_dlp_dist(loss, onehot, output_ids, logits)
         elif self.filter_type == "topp":
             dist_logits, topk_ids = self.get_top_p_dlp_dist(loss, onehot, output_ids, logits)
-        proposal_dist = torch.distributions.Categorical(logits = -1 * dist_logits / self.temp)
+        proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
                               torch.arange(topk_ids.size(1))[None, :],
