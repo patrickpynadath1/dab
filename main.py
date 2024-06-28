@@ -38,8 +38,8 @@ if __name__ == "__main__":
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
-    eval_only.add_argument('--start_idx', type=int, default=0)
-    eval_only.add_argument('--end_idx', type=int, default=-1)
+    parser.add_argument('--start_idx', type=int, default=0)
+    parser.add_argument('--end_idx', type=int, default=-1)
     args = parser.parse_args()
     initial_mode = args.sampler
     initial_prev_run_dir = args.prev_run_dir
