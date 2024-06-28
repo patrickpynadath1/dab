@@ -63,7 +63,7 @@ def sentiment_exp_loop(total_conf):
         minimum_loss, stored_sentence = initialize_best_loss(total_conf["batch_size"])
         for i in range(total_conf["num_steps"]):
             cur_batch, loss, output_ids, otheroutputs = sampler.step(
-                x=cur_batch, model=model, energy_fn=energy_fn, inputs=inputs
+                x=cur_batch, model=model, energy_fn=energy_fn, inputs=inputs, iter=i
             )
             losses_to_eval = otheroutputs[-1]
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
