@@ -29,7 +29,7 @@ def load_cola_model(cola_model = "textattack/roberta-base-CoLA"):
 def load_external_sentiment(sentiment_model = "VictorSanh/roberta-base-finetuned-yelp-polarity", 
                             saved_model="checkpoints/RobertaExtClsf"):
     tokenizer = RobertaTokenizerFast.from_pretrained(sentiment_model, download=True)
-    model = RobertaForSequenceClassification.from_pretrained(saved_model)
+    model = RobertaForSequenceClassification.from_pretrained(sentiment_model)
     model.eval()
     return tokenizer, model
 
