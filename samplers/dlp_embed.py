@@ -12,6 +12,10 @@ class LangevinSampler(nn.Module):
                  p_val,
                  k_val,
                  filter_logit,
+                 initial_temp, 
+                 end_temp,
+                 use_temp_sched,
+                 num_steps=8,
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -23,6 +27,8 @@ class LangevinSampler(nn.Module):
         self.filter_type = filter_type
         self.p_val = p_val
         self.filter_logit= filter_logit
+        self.temp_sched = np.linspace(initial_temp, end_temp, num_steps)
+        self.use_temp_sched = use_temp_sched
     
     def initialize_batch(self,
                          model, 
@@ -116,14 +122,19 @@ class LangevinSampler(nn.Module):
 
     def compute_p_lm(self, 
                      cur_bias, 
-                     energy_fn): 
+                     energy_fn, 
+                     iter): 
 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         if self.filter_type == "topk":
             dist_logits, topk_ids = self.get_top_k_dlp_dist(loss, onehot, output_ids, logits)
         elif self.filter_type == "topp":
             dist_logits, topk_ids = self.get_top_p_dlp_dist(loss, onehot, output_ids, logits)
-        proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
+        if self.use_temp_sched:
+            temp = self.temp_sched[iter]
+        else: 
+            temp = self.temp
+        proposal_dist = torch.distributions.Categorical(logits =  dist_logits / temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
                               torch.arange(topk_ids.size(1))[None, :],
@@ -147,8 +158,8 @@ class LangevinSampler(nn.Module):
     # first, compute the autoregressive generation
     # this should give the one hot vector, the loss, and the gradient
     # use the gradient to compute the distribution over the top-k tokens 
-    def step(self, x, energy_fn, **kwargs):
+    def step(self, x, energy_fn, iter, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn, iter)
         bias = self.compute_bias(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
