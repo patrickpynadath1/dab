@@ -11,11 +11,11 @@ from nltk.translate.bleu_score import corpus_bleu, sentence_bleu
 from nltk import word_tokenize
 from typing import List
 from nltk.util import bigrams, trigrams, everygrams
-from evaluate import load
+# from evaluate import load
 from tqdm import tqdm 
 import json
 
-perplexity = load("perplexity", module_type="metric")
+# perplexity = load("perplexity", module_type="metric")
 
 
 def load_cola_model(cola_model = "textattack/roberta-base-CoLA"):
@@ -84,9 +84,9 @@ def get_unique_ngram(sentence_batch, n):
 
 
 def compute_perplexity(sentence_batch):
-    results = perplexity.compute(predictions=sentence_batch, model_id='gpt2-xl')
-    return results['perplexities']
-
+    # results = perplexity.compute(predictions=sentence_batch, model_id='gpt2-xl')
+    # return results['perplexities']
+    return []
 
 def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
     with torch.no_grad():
