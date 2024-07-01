@@ -130,7 +130,7 @@ class LangevinSampler(nn.Module):
                                   kw_token, 
                                   kw_top_k):
         kw_embeds = self.embed_map(kw_token)
-        kw_top_k = torch.topk(torch.einsum('ve, e -> v', [kw_embeds, self.embed_map.weight]), k=kw_top_k)
+        kw_top_k = torch.topk(torch.einsum('e, ve -> v', [kw_embeds, self.embed_map.weight]), k=kw_top_k)
         return kw_top_k.indices
 
     def compute_p_lm_kw(self, 
@@ -149,7 +149,7 @@ class LangevinSampler(nn.Module):
         topk_ids = torch.topk(logits, self.k_val // 2, dim=-1).indices
         # ideally, this should capture the kw tokens + those that are semantically similar 
         topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val // 2)
-        topk_ids = torch.concat(topk_kw_ids.repeat(topk_ids.size(0), topk_ids.size(1), 1))
+        topk_ids = torch.concat([topk_ids, topk_kw_ids.repeat(topk_ids.size(0), topk_ids.size(1), 1)], dim=-1)
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
                      topk_ids]
@@ -166,7 +166,7 @@ class LangevinSampler(nn.Module):
     
 
     def compute_bias(self, 
-                     sampled_ids):
+                     sampled_ids, kw_token=None):
         with torch.no_grad():
             # this is batch x seq_len x embed_dim
             cur_embeds = self.embed_map(sampled_ids)
@@ -176,7 +176,15 @@ class LangevinSampler(nn.Module):
             t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
             t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
-        return bias 
+        if kw_token is not None:
+            # want to force the bias to give even more weight to kw token
+            # when it occurs 
+            kw_additional_bias= torch.nn.functional.one_hot(sampled_ids, num_classes=50257).to(self.device)
+            kw_additional_bias[:, :, : kw_token] = 0
+            kw_additional_bias[:, :, kw_token + 1:] = 0
+            kw_additional_bias = kw_additional_bias * 2
+            bias = bias + kw_additional_bias
+        return bias * 2
 
 
     def step(self, **kwargs): 
@@ -197,8 +205,8 @@ class LangevinSampler(nn.Module):
     def step_hard(self, x, energy_fn, 
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens[0], cur_iter)
-        bias = self.compute_bias(sampled_ids)
+        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens, cur_iter)
+        bias = self.compute_bias(sampled_ids, kw_tokens)
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
@@ -217,6 +225,12 @@ class LangevinSampler(nn.Module):
 
     def keyword_loss(self, logits, target_kw_idx, kw_token): 
         kw_log_prob = logits[torch.arange(logits.size(0))[:, None, None],
-                             target_kw_idx[:, :, None],
-                                kw_token[None, None, :]]
-        return -1 * kw_log_prob
+                             target_kw_idx[None, :, None],
+                                kw_token]
+        not_kw_log_prob = logits[torch.arange(logits.size(0))[:, None, None],
+                             target_kw_idx[None, :, None],
+                                :kw_token].sum(dim=-1) 
+        not_kw_log_prob += logits[torch.arange(logits.size(0))[:, None, None],
+                             target_kw_idx[None, :, None],
+                                kw_token+1:].sum(dim=-1)
+        return -1 * (kw_log_prob - not_kw_log_prob)

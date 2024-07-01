@@ -88,7 +88,7 @@ def keywords_loop(total_conf):
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                kw_tokens=keywords_token_dlp, 
+                kw_tokens=keywords_token_dlp[0], 
                 cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
