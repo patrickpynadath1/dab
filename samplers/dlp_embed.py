@@ -123,6 +123,16 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, actual_ids, senti_losses.detach().cpu().numpy()
     
 
+    # idea: instead of just using top k on the gpt logit, do 
+    # top k on the embeddings closest to key word embedding 
+    # not sure how this would translate to a phrase, but lets just see if it works for now 
+    def compute_closest_embedding(self, 
+                                  kw_token, 
+                                  kw_top_k):
+        kw_embeds = self.embed_map(kw_token)
+        kw_top_k = torch.topk(torch.einsum('ve, e -> v', [kw_embeds, self.embed_map.weight]), k=kw_top_k)
+        return kw_top_k.indices
+
     def compute_p_lm_kw(self, 
                         cur_bias, 
                         energy_fn, 
@@ -131,13 +141,15 @@ class LangevinSampler(nn.Module):
         ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
         if cur_iter == 0: 
             self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
-        kw_losses = self.keyword_loss(onehot, self.kw_target_idx, kw_tokens)
+        kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
         loss = kw_losses.sum()
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]
-        topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
-        topk_ids = torch.concat(kw_tokens.repeat(topk_ids.size(0), topk_ids.size(1), 1))
+        topk_ids = torch.topk(logits, self.k_val // 2, dim=-1).indices
+        # ideally, this should capture the kw tokens + those that are semantically similar 
+        topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val // 2)
+        topk_ids = torch.concat(topk_kw_ids.repeat(topk_ids.size(0), topk_ids.size(1), 1))
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
                      topk_ids]
@@ -203,8 +215,8 @@ class LangevinSampler(nn.Module):
         sampled_pos = position_dist.sample()
         return sampled_pos
 
-    def keyword_loss(self, onehot, target_kw_idx, kw_token): 
-        cur_embeds = torch.einsum('bv, ve -> be', [onehot[torch.arange(onehot.size(0)), target_kw_idx, :], 
-                                  self.embed_map.weight])
-        target_embeds = self.embed_map(kw_token)
-        return torch.norm(cur_embeds - target_embeds, dim=-1)
+    def keyword_loss(self, logits, target_kw_idx, kw_token): 
+        kw_log_prob = logits[torch.arange(logits.size(0))[:, None, None],
+                             target_kw_idx[:, :, None],
+                                kw_token[None, None, :]]
+        return -1 * kw_log_prob

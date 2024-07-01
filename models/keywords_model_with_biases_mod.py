@@ -178,7 +178,8 @@ class GPTPromptTuningWithBiasesModelMixin:
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = ppl_loss
         print("ppl_loss:", ppl_loss)
-
+        # ste trick to make sure they have the same gradients 
+        logits = logits + onehot_generates - onehot_generates.detach()
         return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):
