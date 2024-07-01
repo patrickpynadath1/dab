@@ -129,7 +129,6 @@ class PerspectiveAPI:
                      pbar: tqdm = None):
         # Check for output file
         output_file = Path(output_file)
-        assert not output_file.exists()
 
         # Set up progress bar
         if not pbar:
