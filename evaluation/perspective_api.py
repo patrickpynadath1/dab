@@ -139,7 +139,7 @@ class PerspectiveAPI:
 
         i = 0
         num_failures = 0
-        with output_file.open('a') as f:
+        with output_file.open('w') as f:
             for batch in batchify(corpus, self.rate_limit):
                 request_ids = None
                 if isinstance(batch[0], tuple):
@@ -153,8 +153,7 @@ class PerspectiveAPI:
                     }
 
                     # Save response
-                    print(response_dict)
-                    json.dump(response_dict, f)
+                    f.write(json.dumps(response_dict))
                     f.write('\n')
 
                     if exception:
