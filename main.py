@@ -1,7 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-from eval import eval_loop, compute_toxicity_score
+from eval import eval_loop, compute_toxicity_score, clean_for_eval
 import argparse
 import yaml
 
@@ -60,9 +60,11 @@ if __name__ == "__main__":
         if args.eval_on_fin: 
             eval_loop(total_conf, generated_sentences)
     else:
+        gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
+        print(f"num of sentences {len(gen_sentences)}")
+        cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
-            compute_toxicity_score(open(f"{initial_prev_run_dir}/output.txt", "r").readlines(), initial_prev_run_dir)
+            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx)
         total_conf['prev_run_dir'] = initial_prev_run_dir
-        generated_sentences = open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
         print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
-        eval_loop(total_conf, generated_sentences[total_conf['start_idx']:total_conf['end_idx']])
+        eval_loop(total_conf, cur_batch)
