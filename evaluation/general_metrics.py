@@ -12,7 +12,8 @@ from nltk import word_tokenize
 from typing import List
 from nltk.util import bigrams, trigrams, everygrams
 from evaluate import load
-from tqdm import tqdm 
+from tqdm import tqdm
+from .perspective_api import PerspectiveAPI 
 import json
 
 perplexity = load("perplexity", module_type="metric")
