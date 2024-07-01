@@ -155,7 +155,8 @@ class PerspectiveAPI:
                     # Save response
                     f.write(json.dumps(response_dict))
                     f.write('\n')
-
+                    f.flush()
+                    os.fsync(f.fileno())
                     if exception:
                         print(exception)
                         num_failures += 1
