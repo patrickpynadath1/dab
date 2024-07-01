@@ -153,6 +153,7 @@ class PerspectiveAPI:
                     }
 
                     # Save response
+                    print(response_dict)
                     json.dump(response_dict, f)
                     f.write('\n')
 
