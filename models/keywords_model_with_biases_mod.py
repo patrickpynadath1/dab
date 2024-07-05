@@ -158,6 +158,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         biases=None,
         keywords_idx=None,
         keywords_token=None,
+        use_cnn_batchloss=True,
         **kwargs
     ):
         
@@ -180,6 +181,9 @@ class GPTPromptTuningWithBiasesModelMixin:
         print("ppl_loss:", ppl_loss)
         # ste trick to make sure they have the same gradients 
         logits = logits + onehot_generates - onehot_generates.detach()
+        if use_cnn_batchloss:
+            keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
+            loss = .3 * ppl_loss + keywords_loss
         return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):

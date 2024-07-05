@@ -15,7 +15,8 @@ class LangevinSampler(nn.Module):
                  num_beam_groups=100,
                  diversity_penalty=.8, 
                  diverse_addition_length=3,
-                 is_kw=False, 
+                 is_kw=False,
+                 use_cnn_batchloss=True, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -31,6 +32,7 @@ class LangevinSampler(nn.Module):
         self.num_beam_groups = num_beam_groups
         self.diversity_penalty = diversity_penalty
         self.is_kw=is_kw
+        self.use_cnn_batchloss = use_cnn_batchloss
     
     def initialize_batch(self,
                          model, 
@@ -141,8 +143,9 @@ class LangevinSampler(nn.Module):
         ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
         if cur_iter == 0: 
             self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
-        kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
-        loss = kw_losses.sum()
+        if not self.use_cnn_batchloss:
+            kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
+            loss = kw_losses.sum()
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]

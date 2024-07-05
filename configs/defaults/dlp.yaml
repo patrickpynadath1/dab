@@ -2,3 +2,4 @@ weight_val: 1.0
 k_val: 100 
 proposal_temp: .1
 use_diverse_initialization: false
+use_cnn_batchloss: true
