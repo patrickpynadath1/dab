@@ -85,6 +85,6 @@ def detoxify_loop(total_conf):
         del cur_batch
         del output_ids
         total_sentences.extend(stored_sentence)
-        output_file.write("\n".join(stored_sentence) + "\n\n")
+        output_file.write("\n".join(stored_sentence))
         output_file.flush()
     return total_conf, total_sentences

@@ -25,6 +25,7 @@ if __name__ == "__main__":
     dlp_sampler = subparsers.add_parser('dlp')
     bolt_sampler = subparsers.add_parser('bolt')
     eval_only = subparsers.add_parser('eval_only')
+    api_eval = subparsers.add_parser('api_eval')
     
 
     # general arguments 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     if args.conf_file != None:
         args.__dict__.update(yaml.safe_load(open(args.conf_file, 'r')))
     total_conf = args.__dict__
-    if initial_mode != "eval_only": 
+    if initial_mode == "bolt" or initial_mode == "dlp": 
         if args.exp == "sentiment": 
             res = sentiment_exp_loop(total_conf)
         elif args.exp == "detoxify":
@@ -59,12 +60,16 @@ if __name__ == "__main__":
         total_conf, generated_sentences = res 
         if args.eval_on_fin: 
             eval_loop(total_conf, generated_sentences)
-    else:
+    elif initial_mode == "eval_only":
+        gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
+        print(f"num of sentences {len(gen_sentences)}")
+        cur_batch = gen_sentences[args.start_idx:args.end_idx]
+        total_conf['prev_run_dir'] = initial_prev_run_dir
+        print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
+        eval_loop(total_conf, cur_batch)
+    elif initial_mode == "api_eval": 
         gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
             compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx)
-        total_conf['prev_run_dir'] = initial_prev_run_dir
-        print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
-        eval_loop(total_conf, cur_batch)
