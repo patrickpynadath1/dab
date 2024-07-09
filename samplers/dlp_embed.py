@@ -146,6 +146,9 @@ class LangevinSampler(nn.Module):
         if not self.use_cnn_batchloss:
             kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
             loss = kw_losses.sum()
+        else: 
+            loss = ppl_loss
+            kw_losses = torch.zeros_like(logits)
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]
@@ -179,14 +182,6 @@ class LangevinSampler(nn.Module):
             t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
             t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
-        if kw_token is not None:
-            # want to force the bias to give even more weight to kw token
-            # when it occurs 
-            kw_additional_bias= torch.nn.functional.one_hot(sampled_ids, num_classes=50257).to(self.device)
-            kw_additional_bias[:, :, : kw_token] = 0
-            kw_additional_bias[:, :, kw_token + 1:] = 0
-            kw_additional_bias = kw_additional_bias * 2
-            bias = bias + kw_additional_bias
         return bias * 2
 
 
