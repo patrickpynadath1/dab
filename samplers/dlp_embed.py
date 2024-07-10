@@ -152,9 +152,9 @@ class LangevinSampler(nn.Module):
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]
-        topk_ids = torch.topk(logits, self.k_val // 2, dim=-1).indices
+        topk_ids = torch.topk(logits, self.k_val, -1).indices
         # ideally, this should capture the kw tokens + those that are semantically similar 
-        topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val // 2)
+        topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val)
         topk_ids = torch.concat([topk_ids, topk_kw_ids.repeat(topk_ids.size(0), topk_ids.size(1), 1)], dim=-1)
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
@@ -182,7 +182,7 @@ class LangevinSampler(nn.Module):
             t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
             t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
-        return bias * 2
+        return bias
 
 
     def step(self, **kwargs): 
