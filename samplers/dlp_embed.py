@@ -16,7 +16,7 @@ class LangevinSampler(nn.Module):
                  diversity_penalty=.8, 
                  diverse_addition_length=3,
                  is_kw=False,
-                 use_cnn_batchloss=True, 
+                 use_cnn_batchloss=False, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -225,10 +225,4 @@ class LangevinSampler(nn.Module):
         kw_log_prob = logits[torch.arange(logits.size(0))[:, None, None],
                              target_kw_idx[None, :, None],
                                 kw_token]
-        not_kw_log_prob = logits[torch.arange(logits.size(0))[:, None, None],
-                             target_kw_idx[None, :, None],
-                                :kw_token].sum(dim=-1) 
-        not_kw_log_prob += logits[torch.arange(logits.size(0))[:, None, None],
-                             target_kw_idx[None, :, None],
-                                kw_token+1:].sum(dim=-1)
-        return -1 * (kw_log_prob - not_kw_log_prob)
+        return -1 * (kw_log_prob)
