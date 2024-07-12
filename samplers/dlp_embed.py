@@ -33,6 +33,8 @@ class LangevinSampler(nn.Module):
         self.diversity_penalty = diversity_penalty
         self.is_kw=is_kw
         self.use_cnn_batchloss = use_cnn_batchloss
+        self.sampled_tokens = []
+        self.max_unnorm = []
     
     def initialize_batch(self,
                          model, 
@@ -152,6 +154,7 @@ class LangevinSampler(nn.Module):
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         logits = logits[:, self.prompt_length:, :]
+        self.max_unnorm.append(logits.max(dim=-1).values.detach().cpu().numpy())
         topk_ids = torch.topk(logits, self.k_val, -1).indices
         # ideally, this should capture the kw tokens + those that are semantically similar 
         topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val)
@@ -200,11 +203,17 @@ class LangevinSampler(nn.Module):
         bias = self.compute_bias(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
+    # using the previous logits from gpt, 
+    # reweights the bias term for the sampled position 
+    def modulate_bias(self, bias, logits):
+        return bias
+    
     def step_hard(self, x, energy_fn, 
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens, cur_iter)
         bias = self.compute_bias(sampled_ids, kw_tokens)
+        self.sampled_tokens.append(sampled_ids)
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
@@ -226,3 +235,7 @@ class LangevinSampler(nn.Module):
                              target_kw_idx[None, :, None],
                                 kw_token]
         return -1 * (kw_log_prob)
+    
+    def get_metrics_to_store(self): 
+        return {'bias_tokens': self.sampled_tokens, 
+                'max_unnorm': self.max_unnorm}
