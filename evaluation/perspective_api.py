@@ -88,7 +88,7 @@ def unpack_scores(response_json: dict) -> Optional[Tuple[dict, dict]]:
 
 
 class PerspectiveAPI:
-    def __init__(self, api_key: str = PERSPECTIVE_API_KEY, rate_limit: int = 200):
+    def __init__(self, api_key: str = PERSPECTIVE_API_KEY, rate_limit: int = 5000):
         self.service = self._make_service(api_key)
         self.last_request_time = -1  # satisfies initial condition
         self.rate_limit = rate_limit
@@ -101,7 +101,7 @@ class PerspectiveAPI:
         # Rate limit to 1 batch request per second
         assert len(texts) <= self.rate_limit
         time_since_last_request = time.time() - self.last_request_time
-        time.sleep(max(0, 15-time_since_last_request))
+        time.sleep(30)
         # if time_since_last_request < 1:
             # print(time_since_last_request)
             # time.sleep(2.0 - time_since_last_request)
