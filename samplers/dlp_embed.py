@@ -15,7 +15,8 @@ class LangevinSampler(nn.Module):
                  diversity_penalty=.8, 
                  diverse_addition_length=3,
                  is_kw=False,
-                 use_cnn_batchloss=False, 
+                 use_cnn_batchloss=False,
+                 k_val=250, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
