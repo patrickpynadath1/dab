@@ -160,9 +160,9 @@ class LangevinSampler(nn.Module):
                         kw_tokens,
                         cur_iter): 
         ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
-        if cur_iter == 0: 
-            self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
         if not self.use_cnn_batchloss:
+            if cur_iter == 0: 
+                self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
             kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
             loss = kw_losses.sum()
         else: 
