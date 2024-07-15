@@ -72,7 +72,7 @@ class BoltSampler(BaseSampler):
         ]
         cur_max_vals = []
         for i in range(len(model.biases)):
-            cur_max_vals.append(torch.max(torch.abs(model.biases[i]), dim=-1).values)
+            cur_max_vals.append(torch.max(model.biases[i], dim=-1).values.detach().cpu())
             model.biases[i].data = model.biases[i].data + noise[i]
         self.bias_max_val.append(cur_max_vals)
         return x, loss, output_ids, otheroutputs
