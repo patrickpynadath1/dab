@@ -83,7 +83,7 @@ def keywords_loop(total_conf):
             prompt_length=inputs.input_ids.shape[1], 
             inputs=inputs,
             sentiment=None,
-            keywords=keywords_token
+            keyword_tokens=keywords_token
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
