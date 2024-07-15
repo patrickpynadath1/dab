@@ -16,7 +16,8 @@ class LangevinSampler(nn.Module):
                  diverse_addition_length=3,
                  is_kw=False,
                  use_cnn_batchloss=False,
-                 k_val=250, 
+                 k_val=250,
+                 bias_compute_method="penalty",
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -32,6 +33,7 @@ class LangevinSampler(nn.Module):
         self.diversity_penalty = diversity_penalty
         self.is_kw=is_kw
         self.use_cnn_batchloss = use_cnn_batchloss
+        self.bias_compute_method = bias_compute_method
         self.sampled_tokens = []
         self.max_unnorm = []
     
@@ -190,7 +192,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, actual_ids, kw_losses.detach().cpu().numpy()
     
 
-    def compute_bias(self, 
+    def compute_bias_penalty(self, 
                      sampled_ids, kw_token=None):
         with torch.no_grad():
             # this is batch x seq_len x embed_dim
@@ -202,6 +204,20 @@ class LangevinSampler(nn.Module):
             t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
         return bias
+    
+    def compute_bias_reward(self, 
+                            sampled_ids, 
+                            kw_token):
+        with torch.no_grad():
+            cur_embeds = self.embed_map(sampled_ids)
+
+            # compute ||embed - sampled_embed||^2 using foil 
+            t1 = torch.einsum('ve -> v', [self.embed_map.weight ** 2])[None, None, :]
+            t2 = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
+            t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
+            l2_dist = (t1 - 2 * t2 + t3)
+            bias = 1 / (l2_dist + EPS)
+        return bias 
 
 
     def step(self, **kwargs): 
@@ -216,7 +232,7 @@ class LangevinSampler(nn.Module):
     def step_soft(self, x, energy_fn, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
-        bias = self.compute_bias(sampled_ids)
+        bias = self.compute_bias_penalty(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
     # using the previous logits from gpt, 
@@ -228,7 +244,10 @@ class LangevinSampler(nn.Module):
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens, cur_iter)
-        bias = self.compute_bias(sampled_ids, kw_tokens)
+        if self.bias_compute_method == 'penalty':
+            bias = self.compute_bias_penalty(sampled_ids, kw_tokens)
+        else: 
+            bias = self.compute_bias_reward(sampled_ids, kw_tokens)
         self.sampled_tokens.append(sampled_ids)
         return bias, loss, output_ids, [kw_losses]
     
