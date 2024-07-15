@@ -107,6 +107,7 @@ def keywords_loop(total_conf):
             if all([idx != -1 for idx in success_idx]):
                 print("success")
                 break
+        print(sentences)
 
         ### Freeing CUDA space
         del inputs 

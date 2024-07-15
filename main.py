@@ -1,7 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-from eval import eval_loop, compute_toxicity_score, clean_for_eval
+from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
 
@@ -73,4 +73,4 @@ if __name__ == "__main__":
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
-            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
+            compute_perspective_scores(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
