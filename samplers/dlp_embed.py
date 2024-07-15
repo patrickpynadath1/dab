@@ -42,6 +42,7 @@ class LangevinSampler(nn.Module):
                          seq_length,
                          prompt_length,
                          inputs,
+                         keyword_tokens,
                          **kwargs):
         self.prompt_length = prompt_length
         model.set_biases(batch_size=batch_size, 
@@ -52,6 +53,7 @@ class LangevinSampler(nn.Module):
         initial_bias = torch.zeros(batch_size, 
                         seq_length - prompt_length, 
                         50257).to(self.device)
+        self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
         self.embed_map = model.get_input_embeddings()
         return inputs, initial_bias
         
@@ -172,8 +174,7 @@ class LangevinSampler(nn.Module):
         self.max_unnorm.append(logits.max(dim=-1).values.detach().cpu().numpy())
         topk_ids = torch.topk(logits, self.k_val, -1).indices
         # ideally, this should capture the kw tokens + those that are semantically similar 
-        topk_kw_ids = self.compute_closest_embedding(kw_tokens, self.k_val)
-        topk_ids = torch.concat([topk_ids, topk_kw_ids.repeat(topk_ids.size(0), topk_ids.size(1), 1)], dim=-1)
+        topk_ids = torch.concat([topk_ids, self.keyword_tokens], dim=-1)
         gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
                      torch.arange(gx.size(1))[None, :, None], 
                      topk_ids]

@@ -57,8 +57,7 @@ def keywords_loop(total_conf):
     keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
     keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-    keywords_token_dlp = keywords_token[0]
-    
+     
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
@@ -83,7 +82,8 @@ def keywords_loop(total_conf):
             batch_size=total_conf["batch_size"], 
             prompt_length=inputs.input_ids.shape[1], 
             inputs=inputs,
-            sentiment=None
+            sentiment=None,
+            keywords=keywords_token
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
@@ -94,7 +94,7 @@ def keywords_loop(total_conf):
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                kw_tokens=keywords_token_dlp[0], 
+                kw_tokens=keywords_token, 
                 cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
