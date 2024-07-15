@@ -88,7 +88,7 @@ def unpack_scores(response_json: dict) -> Optional[Tuple[dict, dict]]:
 
 
 class PerspectiveAPI:
-    def __init__(self, api_key: str = PERSPECTIVE_API_KEY, rate_limit: int = 100):
+    def __init__(self, api_key: str = PERSPECTIVE_API_KEY, rate_limit: int = 60):
         self.service = self._make_service(api_key)
         self.last_request_time = -1  # satisfies initial condition
         self.rate_limit = rate_limit

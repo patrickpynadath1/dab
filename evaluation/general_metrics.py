@@ -100,8 +100,9 @@ def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
 
 def compute_toxicity_score(sentences, 
                             save_dir,
-                           start_idx):
-    api = PerspectiveAPI()
+                           start_idx, 
+                           rate_limit):
+    api = PerspectiveAPI(rate_limit=rate_limit)
     print(len(sentences))
     api.request_bulk(sentences, output_file=f"{save_dir}/toxicity_scores_{start_idx}.json")
     return

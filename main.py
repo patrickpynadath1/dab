@@ -36,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--conf_file", type=str, default=None)
+    api_eval.add_argument("--rate_limit", type=int, default=60)
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
@@ -72,4 +73,4 @@ if __name__ == "__main__":
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
-            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx)
+            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
