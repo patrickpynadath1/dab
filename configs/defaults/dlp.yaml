@@ -8,6 +8,6 @@ p_val: 0.9
 filter_logit: dist
 bias_compute_method: penalty
 weight_strat: learn
-min_weight: 1
-max_weight: 1
+min_weight: 1.0
+max_weight: 1.0
 weight_lr: 1e-3
