@@ -83,7 +83,7 @@ class LangevinSampler(nn.Module):
         elif self.weight_strat == 'bolt':
             self.weights = self.calc_bolt_weights(seq_length - prompt_length)
         elif self.weight_strat == 'learn': 
-            self.weights = torch.ones_like(initial_bias).to(self.device)
+            self.weights = torch.ones((initial_bias.size(0), initial_bias.size(1))).to(self.device)
             self.weight_optim = torch.optim.Adam([self.weights], lr=self.weight_lr)         
         return inputs, initial_bias
         
@@ -301,7 +301,7 @@ class LangevinSampler(nn.Module):
         if self.weight_strat == 'learn':
             self.step_weights(cur_bias, energy_fn)
         self.sampled_tokens.append(sampled_ids)
-        bias = bias * self.weights.unsqueeze(-1)
+        bias = bias * self.weights.unsqueeze(dim=-1)
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
