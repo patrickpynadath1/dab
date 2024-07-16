@@ -187,7 +187,7 @@ class LangevinSampler(nn.Module):
     def step_weights(self, 
                      cur_bias,
                      energy_fn):
-        torch.zero_grad()
+        self.weight_optim.zero_grad() 
         cur_bias = cur_bias * self.weights  
         ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
         ppl_loss.backward()
