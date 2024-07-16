@@ -192,7 +192,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, actual_ids, kw_losses.detach().cpu().numpy()
     
 
-    def compute_bias_penalty(self, 
+    def compute_bias_l2_pen(self, 
                      sampled_ids, kw_token=None):
         with torch.no_grad():
             # this is batch x seq_len x embed_dim
@@ -205,7 +205,7 @@ class LangevinSampler(nn.Module):
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
         return bias
     
-    def compute_bias_reward(self, 
+    def compute_bias_l2_inv(self, 
                             sampled_ids, 
                             kw_token):
         with torch.no_grad():
@@ -217,7 +217,16 @@ class LangevinSampler(nn.Module):
             t3 = torch.einsum('bse -> bs', [cur_embeds ** 2]).unsqueeze(-1)
             l2_dist = (t1 - 2 * t2 + t3)
             bias = 1 / (l2_dist + EPS)
-        return bias 
+        return bias
+    
+    def compute_bias_dot_exp(self, 
+                             sampled_ids,
+                             kw_token): 
+        with torch.no_grad(): 
+            cur_embeds = self.embed_map(sampled_ids)
+            dots = torch.einsum('bse, ve -> bsv', [cur_embeds, self.embed_map.weight])
+            bias = torch.exp(dots)
+        return bias
 
 
     def step(self, **kwargs): 
@@ -232,7 +241,7 @@ class LangevinSampler(nn.Module):
     def step_soft(self, x, energy_fn, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
-        bias = self.compute_bias_penalty(sampled_ids)
+        bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
     # using the previous logits from gpt, 
@@ -244,10 +253,12 @@ class LangevinSampler(nn.Module):
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens, cur_iter)
-        if self.bias_compute_method == 'penalty':
-            bias = self.compute_bias_penalty(sampled_ids, kw_tokens)
+        if self.bias_compute_method == 'l2_pen':
+            bias = self.compute_bias_l2_pen(sampled_ids, kw_tokens)
+        elif self.bias_compute_method == 'l2_inv': 
+            bias = self.compute_bias_l2_inv(sampled_ids, kw_tokens)
         else: 
-            bias = self.compute_bias_reward(sampled_ids, kw_tokens)
+            bias = self.compute_bias_dot_exp(sampled_ids, kw_tokens)
         self.sampled_tokens.append(sampled_ids)
         return bias, loss, output_ids, [kw_losses]
     
