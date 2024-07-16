@@ -7,3 +7,4 @@ filter_type: topk
 p_val: 0.9
 filter_logit: dist
 bias_compute_method: penalty
+weight_strat: learn
