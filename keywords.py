@@ -95,6 +95,7 @@ def keywords_loop(total_conf):
                 energy_fn=energy_fn, 
                 inputs=inputs, 
                 kw_tokens=keywords_token, 
+                keywords=keywords_token,
                 cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
