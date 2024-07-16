@@ -301,7 +301,10 @@ class LangevinSampler(nn.Module):
         if self.weight_strat == 'learn':
             self.step_weights(cur_bias, energy_fn)
         self.sampled_tokens.append(sampled_ids)
-        bias = bias * self.weights.unsqueeze(dim=-1)
+        if self.weight_strat == 'learn':
+            bias = bias * self.weights.unsqueeze(dim=-1)
+        else: 
+            bias = bias * self.weights.unsqueeze(0).unsqueeze(-1)
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
