@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.distributions as dists
 import numpy as np
+
 EPS = 1e-10
 class LangevinSampler(nn.Module):
     def __init__(self, 
@@ -18,6 +19,10 @@ class LangevinSampler(nn.Module):
                  use_cnn_batchloss=False,
                  k_val=250,
                  bias_compute_method="penalty",
+                 weight_strat='uniform',
+                 min_weight=1,
+                 max_weight=1,
+                 weight_lr=1e-3,
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -36,7 +41,21 @@ class LangevinSampler(nn.Module):
         self.bias_compute_method = bias_compute_method
         self.sampled_tokens = []
         self.max_unnorm = []
-    
+        self.max_weight = max_weight
+        self.min_weight = min_weight 
+        self.weight_lr = weight_lr
+        self.weight_strat = weight_strat
+
+    def calc_linear_weights(self, 
+                            num_gen_tokens):
+        return torch.Tensor(np.linspace(self.min_weight, self.max_weight, num_gen_tokens)).to(self.device)
+
+    def calc_bolt_weights(self, 
+                          num_tokens):
+        t = torch.linspace(1, num_tokens+1, num_tokens).to(self.device)
+        return self.weight_val * (1 - t / (num_tokens+1))
+
+
     def initialize_batch(self,
                          model, 
                          sentiment,
@@ -57,6 +76,15 @@ class LangevinSampler(nn.Module):
                         50257).to(self.device)
         self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
         self.embed_map = model.get_input_embeddings()
+        if self.weight_strat == 'uniform':
+            self.weights = self.weight_val 
+        elif self.weight_strat == 'linear':
+            self.weights = self.calc_linear_weights(seq_length - prompt_length)
+        elif self.weight_strat == 'bolt':
+            self.weights = self.calc_bolt_weights(seq_length - prompt_length)
+        elif self.weight_strat == 'learn': 
+            self.weights = torch.ones_like(initial_bias).to(self.device)
+            self.weight_optim = torch.optim.Adam([self.weights], lr=self.weight_lr)         
         return inputs, initial_bias
         
 
@@ -155,6 +183,17 @@ class LangevinSampler(nn.Module):
         kw_embeds = self.embed_map(kw_token)
         kw_top_k = torch.topk(torch.einsum('e, ve -> v', [kw_embeds, self.embed_map.weight]), k=kw_top_k)
         return kw_top_k.indices
+
+    def step_weights(self, 
+                     cur_bias,
+                     energy_fn):
+        torch.zero_grad()
+        cur_bias = cur_bias * self.weights  
+        ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
+        ppl_loss.backward()
+        self.weight_optim.step()
+        return
+
 
     def compute_p_lm_kw(self, 
                         cur_bias, 
@@ -259,7 +298,10 @@ class LangevinSampler(nn.Module):
             bias = self.compute_bias_l2_inv(sampled_ids, kw_tokens)
         else: 
             bias = self.compute_bias_dot_exp(sampled_ids, kw_tokens)
+        if self.weight_strat == 'learn':
+            self.step_weights(cur_bias, energy_fn)
         self.sampled_tokens.append(sampled_ids)
+        bias = bias * self.weights.unsqueeze(0).unsqueeze(-1)
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
