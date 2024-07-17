@@ -25,6 +25,7 @@ def keyword_loss(logits, target_kw_idx, kw_token):
 def commongen_loop(total_conf):
     ### LOADING CONFIGS
     ### LOADING MODELS
+    total_conf['base_model_args']['pretrained_model_name_or_path'] = "mrm8488/GPT-2-finetuned-common_gen"
     model = load_base_model(total_conf['sampler'], 
                             use_senti=False, 
                             **total_conf["base_model_args"]).to(total_conf["device"])
