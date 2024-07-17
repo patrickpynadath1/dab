@@ -77,6 +77,7 @@ def commongen_loop(total_conf):
     for concept_idx, concept in concept_sets.iterrows():
         keywords_list = concept["concept_set"].split("#")
         keywords_string = " ".join(keywords_list)
+        print(keywords_string)
         keywords_token = tokenizer([keywords_string]*total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
         prompt = keywords_string + " = "
         prefixs = [prompt] * total_conf["batch_size"]
@@ -104,7 +105,7 @@ def commongen_loop(total_conf):
                 keywords=keywords_token,
                 cur_iter=i
             )
-            sentences = tokenizer.batch_decode(output_ids[:, inputs.input_ids.size(1):], skip_special_tokens=True)
+            sentences = tokenizer.batch_decode(output_ids[:, inputs.size(1)], skip_special_tokens=True)
             updating_best_keywords(cur_iter=i,
                                    batch_size=total_conf["batch_size"],
                                    sentences=sentences,
