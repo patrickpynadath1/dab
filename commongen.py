@@ -74,7 +74,7 @@ def commongen_loop(total_conf):
         return loss, output_ids, onehot_generates, gpt_logit
     
 
-    for concept in concept_sets.itterrows():
+    for concept in concept_sets.iterrows():
         keywords_list = concept["concept_set"].split("#")
         keywords_token = tokenizer(keywords_list, return_tensors="pt")['input_ids'].to(total_conf['device'])
         prompt = keywords_list.join(" ") + " = "
