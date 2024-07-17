@@ -104,7 +104,7 @@ def commongen_loop(total_conf):
                 keywords=keywords_token,
                 cur_iter=i
             )
-            sentences = tokenizer.batch_decode(output_ids[:, inputs.size(1):], skip_special_tokens=True)
+            sentences = tokenizer.batch_decode(output_ids[:, inputs.input_ids.size(1):], skip_special_tokens=True)
             updating_best_keywords(cur_iter=i,
                                    batch_size=total_conf["batch_size"],
                                    sentences=sentences,
