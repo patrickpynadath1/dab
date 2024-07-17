@@ -1,6 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
+from commongen import commongen_loop
 # from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
     parser.add_argument("--save_dir", type=str, default="results")
-    parser.add_argument("--exp", type=str, choices=['sentiment', 'detoxify', 'keywords'], required=True)
+    parser.add_argument("--exp", type=str, choices=['sentiment', 'detoxify', 'keywords', 'commongen'], required=True)
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
@@ -57,6 +58,8 @@ if __name__ == "__main__":
             res = detoxify_loop(total_conf)
         elif args.exp == "keywords":
             res = keywords_loop(total_conf)
+        elif args.exp == "commongen": 
+            res = commongen_loop(total_conf)
 
         total_conf, generated_sentences = res 
     #     if args.eval_on_fin: 

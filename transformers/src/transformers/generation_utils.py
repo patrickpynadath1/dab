@@ -2970,6 +2970,7 @@ class GenerationMixin:
         reverse=False,
         seq_len=50,
         is_dlp = False,
+        labels=None, 
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
         r"""
