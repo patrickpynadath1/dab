@@ -54,7 +54,7 @@ def commongen_loop(total_conf):
     total_sentences = []
 
     concept_sets = pd.read_json(total_conf["commongen_file"], lines=True)
-
+    print(concept_sets)
     output_file = open(f"{save_dir}/output.txt", "w")
     # keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     # keywords_string = " ".join(keywords_list)
@@ -74,7 +74,7 @@ def commongen_loop(total_conf):
         return loss, output_ids, onehot_generates, gpt_logit
     
 
-    for concept in concept_sets:
+    for concept in concept_sets.itterrows():
         keywords_list = concept["concept_set"].split("#")
         keywords_token = tokenizer(keywords_list, return_tensors="pt")['input_ids'].to(total_conf['device'])
         prompt = keywords_list.join(" ") + " = "
