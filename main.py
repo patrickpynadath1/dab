@@ -26,7 +26,7 @@ if __name__ == "__main__":
     bolt_sampler = subparsers.add_parser('bolt')
     eval_only = subparsers.add_parser('eval_only')
     api_eval = subparsers.add_parser('api_eval')
-    
+    api_eval.add_argument("--rate_limit", type=int, default=60)    
 
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
@@ -72,4 +72,4 @@ if __name__ == "__main__":
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
-            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx)
+            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
