@@ -42,6 +42,7 @@ class LangevinSampler(nn.Module):
                         seq_length - prompt_length, 
                         50257).to(self.device)
         self.embed_map = model.get_input_embeddings()
+        self.stored_biases = []
         return inputs, initial_bias
         
 
@@ -151,4 +152,8 @@ class LangevinSampler(nn.Module):
         cur_bias = x
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
         bias = self.compute_bias(sampled_ids)
+        self.stored_biases.append(bias.detach().cpu().numpy())
         return bias, loss, output_ids, [senti_losses]
+    
+    def get_sampling_metrics(self): 
+        return self.stored_biases

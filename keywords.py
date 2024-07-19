@@ -13,6 +13,7 @@ from models import (
     load_toxicity_discriminator, 
     load_tokenizer
 )
+import pickle
 
 
 def keywords_loop(total_conf):
@@ -103,4 +104,6 @@ def keywords_loop(total_conf):
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
+    with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f: 
+        pickle.dump(sampler.get_sampling_metrics())
     return total_conf, total_sentences
