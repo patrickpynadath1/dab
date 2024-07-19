@@ -87,4 +87,6 @@ def sentiment_exp_loop(total_conf):
     del model 
     del discriminator
     pickle.dump(times, open(f"{save_dir}/times.pkl", "wb"))
+    with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f: 
+        pickle.dump(sampler.get_sampling_metrics(), f)
     return total_conf, total_sentences
