@@ -15,6 +15,7 @@ from models import (
 )
 import pickle
 import json 
+import pandas as pd 
 
 
 def abductive_reasoning_loop(total_conf):
@@ -45,13 +46,13 @@ def abductive_reasoning_loop(total_conf):
         sampler = LangevinSampler(**total_conf, is_kw=True)
 
     ### INITIALIZE METADATA COLLECTION
-    # TODO: do the above
     total_sentences = []
+    
+    observations = pd.read_json(total_conf['abductive_reasoning_file'], lines=True)
 
-    prompts = [line.strip() for line in open(total_conf["keyword_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
      
-    def energy_fn_wrapper(x, inputs):
+    def energy_fn_wrapper(x, inputs, ending_tokens):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, ending_losses = model.soft_forward(
@@ -59,13 +60,17 @@ def abductive_reasoning_loop(total_conf):
             labels=inputs.input_ids, 
             use_full_prompt=False, 
             biases=x_full,
+            ending_tokens=ending_tokens
         )
         return loss, output_ids, onehot_generates, gpt_logit, ending_losses
     
 
-    for prompt in prompts:
-        prefixs = [prompt] * total_conf["batch_size"]
+    for row_idx, row in observations.iterrows():
+        prefix = row['obs1']
+        ending = row['obs2']
+        prefixs = [prefix] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
+        ending_tokens = tokenizer([ending] * total_conf["batch_size"], return_tensors="pt")['input_ids'].to(total_conf['device'])
         inputs = inputs.to(total_conf["device"])
         inputs, cur_batch = sampler.initialize_batch(
             model=model,
@@ -75,7 +80,7 @@ def abductive_reasoning_loop(total_conf):
             inputs=inputs,
             sentiment=None,
         )
-        energy_fn = lambda x : energy_fn_wrapper(x, inputs)
+        energy_fn = lambda x : energy_fn_wrapper(x, inputs, ending_tokens)
         model.eval()
         minimum_loss, stored_sentence = initialize_best_loss(total_conf["batch_size"])
         for i in range(total_conf["num_steps"]):
@@ -84,7 +89,8 @@ def abductive_reasoning_loop(total_conf):
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                cur_iter=i
+                cur_iter=i, 
+                ending_tokens=ending_tokens
             )
             losses_to_eval = otheroutputs[-1]
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
