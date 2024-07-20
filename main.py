@@ -1,7 +1,8 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-# from eval import eval_loop, compute_perspective_scores, clean_for_eval
+from abductive_reasoning import abductive_reasoning_loop
+from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
 
@@ -26,12 +27,12 @@ if __name__ == "__main__":
     bolt_sampler = subparsers.add_parser('bolt')
     eval_only = subparsers.add_parser('eval_only')
     api_eval = subparsers.add_parser('api_eval')
-    
+    experiments = ['sentiment', 'detoxify', 'keywords', 'abductive_reasoning']
 
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
     parser.add_argument("--save_dir", type=str, default="results")
-    parser.add_argument("--exp", type=str, choices=['sentiment', 'detoxify', 'keywords'], required=True)
+    parser.add_argument("--exp", type=str, choices=experiments, required=True)
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
@@ -57,20 +58,22 @@ if __name__ == "__main__":
             res = detoxify_loop(total_conf)
         elif args.exp == "keywords":
             res = keywords_loop(total_conf)
+        elif args.exp == 'abductive_reasoning': 
+            res = abductive_reasoning_loop(total_conf)
 
         total_conf, generated_sentences = res 
-    #     if args.eval_on_fin: 
-    #         eval_loop(total_conf, generated_sentences)
-    # elif initial_mode == "eval_only":
-    #     gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
-    #     print(f"num of sentences {len(gen_sentences)}")
-    #     cur_batch = gen_sentences[args.start_idx:args.end_idx]
-    #     total_conf['prev_run_dir'] = initial_prev_run_dir
-    #     print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
-    #     eval_loop(total_conf, cur_batch)
-    # elif initial_mode == "api_eval": 
-    #     gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
-    #     print(f"num of sentences {len(gen_sentences)}")
-    #     cur_batch = gen_sentences[args.start_idx:args.end_idx]
-    #     if args.exp == 'detoxify': 
-    #         compute_perspective_scores(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
+        if args.eval_on_fin: 
+            eval_loop(total_conf, generated_sentences)
+    elif initial_mode == "eval_only":
+        gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
+        print(f"num of sentences {len(gen_sentences)}")
+        cur_batch = gen_sentences[args.start_idx:args.end_idx]
+        total_conf['prev_run_dir'] = initial_prev_run_dir
+        print(f"eval gen sentences {total_conf['start_idx']} to {total_conf['end_idx']}")
+        eval_loop(total_conf, cur_batch)
+    elif initial_mode == "api_eval": 
+        gen_sentences = clean_for_eval(open(f"{initial_prev_run_dir}/output.txt", "r").readlines())
+        print(f"num of sentences {len(gen_sentences)}")
+        cur_batch = gen_sentences[args.start_idx:args.end_idx]
+        if args.exp == 'detoxify': 
+            compute_perspective_scores(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
