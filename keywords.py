@@ -25,7 +25,7 @@ def keywords_loop(total_conf):
     ### LOADING CONFIGS
     ### LOADING MODELS
     model = load_base_model(total_conf['sampler'], 
-                            use_senti=False, 
+                            mode='keywords', 
                             **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()

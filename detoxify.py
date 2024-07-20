@@ -19,7 +19,7 @@ def detoxify_loop(total_conf):
 
 
     ### LOADING MODELS
-    model = load_base_model(total_conf['sampler'], **total_conf["base_model_args"]).to(total_conf["device"])
+    model = load_base_model(total_conf['sampler'], mode='senti', **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
