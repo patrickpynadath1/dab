@@ -7,6 +7,8 @@ from .model_with_biases import GPTPromptTuningWithBiasModelLM as GPT_BOLT_LM_sen
 from .model_with_biases_mod import GPTPromptTuningWithBiasModelLM as GPT_DLP_LM_senti
 from .keywords_model_with_biases import GPTPromptTuningWithBiasModelLM as GPT_BOLT_LM_keywords
 from .keywords_model_with_biases_mod import GPTPromptTuningWithBiasModelLM as GPT_DLP_LM_keywords
+from .reasoning_model_with_biases import GPTPromptTuningWithBiasModelLM as GPT_BOLT_LM_reasoning
+from .reasoning_model_with_biases_mod import GPTPromptTuningWithBiasModelLM as GPT_DLP_LM_reasoning
 
 def load_tokenizer(model="gpt2-large"): 
     tokenizer = GPT2TokenizerFast.from_pretrained(model)
@@ -31,8 +33,8 @@ def load_keyword_discriminator():
     return 
 
 
-def load_base_model(sampler, use_senti=True, **kwargs):
-    if use_senti: 
+def load_base_model(sampler, mode='senti', **kwargs):
+    if mode=='senti': 
         if sampler == "bolt": 
             base_lm = GPT_BOLT_LM_senti.from_pretrained(
                                     **kwargs
@@ -41,7 +43,7 @@ def load_base_model(sampler, use_senti=True, **kwargs):
             base_lm = GPT_DLP_LM_senti.from_pretrained(
                                     **kwargs
                                 )
-    else: 
+    elif mode =='keywords': 
         if sampler == "bolt": 
             base_lm = GPT_BOLT_LM_keywords.from_pretrained(
                                     **kwargs
@@ -50,6 +52,15 @@ def load_base_model(sampler, use_senti=True, **kwargs):
             base_lm = GPT_DLP_LM_keywords.from_pretrained(
                                     **kwargs
                                 )
+    elif mode == 'reasoning': 
+        if sampler == 'bolt': 
+            base_lm = GPT_BOLT_LM_reasoning.from_pretrained(
+                                    **kwargs
+                                )
+        else: 
+            base_lm = GPT_DLP_LM_reasoning.from_pretrained(
+                                    **kwargs
+                                )   
     return base_lm 
 
 
