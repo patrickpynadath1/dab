@@ -3,7 +3,7 @@ from utils import (
     load_exp_conf,
     initialize_metric_storing,
     initialize_best_loss,
-    updating_best_keywords
+    updating_best_loss
 )
 import torch
 from samplers import BoltSampler, LangevinSampler
@@ -14,6 +14,7 @@ from models import (
     load_tokenizer
 )
 import pickle
+import json 
 
 
 def abductive_reasoning_loop(total_conf):
@@ -32,7 +33,7 @@ def abductive_reasoning_loop(total_conf):
     # total_conf['init_noise_rate'] = .7 
 
     # initialize the directory for storing data
-    save_dir = f"{total_conf['save_dir']}/keywords/{total_conf['sampler']}"
+    save_dir = f"{total_conf['save_dir']}/abductive_reasoning/{total_conf['sampler']}"
     total_conf['prev_run_dir'] = save_dir
     save_dir = initialize_metric_storing(total_conf, save_dir)
 
@@ -49,22 +50,17 @@ def abductive_reasoning_loop(total_conf):
 
     prompts = [line.strip() for line in open(total_conf["keyword_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
-    keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
-    keywords_string = " ".join(keywords_list)
-    keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
      
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
-        loss, output_ids, onehot_generates, gpt_logit = model.soft_forward(
+        loss, output_ids, onehot_generates, gpt_logit, ending_losses = model.soft_forward(
             **inputs, 
             labels=inputs.input_ids, 
             use_full_prompt=False, 
             biases=x_full,
-            keywords=keywords_token, 
-            use_cnn_batchloss=total_conf['use_cnn_batchloss']
         )
-        return loss, output_ids, onehot_generates, gpt_logit
+        return loss, output_ids, onehot_generates, gpt_logit, ending_losses
     
 
     for prompt in prompts:
@@ -78,31 +74,27 @@ def abductive_reasoning_loop(total_conf):
             prompt_length=inputs.input_ids.shape[1], 
             inputs=inputs,
             sentiment=None,
-            keyword_tokens=keywords_token
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
-        success_idx, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=False)
+        minimum_loss, stored_sentence = initialize_best_loss(total_conf["batch_size"])
         for i in range(total_conf["num_steps"]):
             cur_batch, loss, output_ids, otheroutputs = sampler.step(
                 x=cur_batch, 
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                kw_tokens=keywords_token, 
-                keywords=keywords_token,
                 cur_iter=i
             )
+            losses_to_eval = otheroutputs[-1]
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-            updating_best_keywords(cur_iter=i,
-                                   batch_size=total_conf["batch_size"],
-                                   sentences=sentences,
-                                   success_idx=success_idx,
-                                   keywords_word=keywords_list,
-                                   stored_sentence_list=stored_sentence)
-            if all([idx != -1 for idx in success_idx]):
-                print("success")
-                break
+            updating_best_loss(
+                total_conf["batch_size"],
+                losses_to_eval,
+                sentences,
+                minimum_loss,
+                stored_sentence,
+            )
         print(sentences)
 
         ### Freeing CUDA space
