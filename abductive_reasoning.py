@@ -67,7 +67,8 @@ def abductive_reasoning_loop(total_conf):
 
     for row_idx, row in observations.iterrows():
         prefix = row['obs1']
-        ending = row['obs2']
+        # adding period to help with finishing the sentence
+        ending = ". " + row['obs2']
         prefixs = [prefix] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         ending_tokens = tokenizer([ending] * total_conf["batch_size"], return_tensors="pt")['input_ids'].to(total_conf['device'])
