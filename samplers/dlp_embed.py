@@ -111,6 +111,7 @@ class LangevinSampler(nn.Module):
                          cur_token_ids,
                          logits): 
         gx = self.calc_grad(loss, onehot)
+        print(gx.norm(dim=-1).mean)
         logits = logits[:, self.prompt_length:, :]
         unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
