@@ -43,7 +43,7 @@ def abductive_reasoning_loop(total_conf):
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
     elif total_conf['sampler'] == "dlp":
-        sampler = LangevinSampler(**total_conf, is_kw=True)
+        sampler = LangevinSampler(**total_conf, is_kw=False)
 
     ### INITIALIZE METADATA COLLECTION
     total_sentences = []
