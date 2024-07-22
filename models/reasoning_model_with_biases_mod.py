@@ -189,7 +189,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         # ste trick to make sure they have the same gradients 
         logits = logits + onehot_generates - onehot_generates.detach()
 
-        return loss, output_ids, onehot_generates, ending_losses
+        return loss, output_ids, onehot_generates, logits, ending_losses
 
 class FullPrompt(nn.Module):
     def __init__(self, n_tokens: int = 20, random_range: float = 0.5, config = None):
