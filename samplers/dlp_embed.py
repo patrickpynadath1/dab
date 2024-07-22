@@ -23,6 +23,7 @@ class LangevinSampler(nn.Module):
                  min_weight=1,
                  max_weight=1,
                  weight_lr=1e-3,
+                 filter_type='topk',
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -45,6 +46,7 @@ class LangevinSampler(nn.Module):
         self.min_weight = min_weight 
         self.weight_lr = weight_lr
         self.weight_strat = weight_strat
+        self.filter_type = filter_type
 
     def calc_linear_weights(self, 
                             num_gen_tokens):
