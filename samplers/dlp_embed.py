@@ -63,7 +63,7 @@ class LangevinSampler(nn.Module):
                          seq_length,
                          prompt_length,
                          inputs,
-                         keyword_tokens,
+                         keyword_tokens=None,
                          **kwargs):
         self.prompt_length = prompt_length
         model.set_biases(batch_size=batch_size, 
@@ -74,7 +74,8 @@ class LangevinSampler(nn.Module):
         initial_bias = torch.zeros(batch_size, 
                         seq_length - prompt_length, 
                         50257).to(self.device)
-        self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
+        if keyword_tokens is not None: 
+            self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
         self.embed_map = model.get_input_embeddings()
         if self.weight_strat == 'uniform':
             self.weights = self.weight_val 
