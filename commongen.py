@@ -79,7 +79,7 @@ def commongen_loop(total_conf):
         keywords_string = " ".join(keywords_list)
         print(keywords_string)
         keywords_token = tokenizer([keywords_string]*total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-        prompt = "The "
+        prompt = "<|endoftext|>"
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
