@@ -179,7 +179,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         ending_losses = -1 * torch.gather(ending_logits, 2, ending_tokens.unsqueeze(-1)).squeeze().sum(dim=-1)
         ending_loss = ending_losses.sum()
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
-        loss = ending_loss + ppl_loss
+        loss = ending_loss + .1 * ppl_loss
 
         print("reasoning_loss", ending_loss)
         print("ppl_loss:", ppl_loss)
