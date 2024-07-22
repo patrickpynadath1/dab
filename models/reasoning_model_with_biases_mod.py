@@ -179,7 +179,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         total_embs = torch.cat([lm_embs, ending_embs], dim=1)
         ending_logits = self(inputs_embeds = total_embs).logits[:, lm_embs.size(1):, :]
-        ending_losses = -1 * torch.gather(ending_logits, 2, ending_tokens.unsqueeze(-1)).squeeze().sum(dim=-1)
+        ending_losses = -1 * torch.gather(ending_logits, 2, ending_tokens.unsqueeze(-1)).squeeze().log_softmax(dim=-1).sum(dim=-1)
         ending_loss = ending_losses.sum()
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = ending_loss + .1 * ppl_loss
