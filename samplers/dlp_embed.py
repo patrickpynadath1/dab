@@ -113,10 +113,7 @@ class LangevinSampler(nn.Module):
         gx = self.calc_grad(loss, onehot)
         logits = logits[:, self.prompt_length:, :]
         unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
-        if self.filter_logit == "gpt":
-            topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
-        else: 
-            topk_ids = torch.topk(unfiltered_dist, self.k_val, dim=-1).indices
+        topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
         filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
                                                   torch.arange(unfiltered_dist.size(1))[None, :, None],
                                                     topk_ids]
