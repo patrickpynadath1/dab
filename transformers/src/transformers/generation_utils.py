@@ -3460,18 +3460,18 @@ class GenerationMixin:
             last_hidden_states = outputs.hidden_states[-1]
             cur_hidden_state = last_hidden_states[:, -1, :]
             cur_norm = torch.norm(cur_hidden_state, dim=-1, keepdim=True)
-            print('hidden norm')
-            print(cur_norm.mean())
+            # print('hidden norm')
+            # print(cur_norm.mean())
             cur_bias_norm = torch.norm(biases[:, bias_idx, :], dim=-1, keepdim=True)
-            print('embed norm')
-            print(cur_bias_norm.mean())
+            # print('embed norm')
+            # print(cur_bias_norm.mean())
             if cur_bias_norm.sum() == 0: 
                 scaling_weight = 1
             else:
                 scaling_weight = cur_norm / cur_bias_norm 
             next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
-            print("how many logits are nan")
-            print(torch.isnan(next_tokens_scores).sum())
+            # print("how many logits are nan")
+            # print(torch.isnan(next_tokens_scores).sum())
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
                 if output_scores:
