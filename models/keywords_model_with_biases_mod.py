@@ -159,19 +159,25 @@ class GPTPromptTuningWithBiasesModelMixin:
         keywords_idx=None,
         keywords_token=None,
         use_cnn_batchloss=True,
+        bias_rep_space='logit', 
+        weight=1,
         **kwargs
     ):
+        if bias_rep_space == 'logit':
+            forward_func = self.soft_greedy_search_with_biases
+        else: 
+            forward_func = self.soft_greedy_search_with_biases_embed
         
         if not inference:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight,)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight, )
         else:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight)
         
 
             
@@ -181,9 +187,8 @@ class GPTPromptTuningWithBiasesModelMixin:
         print("ppl_loss:", ppl_loss)
         # ste trick to make sure they have the same gradients 
         logits = logits + onehot_generates - onehot_generates.detach()
-        if use_cnn_batchloss:
-            keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
-            loss = .3 * ppl_loss + keywords_loss
+        keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
+        loss = .3 * ppl_loss + keywords_loss
         return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):
