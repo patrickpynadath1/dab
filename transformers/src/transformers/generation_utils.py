@@ -3457,7 +3457,7 @@ class GenerationMixin:
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
             # according to the docs, the last hidden state should be the first of the tuple 
-            last_hidden_states = outputs.last_hidden_states
+            last_hidden_states = outputs.last_hidden_state
             cur_hidden_state = last_hidden_states[:, -1, :]
             cur_norm = torch.norm(cur_hidden_state, dim=-1, keepdim=True)
             cur_bias_norm = torch.norm(cur_hidden_state - biases[bias_idx], dim=-1, keepdim=True)
