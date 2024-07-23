@@ -177,8 +177,13 @@ class GPTPromptTuningWithbiasesModelMixin:
         use_full_prompt=False,
         senti_label=None,
         biases=None,
+        bias_rep_space='logit', 
         **kwargs
     ):
+        if bias_rep_space == 'logit':
+            forward_func = self.soft_forward_with_biases
+        else: 
+            forward_func = self.soft_forward_with_biases_embed
         if senti_label is not None:
             if type(senti_label) == int:
                 self.labels = torch.LongTensor([senti_label]).to(self.device)
@@ -194,7 +199,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -219,7 +224,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -244,7 +249,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -270,7 +275,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
