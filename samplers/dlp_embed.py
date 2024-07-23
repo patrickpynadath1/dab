@@ -326,7 +326,7 @@ class LangevinSampler(nn.Module):
     def step_soft_embed(self, x, energy_fn, **kwargs): 
         cur_bias = x
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
-        bias = torch.einsum('bs, ve -> bse', [sampled_ids, self.embed_map.weight])
+        bias = self.embed_map(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
 
 
