@@ -83,6 +83,7 @@ def sentiment_exp_loop(total_conf):
                 stored_sentence,
             )
         end = time.time()
+        print(end - start)
         times.append(end - start)
 
         ### Freeing CUDA space
