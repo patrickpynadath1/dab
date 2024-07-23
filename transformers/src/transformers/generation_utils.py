@@ -3461,7 +3461,7 @@ class GenerationMixin:
             cur_hidden_state = last_hidden_states[:, -1, :]
             cur_norm = torch.norm(cur_hidden_state, dim=-1, keepdim=True)
             print(cur_norm)
-            cur_bias_norm = torch.norm(cur_hidden_state - biases[bias_idx], dim=-1, keepdim=True)
+            cur_bias_norm = torch.norm(biases[:, bias_idx, :], dim=-1, keepdim=True)
             print(cur_bias_norm)
             scaling_weight = cur_norm / cur_bias_norm 
             if not use_hidden_states_biases:
