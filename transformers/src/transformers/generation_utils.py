@@ -3274,6 +3274,7 @@ class GenerationMixin:
         reverse=False,
         seq_len=50,
         is_dlp = False,
+        weight=1,
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
         r"""
@@ -3450,10 +3451,11 @@ class GenerationMixin:
 
             logits_before_adding_seq = torch.cat((logits_before_adding_seq, next_tokens_scores.unsqueeze(1)), dim=1)
 
-            if trainable_weights is None:
-                weight = 1 * (cur_len-init_len) / (seq_len-init_len)
-            else:
-                weight = trainable_weights[cur_len]
+            # if trainable_weights is None:
+            #     weight = 1 * (cur_len-init_len) / (seq_len-init_len)
+            # else:
+            #     weight = trainable_weights[cur_len]
+            
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
             # according to the docs, the last hidden state should be the first of the tuple 

@@ -48,7 +48,8 @@ def sentiment_exp_loop(total_conf):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs, use_full_prompt=False, biases=x_full, bias_rep_space = total_conf['bias_rep_space']
+            **inputs, labels=inputs, use_full_prompt=False, biases=x_full, bias_rep_space = total_conf['bias_rep_space'], 
+            weight=total_conf['weight_val']
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
     

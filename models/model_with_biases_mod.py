@@ -177,7 +177,8 @@ class GPTPromptTuningWithbiasesModelMixin:
         use_full_prompt=False,
         senti_label=None,
         biases=None,
-        bias_rep_space='logit', 
+        bias_rep_space='logit',
+        weight=1,
         **kwargs
     ):
         if bias_rep_space == 'logit':
@@ -214,7 +215,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                     return_logit=True,
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
-                    is_dlp=True, 
+                    is_dlp=True,
+                    weight=weight, 
                 )
             else:
                 (
@@ -239,6 +241,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight,
                 )
         else:
             if use_full_prompt:
@@ -266,6 +269,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight, 
                 )
             else:
                 (
@@ -291,6 +295,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight,
                 )
 
         dis_embs = torch.matmul(
