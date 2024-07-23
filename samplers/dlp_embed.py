@@ -24,6 +24,7 @@ class LangevinSampler(nn.Module):
                  max_weight=1,
                  weight_lr=1e-3,
                  filter_type='topk',
+                 bias_rep_space='logit',
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -47,6 +48,7 @@ class LangevinSampler(nn.Module):
         self.weight_lr = weight_lr
         self.weight_strat = weight_strat
         self.filter_type = filter_type
+        self.bias_rep_space = bias_rep_space
 
     def calc_linear_weights(self, 
                             num_gen_tokens):
@@ -91,8 +93,13 @@ class LangevinSampler(nn.Module):
         return inputs, initial_bias
         
 
-    def calc_grad(self, loss, onehot): 
+    def calc_grad_logit(self, loss, onehot): 
         gx = torch.autograd.grad(loss, onehot, allow_unused=True)
+        gx = gx[0].detach()[:, self.prompt_length:, :]
+        return gx
+    
+    def calc_grad_embed(self, loss, embed_bias): 
+        gx = torch.autograd.grad(loss, embed_bias, allow_unused=True)
         gx = gx[0].detach()[:, self.prompt_length:, :]
         return gx
     
@@ -105,12 +112,27 @@ class LangevinSampler(nn.Module):
         return unfiltered_dist
 
 
-    def get_top_k_dlp_dist(self, 
+    def get_top_k_dlp_dist_embed(self, 
+                                 loss, 
+                                 cur_bias,
+                                 onehot, 
+                                 cur_token_ids, 
+                                 logits):
+        gx = self.calc_grad_embed(loss, cur_bias)
+        logits = logits[:, self.prompt_length:, :]
+        unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
+        topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
+        filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
+                                                  torch.arange(unfiltered_dist.size(1))[None, :, None],
+                                                    topk_ids]
+        return filtered_dist_logits, topk_ids
+
+    def get_top_k_dlp_dist_logit(self, 
                          loss, 
                          onehot,
                          cur_token_ids,
                          logits): 
-        gx = self.calc_grad(loss, onehot)
+        gx = self.calc_grad_logit(loss, onehot)
         print(gx.var(dim=-1).mean())
         logits = logits[:, self.prompt_length:, :]
         unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
@@ -131,7 +153,7 @@ class LangevinSampler(nn.Module):
                          onehot,
                          cur_token_ids,
                          logits):
-        gx = self.calc_grad(loss, onehot)
+        gx = self.calc_grad_logit(loss, onehot)
         logits = logits[:, self.prompt_length:, :]
         unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
         if self.filter_logit == "gpt":
@@ -159,13 +181,26 @@ class LangevinSampler(nn.Module):
         masked_logits[:, :, 0] = dist_logits_premask[:, :, 0]
         return masked_logits, topk_ids
 
-    def compute_p_lm(self, 
+    def compute_p_lm_embed_soft(self, 
+                                cur_bias, 
+                                energy_fn): 
+        loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
+        dist_logits, topk_ids = self.get_top_k_dlp_dist_embed(loss, cur_bias, onehot, output_ids, logits)
+        proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
+        sampled_dist_ids = proposal_dist.sample()
+        actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
+                              torch.arange(topk_ids.size(1))[None, :],
+                                sampled_dist_ids]
+        return loss, output_ids, actual_ids, senti_losses.detach().cpu().numpy()
+
+
+    def compute_p_lm_logit_soft(self, 
                      cur_bias, 
                      energy_fn): 
 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         if self.filter_type == "topk":
-            dist_logits, topk_ids = self.get_top_k_dlp_dist(loss, onehot, output_ids, logits)
+            dist_logits, topk_ids = self.get_top_k_dlp_dist_logit(loss, onehot, output_ids, logits)
         elif self.filter_type == "topp":
             dist_logits, topk_ids = self.get_top_p_dlp_dist(loss, onehot, output_ids, logits)
         proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
@@ -270,18 +305,29 @@ class LangevinSampler(nn.Module):
         return bias
 
 
-    def step(self, **kwargs): 
-        if self.is_kw: 
-            return self.step_hard(**kwargs)
+    def step(self, **kwargs):
+        if self.bias_rep_space == 'logit':
+            if self.is_kw: 
+                return self.step_hard_logit(**kwargs)
+            else: 
+                return self.step_soft_logit(**kwargs)
         else: 
-            return self.step_soft(**kwargs)
+            return self.step_soft_embed(**kwargs)
+        
+
+    def step_soft_embed(self, x, energy_fn, **kwargs): 
+        cur_bias = x
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
+        bias = torch.einsum('bs, ve -> bse', [sampled_ids, self.embed_map.weight])
+        return bias, loss, output_ids, [senti_losses]
+
 
     # first, compute the autoregressive generation
     # this should give the one hot vector, the loss, and the gradient
     # use the gradient to compute the distribution over the top-k tokens 
-    def step_soft(self, x, energy_fn, **kwargs):
+    def step_soft_logit(self, x, energy_fn, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm(cur_bias, energy_fn)
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
@@ -290,7 +336,7 @@ class LangevinSampler(nn.Module):
     def modulate_bias(self, bias, logits):
         return bias
     
-    def step_hard(self, x, energy_fn, 
+    def step_hard_logit(self, x, energy_fn, 
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens, cur_iter)
