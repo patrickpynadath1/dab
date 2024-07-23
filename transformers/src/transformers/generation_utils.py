@@ -3463,7 +3463,11 @@ class GenerationMixin:
             print(cur_norm)
             cur_bias_norm = torch.norm(biases[:, bias_idx, :], dim=-1, keepdim=True)
             print(cur_bias_norm)
-            scaling_weight = cur_norm / cur_bias_norm 
+            if cur_bias_norm.sum() == 0: 
+                scaling_weight = 1
+                print('sum is 0, avoiding nan error ')
+            else:
+                scaling_weight = cur_norm / cur_bias_norm 
             next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
             print(next_tokens_scores)
             # Store scores, attentions and hidden_states when required
