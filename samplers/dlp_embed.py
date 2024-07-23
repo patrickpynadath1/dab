@@ -75,9 +75,16 @@ class LangevinSampler(nn.Module):
                         prompt_length=prompt_length, 
                         attribute=sentiment,
                         device=self.device)
-        initial_bias = torch.zeros(batch_size, 
+        logit_dim = model.get_input_embeddign().weight.size(0)
+        embed_dim = model.get_input_embeddign().weight.size(1)
+        if self.bias_rep_space == 'logit':
+            initial_bias = torch.zeros(batch_size, 
                         seq_length - prompt_length, 
-                        50257).to(self.device)
+                        logit_dim).to(self.device)
+        else: 
+            initial_bias = torch.zeros(batch_size, 
+                        seq_length - prompt_length, 
+                        embed_dim).to(self.device) 
         if keyword_tokens is not None: 
             self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
         self.embed_map = model.get_input_embeddings()
