@@ -3465,7 +3465,7 @@ class GenerationMixin:
             print(cur_bias_norm)
             scaling_weight = cur_norm / cur_bias_norm 
             next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
-            print(next_token_scores)
+            print(next_tokens_scores)
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
                 if output_scores:
