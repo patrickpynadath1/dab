@@ -181,9 +181,9 @@ class GPTPromptTuningWithbiasesModelMixin:
         **kwargs
     ):
         if bias_rep_space == 'logit':
-            forward_func = self.soft_forward_with_biases
+            forward_func = self.soft_greedy_search_with_biases
         else: 
-            forward_func = self.soft_forward_with_biases_embed
+            forward_func = self.soft_greedy_search_with_biases_embed
         if senti_label is not None:
             if type(senti_label) == int:
                 self.labels = torch.LongTensor([senti_label]).to(self.device)
