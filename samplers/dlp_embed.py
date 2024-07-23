@@ -75,8 +75,8 @@ class LangevinSampler(nn.Module):
                         prompt_length=prompt_length, 
                         attribute=sentiment,
                         device=self.device)
-        logit_dim = model.get_input_embedding().weight.size(0)
-        embed_dim = model.get_input_embedding().weight.size(1)
+        logit_dim = model.get_input_embeddings().weight.size(0)
+        embed_dim = model.get_input_embeddings().weight.size(1)
         if self.bias_rep_space == 'logit':
             initial_bias = torch.zeros(batch_size, 
                         seq_length - prompt_length, 
