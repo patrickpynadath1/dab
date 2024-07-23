@@ -3470,7 +3470,8 @@ class GenerationMixin:
             else:
                 scaling_weight = cur_norm / cur_bias_norm 
             next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
-            print(next_tokens_scores)
+            print("how many logits are nan")
+            print(torch.isnan(next_tokens_scores).sum())
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
                 if output_scores:
