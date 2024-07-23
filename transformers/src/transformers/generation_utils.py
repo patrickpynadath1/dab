@@ -3464,13 +3464,7 @@ class GenerationMixin:
             cur_bias_norm = torch.norm(biases[:, bias_idx, :], dim=-1, keepdim=True)
             print(cur_bias_norm)
             scaling_weight = cur_norm / cur_bias_norm 
-            if not use_hidden_states_biases:
-                if is_dlp:
-                    next_tokens_scores = next_tokens_scores + weight * biases[:, bias_idx, :]
-                else: 
-                    next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]
-            else:
-                next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
+            next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
 
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
