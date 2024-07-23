@@ -193,6 +193,7 @@ class LangevinSampler(nn.Module):
                                 energy_fn): 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         dist_logits, topk_ids = self.get_top_k_dlp_dist_embed(loss, cur_bias, onehot, output_ids, logits)
+        print(dist_logits.shape)
         proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
