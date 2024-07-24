@@ -34,8 +34,13 @@ def detoxify_loop(total_conf):
     ### INITIALIZING SAMPLERS
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
+        bias_dim = model.get_input_embeddings().weight.shape[0]
     elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
+        if total_conf['bias_rep_space'] == "logit":
+            bias_dim = model.get_input_embeddings().weight.shape[0]
+        if total_conf['bias_rep_space'] == "embed":
+            bias_dim = model.get_input_embeddings().weight.shape[1]
 
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above
@@ -44,10 +49,11 @@ def detoxify_loop(total_conf):
     output_file = open(f"{save_dir}/output.txt", "w")
     total_sentences = []
     def energy_fn_wrapper(x, inputs):
-        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full
+            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full,  bias_rep_space = total_conf['bias_rep_space'], 
+            weight=total_conf['weight_val']
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
 
