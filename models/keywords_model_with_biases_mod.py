@@ -55,7 +55,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
     
-    def set_biases(self, batch_size, seq_len, device='cpu', **kwargs):
+    def set_biases(self, batch_size, seq_len, device='cpu', disc_weight=.9,**kwargs):
         self.seq_len = seq_len
 
         self.trainable_weights = None
@@ -188,7 +188,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         # ste trick to make sure they have the same gradients 
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
-        loss = .3 * ppl_loss + keywords_loss
+        loss = (1 - self.disc_weight) *  ppl_loss + self.disc_weight * keywords_loss
         return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):

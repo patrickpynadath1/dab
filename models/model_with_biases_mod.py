@@ -59,9 +59,9 @@ class GPTPromptTuningWithbiasesModelMixin:
                    attribute, 
                    prompt_length,
                    device,
-                   init_noise_rate=0.5, **kwargs):
+                   init_noise_rate=0.5, disc_weight=.9, **kwargs):
         self.seq_len = seq_len
-
+        self.disc_weight = disc_weight
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
@@ -310,7 +310,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         labels = torch.argmax(onehot_generates, dim=-1)
-        loss = 1 * senti_loss + 0.1 * ppl_loss
+        loss = self.disc_weight * senti_loss + (1 - self.disc_weight) * ppl_loss
 
         print("senti_loss:", senti_loss)
         print("ppl_loss:", ppl_loss)

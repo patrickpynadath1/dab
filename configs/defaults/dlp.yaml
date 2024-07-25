@@ -12,3 +12,6 @@ min_weight: 1.0
 max_weight: 1.0
 weight_lr: 1e-3
 bias_rep_space: embed
+proposal_rep_space: embed
+step_size: .1
+disc_weight: .9

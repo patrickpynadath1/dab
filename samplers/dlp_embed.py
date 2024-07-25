@@ -25,6 +25,9 @@ class LangevinSampler(nn.Module):
                  weight_lr=1e-3,
                  filter_type='topk',
                  bias_rep_space='logit',
+                 proposal_rep_space='logit',
+                 step_size=.1,
+                 disc_weight=.9, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -49,6 +52,9 @@ class LangevinSampler(nn.Module):
         self.weight_strat = weight_strat
         self.filter_type = filter_type
         self.bias_rep_space = bias_rep_space
+        self.proposal_rep_space=proposal_rep_space
+        self.step_size = step_size 
+        self.disc_weight = disc_weight
 
     def calc_linear_weights(self, 
                             num_gen_tokens):
@@ -74,7 +80,8 @@ class LangevinSampler(nn.Module):
                         seq_len=seq_length,
                         prompt_length=prompt_length, 
                         attribute=sentiment,
-                        device=self.device)
+                        device=self.device, 
+                        disc_weight=self.disc_weight)
         logit_dim = model.get_input_embeddings().weight.size(0)
         embed_dim = model.get_input_embeddings().weight.size(1)
         if self.bias_rep_space == 'logit':
@@ -110,13 +117,23 @@ class LangevinSampler(nn.Module):
         gx = gx[0].detach()[:, self.prompt_length:, :]
         return gx
     
-    def get_unfiltered_dist(self, gx, cur_token_ids):
-        token_dist = torch.ones_like(gx).to(self.device)
-        token_dist[torch.arange(token_dist.size(0))[:, None, None],
-                    torch.arange(token_dist.size(1))[None, :, None], 
-                    cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = EPS 
-        unfiltered_dist = - gx * token_dist
-        return unfiltered_dist
+    def get_unfiltered_dist(self, gx, cur_token_ids, cur_bias=None):
+        if self.proposal_rep_space == 'logit':
+            token_dist = torch.ones_like(gx).to(self.device)
+            token_dist[torch.arange(token_dist.size(0))[:, None, None],
+                        torch.arange(token_dist.size(1))[None, :, None], 
+                        cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = EPS 
+            unfiltered_dist = gx * token_dist
+        else: 
+            t1_1 = torch.einsum('bse, ve -> bsv', [gx, self.embed_map.weight])
+            t1_2 = torch.einsum('bse, bse -> bs', [gx, cur_bias]).unsqueeze(-1)
+
+            t2_1 = torch.einsum('ve -> v', [self.embed_map.weight ** 2])[None, None, :]
+            t2_2 = torch.einsum('bse, ve -> bsv', [cur_bias, self.embed_map.weight])
+            t2_3 = torch.einsum('bse -> bs', [cur_bias ** 2]).unsqueeze(-1)
+
+            unfiltered_dist = .5 * (t1_1 - t1_2) + (t2_1 - 2 * t2_2 + t2_3) / self.step_size
+        return -1 * unfiltered_dist
 
 
     def get_top_k_dlp_dist_embed(self, 
@@ -140,7 +157,6 @@ class LangevinSampler(nn.Module):
                          cur_token_ids,
                          logits): 
         gx = self.calc_grad_logit(loss, onehot)
-        print(gx.var(dim=-1).mean())
         logits = logits[:, self.prompt_length:, :]
         unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
@@ -193,7 +209,6 @@ class LangevinSampler(nn.Module):
                                 energy_fn): 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         dist_logits, topk_ids = self.get_top_k_dlp_dist_embed(loss, cur_bias, onehot, output_ids, logits)
-        print(dist_logits.shape)
         proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
@@ -322,6 +337,10 @@ class LangevinSampler(nn.Module):
         else: 
             return self.step_soft_embed(**kwargs)
         
+    def step_soft_embed_prop(self, x, energy_fn, **kwargs):
+        return 
+
+
 
     def step_soft_embed(self, x, energy_fn, **kwargs): 
         cur_bias = x
