@@ -25,6 +25,7 @@ class LangevinSampler(nn.Module):
                  weight_lr=1e-3,
                  filter_type='topk',
                  bias_rep_space='logit',
+                 use_scale_based_weight = True, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -49,6 +50,7 @@ class LangevinSampler(nn.Module):
         self.weight_strat = weight_strat
         self.filter_type = filter_type
         self.bias_rep_space = bias_rep_space
+        self.use_scale_based_weight = use_scale_based_weight
 
     def calc_linear_weights(self, 
                             num_gen_tokens):

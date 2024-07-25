@@ -12,3 +12,4 @@ min_weight: 1.0
 max_weight: 1.0
 weight_lr: 1e-3
 bias_rep_space: embed
+use_scale_based_weight: true 
