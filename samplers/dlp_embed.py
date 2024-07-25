@@ -195,7 +195,6 @@ class LangevinSampler(nn.Module):
                                 energy_fn): 
         loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
         dist_logits, topk_ids = self.get_top_k_dlp_dist_embed(loss, cur_bias, onehot, output_ids, logits)
-        print(dist_logits.shape)
         proposal_dist = torch.distributions.Categorical(logits =  dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
@@ -327,7 +326,7 @@ class LangevinSampler(nn.Module):
 
     def step_soft_embed(self, x, energy_fn, **kwargs): 
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_embed_soft(cur_bias, energy_fn)
         bias = self.embed_map(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
 
@@ -337,7 +336,7 @@ class LangevinSampler(nn.Module):
     # use the gradient to compute the distribution over the top-k tokens 
     def step_soft_logit(self, x, energy_fn, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_embed_soft(cur_bias, energy_fn)
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
