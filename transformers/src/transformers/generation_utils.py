@@ -2970,6 +2970,9 @@ class GenerationMixin:
         reverse=False,
         seq_len=50,
         is_dlp = False,
+        use_bolt_weights = True,
+        use_scale_weigths = False, 
+
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
         r"""
@@ -3149,7 +3152,10 @@ class GenerationMixin:
             if trainable_weights is None:
                 weight = 1 * (cur_len-init_len) / (seq_len-init_len)
             else:
-                weight = trainable_weights[cur_len]
+                if use_bolt_weights:
+                    weight = trainable_weights[cur_len]
+                else:
+                    weight = 1
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
             if not use_hidden_states_biases:
@@ -3275,6 +3281,8 @@ class GenerationMixin:
         seq_len=50,
         is_dlp = False,
         weight=1,
+        use_bolt_weight_sched=True, 
+        use_scaling_weight=True,
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
         r"""
@@ -3467,10 +3475,12 @@ class GenerationMixin:
             cur_bias_norm = torch.norm(biases[:, bias_idx, :], dim=-1, keepdim=True)
             # print('embed norm')
             # print(cur_bias_norm.mean())
-            if cur_bias_norm.sum() == 0: 
-                scaling_weight = 1
+            if use_bolt_weight_sched:
+                scaling_weight = 1 * (cur_len-init_len) / (seq_len-init_len)
             else:
-                scaling_weight = cur_norm / cur_bias_norm 
+                scaling_weight = trainable_weights[cur_len]
+            if cur_bias_norm.sum() != 0 and use_scaling_weight: 
+                scaling_weight = scaling_weight * cur_norm / cur_bias_norm
             next_tokens_scores = next_tokens_scores + weight * scaling_weight * self.lm_head(biases[:, bias_idx, :])
             # print("how many logits are nan")
             # print(torch.isnan(next_tokens_scores).sum())

@@ -28,6 +28,8 @@ class LangevinSampler(nn.Module):
                  proposal_rep_space='logit',
                  step_size=.1,
                  disc_weight=.9, 
+                 use_bolt_weights=True, 
+                 use_scale_weights=True, 
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -44,8 +46,6 @@ class LangevinSampler(nn.Module):
         self.is_kw=is_kw
         self.use_cnn_batchloss = use_cnn_batchloss
         self.bias_compute_method = bias_compute_method
-        self.sampled_tokens = []
-        self.max_unnorm = []
         self.max_weight = max_weight
         self.min_weight = min_weight 
         self.weight_lr = weight_lr
@@ -55,6 +55,13 @@ class LangevinSampler(nn.Module):
         self.proposal_rep_space=proposal_rep_space
         self.step_size = step_size 
         self.disc_weight = disc_weight
+        self.use_bolt_weights = use_bolt_weights
+        self.use_scale_weights = use_scale_weights
+
+        # initializing sampling metrics to track
+        self.sampled_tokens = []
+        self.max_unnorm = []
+        self.energy = []
 
     def calc_linear_weights(self, 
                             num_gen_tokens):
@@ -81,7 +88,9 @@ class LangevinSampler(nn.Module):
                         prompt_length=prompt_length, 
                         attribute=sentiment,
                         device=self.device, 
-                        disc_weight=self.disc_weight)
+                        disc_weight=self.disc_weight,
+                        use_scale_weights=self.use_scale_weights, 
+                        use_bolt_weights=self.use_bolt_weights)
         logit_dim = model.get_input_embeddings().weight.size(0)
         embed_dim = model.get_input_embeddings().weight.size(1)
         if self.bias_rep_space == 'logit':
@@ -126,10 +135,9 @@ class LangevinSampler(nn.Module):
                         torch.arange(token_dist.size(1))[None, :, None], 
                         cur_token_ids[:, self.prompt_length:].unsqueeze(-1)] = EPS 
             unfiltered_dist = gx * token_dist
-        else: 
+        else:
             t1_1 = torch.einsum('bse, ve -> bsv', [gx, self.embed_map.weight])
             t1_2 = torch.einsum('bse, bse -> bs', [gx, cur_bias]).unsqueeze(-1)
-
             t2_1 = torch.einsum('ve -> v', [self.embed_map.weight ** 2])[None, None, :]
             t2_2 = torch.einsum('bse, ve -> bsv', [cur_bias, self.embed_map.weight])
             t2_3 = torch.einsum('bse -> bs', [cur_bias ** 2]).unsqueeze(-1)

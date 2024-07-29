@@ -12,10 +12,8 @@ min_weight: 1.0
 max_weight: 1.0
 weight_lr: .001 
 bias_rep_space: embed
-<<<<<<< HEAD
 proposal_rep_space: logit 
 step_size: .1
 disc_weight: .9
-=======
-use_scale_based_weight: true 
->>>>>>> additional_features
+use_bolt_weights: true 
+use_scale_weights: true 

@@ -59,9 +59,13 @@ class GPTPromptTuningWithbiasesModelMixin:
                    attribute, 
                    prompt_length,
                    device,
+                   use_scale_weights,
+                   use_bolt_weights,
                    init_noise_rate=0.5, disc_weight=.9, **kwargs):
         self.seq_len = seq_len
         self.disc_weight = disc_weight
+        self.use_scale_weights=use_scale_weights
+        self.use_bolt_weights=use_bolt_weights
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
@@ -216,7 +220,9 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
-                    weight=weight, 
+                    weight=weight,
+                    use_bolt_weights=self.use_bolt_weights,
+                    use_scale_weights=self.use_scale_weights,
                 )
             else:
                 (
@@ -242,6 +248,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                     seq_len=self.seq_len,
                     is_dlp=True,
                     weight=weight,
+                    use_bolt_weights=self.use_bolt_weights,
+                    use_scale_weights=self.use_scale_weights,
                 )
         else:
             if use_full_prompt:
@@ -269,7 +277,9 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
-                    weight=weight, 
+                    weight=weight,
+                    use_bolt_weights=self.use_bolt_weights,
+                    use_scale_weights=self.use_scale_weights,
                 )
             else:
                 (
@@ -296,6 +306,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                     seq_len=self.seq_len,
                     is_dlp=True,
                     weight=weight,
+                    use_bolt_weights=self.use_bolt_weights,
+                    use_scale_weights=self.use_scale_weights,
                 )
 
         dis_embs = torch.matmul(

@@ -1,0 +1,20 @@
+default: 
+  bias_rep_space: logit
+  proposal_rep_space: logit
+  k_val: 250 
+  disc_weight: .8
+  use_bolt_weights: true
+  use_scale_weights: true
+  weight_val: 1.0
+weight_val: 
+  values: [.5, .75, 1.0, 1.25, 1.5]
+k_val: 
+  values: [50, 100, 250, 500, 1000]
+proposal_temp: 
+  values: [.01, .05, .1, .5, 1.0]
+disc_weight: 
+  values: [.1, .2, .3,.4, .5, .6, .7, .8, .9]
+use_bolt_weights:
+  values: [true, false]
+use_scale_weights:
+  values: [true, false]

@@ -36,9 +36,14 @@ def construct_all_configs(ablation_conf,
                           experiments, 
                           base_dir='results'):
     configs_to_run = []
-
+    # configuring default setting
+    for k, v in ablation_conf['default'].items():
+        base_conf[k] = v
+    # configuring params to ablate over 
     for exp in experiments:
         for ablation_k, ablation_v in ablation_conf.items():
+            if ablation_k  == 'default':
+                continue
             for ablation_val in ablation_v['values']:
                 conf = deepcopy(base_conf)
                 conf['sampler'] = sampler
@@ -142,4 +147,4 @@ if __name__ == "__main__":
     base_conf = {**base_conf, **exp_conf}
     base_conf['exp'] = args.exp
     all_configs = construct_all_configs(ablation_conf, base_conf, args.sampler, experiments=args.exp)
-    run_ablations(all_configs, args.gpu_ids)
+    run_ablations(all_configs, args.gpu_ids, args.jobs_per_gpu)
