@@ -2,7 +2,7 @@ weight_val: .1
 k_val: 250 
 proposal_temp: .1
 use_diverse_initialization: false
-use_cnn_batchloss: false 
+use_cnn_batchloss: True 
 filter_type: topk
 p_val: 0.9
 filter_logit: dist
@@ -10,8 +10,8 @@ bias_compute_method: penalty
 weight_strat: learn
 min_weight: 1.0
 max_weight: 1.0
-weight_lr: 1e-3
+weight_lr: .001 
 bias_rep_space: embed
-proposal_rep_space: embed
+proposal_rep_space: logit 
 step_size: .1
 disc_weight: .9

@@ -25,11 +25,13 @@ def sentiment_exp_loop(total_conf):
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
     # initialize the directory for storing data
-    save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
-    save_dir = initialize_metric_storing(total_conf, save_dir)
+    save_dir = total_conf.get('prev_run_dir', None)
+    if save_dir is None:
+        save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
+        save_dir = initialize_metric_storing(total_conf, save_dir)
     total_conf['prev_run_dir'] = save_dir
     ### initializing samplers
-    print(model.get_input_embeddings().weight.size())
+    # print(model.get_input_embeddings().weight.size())
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
         bias_dim = model.get_input_embeddings().weight.shape[0]
@@ -83,7 +85,7 @@ def sentiment_exp_loop(total_conf):
                 stored_sentence,
             )
         end = time.time()
-        print(end - start)
+        # print(end - start)
         times.append(f"time: {end - start}")
 
 

@@ -33,9 +33,9 @@ class LangevinSampler(nn.Module):
         self.weight_val = weight_val
         self.a_s = []
         self.hops = []
-        self.k_val = k_val 
-        self.temp = proposal_temp
-        self.device = device
+        self.k_val = int(k_val)
+        self.temp = float(proposal_temp)
+        self.device = str(device)
         self.use_diverse_initialization=use_diverse_initialization
         self.diverse_addition_length = diverse_addition_length
         self.num_beams = num_beams
@@ -103,7 +103,8 @@ class LangevinSampler(nn.Module):
             self.weights = self.calc_bolt_weights(seq_length - prompt_length)
         elif self.weight_strat == 'learn': 
             self.weights = torch.ones((initial_bias.size(0), initial_bias.size(1))).to(self.device)
-            self.weight_optim = torch.optim.Adam([self.weights], lr=self.weight_lr)         
+            self.weight_optim = torch.optim.Adam([self.weights], lr=self.weight_lr)    
+        initial_bias.requires_grad = True     
         return inputs, initial_bias
         
 
@@ -114,10 +115,11 @@ class LangevinSampler(nn.Module):
     
     def calc_grad_embed(self, loss, embed_bias): 
         gx = torch.autograd.grad(loss, embed_bias, allow_unused=True)
-        gx = gx[0].detach()[:, self.prompt_length:, :]
+        gx = gx[0].detach()
         return gx
     
     def get_unfiltered_dist(self, gx, cur_token_ids, cur_bias=None):
+        # print(gx.shape)
         if self.proposal_rep_space == 'logit':
             token_dist = torch.ones_like(gx).to(self.device)
             token_dist[torch.arange(token_dist.size(0))[:, None, None],
@@ -142,9 +144,12 @@ class LangevinSampler(nn.Module):
                                  onehot, 
                                  cur_token_ids, 
                                  logits):
-        gx = self.calc_grad_embed(loss, cur_bias)
+        if self.proposal_rep_space == 'logit':
+            gx = self.calc_grad_logit(loss, onehot)
+        else:
+            gx = self.calc_grad_embed(loss, cur_bias)
         logits = logits[:, self.prompt_length:, :]
-        unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids)
+        unfiltered_dist = self.get_unfiltered_dist(gx, cur_token_ids, cur_bias=cur_bias)
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
         filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
                                                   torch.arange(unfiltered_dist.size(1))[None, :, None],
@@ -163,7 +168,7 @@ class LangevinSampler(nn.Module):
         filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
                                                   torch.arange(unfiltered_dist.size(1))[None, :, None],
                                                     topk_ids]
-        print(filtered_dist_logits.var(dim=-1).mean())
+        # print(filtered_dist_logits.var(dim=-1).mean())
         return filtered_dist_logits, topk_ids
     
 
@@ -261,29 +266,21 @@ class LangevinSampler(nn.Module):
                         kw_tokens,
                         cur_iter): 
         ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
-        if not self.use_cnn_batchloss:
-            if cur_iter == 0: 
-                self.kw_target_idx = self.sample_position_kw(kw_tokens, output_ids)
-            kw_losses = self.keyword_loss(logits, self.kw_target_idx, kw_tokens)
-            loss = kw_losses.sum()
+        loss = ppl_loss
+        kw_losses = torch.zeros_like(logits)
+        if self.proposal_rep_space == 'logit':
+            gx = self.calc_grad_logit(loss, onehot)
         else: 
-            loss = ppl_loss
-            kw_losses = torch.zeros_like(logits)
-        gx = torch.autograd.grad(loss, onehot, allow_unused=True)
-        gx = gx[0].detach()[:, self.prompt_length:, :]
+            gx = self.calc_grad_embed(loss, cur_bias)
+        unfiltered_dist = self.get_unfiltered_dist(gx, output_ids, cur_bias)
         logits = logits[:, self.prompt_length:, :]
-        self.max_unnorm.append(logits.max(dim=-1).values.detach().cpu().numpy())
         topk_ids = torch.topk(logits, self.k_val, -1).indices
         # ideally, this should capture the kw tokens + those that are semantically similar 
         topk_ids = torch.concat([topk_ids, self.keyword_tokens], dim=-1)
-        gx_topk = gx[torch.arange(gx.size(0))[:, None, None], 
-                     torch.arange(gx.size(1))[None, :, None], 
-                     topk_ids]
-        # gx_topk = torch.gather(gx, -1, topk_ids)
-        token_dist = torch.ones_like(gx_topk).to(self.device) 
-        token_dist[:, :, 0] = 0
-        logits = gx_topk * token_dist
-        proposal_dist = torch.distributions.Categorical(logits = -1 * logits / self.temp)
+        filtered_dist_logits = unfiltered_dist[torch.arange(unfiltered_dist.size(0))[:, None, None],
+                                                  torch.arange(unfiltered_dist.size(1))[None, :, None],
+                                                    topk_ids] 
+        proposal_dist = torch.distributions.Categorical(logits = filtered_dist_logits / self.temp)
         sampled_dist_ids = proposal_dist.sample()
         actual_ids = topk_ids[torch.arange(topk_ids.size(0))[:, None],
                               torch.arange(topk_ids.size(1))[None, :],
@@ -336,15 +333,13 @@ class LangevinSampler(nn.Module):
                 return self.step_soft_logit(**kwargs)
         else: 
             return self.step_soft_embed(**kwargs)
-        
-    def step_soft_embed_prop(self, x, energy_fn, **kwargs):
-        return 
-
-
 
     def step_soft_embed(self, x, energy_fn, **kwargs): 
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
+        if self.is_kw: 
+            loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_kw(cur_bias, energy_fn, kw_tokens = kwargs['kw_tokens'], cur_iter=kwargs['cur_iter'])
+        else: 
+            loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_embed_soft(cur_bias, energy_fn)
         bias = self.embed_map(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
 
@@ -358,11 +353,7 @@ class LangevinSampler(nn.Module):
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
-    # using the previous logits from gpt, 
-    # reweights the bias term for the sampled position 
-    def modulate_bias(self, bias, logits):
-        return bias
-    
+
     def step_hard_logit(self, x, energy_fn, 
                 kw_tokens, cur_iter, **kwargs):
         cur_bias = x

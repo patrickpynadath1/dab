@@ -5,7 +5,7 @@ import pickle
 from evaluation import *
 
 
-def exp_specific_metrics(exp, batch, **kwargs): 
+def exp_specific_metrics(exp, batch,  **kwargs): 
     if exp == "sentiment": 
         return compute_classifier_attribute(batch, **kwargs) 
     elif exp == "keywords":
@@ -14,7 +14,7 @@ def exp_specific_metrics(exp, batch, **kwargs):
         return compute_classifier_attribute(batch, **kwargs) 
     return  []
 
-def eval_loop(total_conf, generated_sentences):
+def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=True):
 
     cur_idx = 0
     batch_size = total_conf['batch_size']
@@ -35,8 +35,8 @@ def eval_loop(total_conf, generated_sentences):
         batch = generated_sentences[cur_idx:cur_idx+batch_size]
         
         metrics['perp'].append(compute_perplexity(batch))
-        metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
-        metrics['self_bleu'].append(calc_self_bleu(batch))
+        # metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
+        # metrics['self_bleu'].append(calc_self_bleu(batch))
         if total_conf['exp'] != "detoxify":
             metrics[total_conf['exp']].append(exp_specific_metrics(total_conf['exp'], batch, 
                                                         ext_tokenizer=ext_senti_tokenizer, 
@@ -48,5 +48,8 @@ def eval_loop(total_conf, generated_sentences):
 
 
         cur_idx += batch_size
-    pickle.dump(metrics, open(f"{total_conf['prev_run_dir']}/eval_metrics_{total_conf['start_idx']}_{total_conf['end_idx']}.pkl", 'wb'))
+    if dump_on_end:
+        pickle.dump(metrics, open(f"{total_conf['prev_run_dir']}/eval_metrics_{total_conf['start_idx']}_{total_conf['end_idx']}.pkl", 'wb'))
+    if return_on_end:
+        return metrics
     return

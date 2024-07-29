@@ -71,6 +71,7 @@ class GPTPromptTuningWithBiasesModelMixin:
                 MinLengthLogitsProcessor(seq_len, eos_token_id=self.config.eos_token_id),
             ]
         )
+        self.disc_weight = disc_weight
         self.stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=seq_len)])
 
     def _extend_labels(self, labels, ignore_index=-100) -> torch.Tensor:
@@ -184,7 +185,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = ppl_loss
-        print("ppl_loss:", ppl_loss)
+        # print("ppl_loss:", ppl_loss)
         # ste trick to make sure they have the same gradients 
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()

@@ -113,9 +113,9 @@ def keywords_loop(total_conf):
                                    keywords_word=keywords_list,
                                    stored_sentence_list=stored_sentence)
             if all([idx != -1 for idx in success_idx]):
-                print("success")
+                # print("success")
                 break
-        print(sentences)
+        # print(sentences)
 
         ### Freeing CUDA space
         del inputs 
@@ -124,8 +124,6 @@ def keywords_loop(total_conf):
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-    with open(f"{save_dir}/sampler_metrics.pkl", "wb") as f:
-        pickle.dump(sampler.get_metrics_to_store(), f)
     return total_conf, total_sentences
 
 

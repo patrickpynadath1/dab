@@ -177,8 +177,8 @@ class GPTPromptTuningWithbiasesModelMixin:
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = 0.3 * keywords_loss + 1 * ppl_loss
 
-        print("keywords_loss:", keywords_loss)
-        print("ppl_loss:", ppl_loss)
+        # print("keywords_loss:", keywords_loss)
+        # print("ppl_loss:", ppl_loss)
 
         return loss, output_ids
 

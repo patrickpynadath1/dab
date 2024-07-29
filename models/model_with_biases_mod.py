@@ -312,8 +312,8 @@ class GPTPromptTuningWithbiasesModelMixin:
         labels = torch.argmax(onehot_generates, dim=-1)
         loss = self.disc_weight * senti_loss + (1 - self.disc_weight) * ppl_loss
 
-        print("senti_loss:", senti_loss)
-        print("ppl_loss:", ppl_loss)
+        # print("senti_loss:", senti_loss)
+        # print("ppl_loss:", ppl_loss)
         
         return (loss, 
                 output_ids, 
