@@ -19,3 +19,5 @@ keywords_dict:
   science : ["microscope", "mass", "mineral", "scientist"]
   space : ["meteor", "planet", "satellite", "astronaut"]
 keyword: computer
+abductive_reasoning_file: prompts/anli/test.jsonl
+save_dir: results

@@ -55,7 +55,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
     
-    def set_biases(self, batch_size, seq_len, device='cpu', **kwargs):
+    def set_biases(self, batch_size, seq_len, device='cpu', disc_weight=.9,**kwargs):
         self.seq_len = seq_len
 
         self.trainable_weights = None
@@ -71,6 +71,7 @@ class GPTPromptTuningWithBiasesModelMixin:
                 MinLengthLogitsProcessor(seq_len, eos_token_id=self.config.eos_token_id),
             ]
         )
+        self.disc_weight = disc_weight
         self.stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=seq_len)])
 
     def _extend_labels(self, labels, ignore_index=-100) -> torch.Tensor:
@@ -155,30 +156,41 @@ class GPTPromptTuningWithBiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         keywords=None,
-        biases=None, 
+        biases=None,
+        keywords_idx=None,
+        keywords_token=None,
+        use_cnn_batchloss=True,
+        bias_rep_space='logit', 
+        weight=1,
         **kwargs
     ):
+        if bias_rep_space == 'logit':
+            forward_func = self.soft_greedy_search_with_biases
+        else: 
+            forward_func = self.soft_greedy_search_with_biases_embed
         
         if not inference:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight,)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight, )
         else:
             if use_full_prompt:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight)
             else:
-                output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True)
-        keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
+                output_ids, onehot_generates, last_score, soft_generates, logits, _ = forward_func(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=biases, use_hidden_states_biases=False, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len, is_dlp=True, weight=weight)
+        
 
+            
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
-        loss = 0.3 * keywords_loss + 1 * ppl_loss
-
-        print("keywords_loss:", keywords_loss)
-        print("ppl_loss:", ppl_loss)
-
-        return loss, output_ids, onehot_generates, logits, keywords_loss
+        loss = ppl_loss
+        # print("ppl_loss:", ppl_loss)
+        # ste trick to make sure they have the same gradients 
+        logits = logits + onehot_generates - onehot_generates.detach()
+        keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
+        loss = (1 - self.disc_weight) *  ppl_loss + self.disc_weight * keywords_loss
+        return loss, output_ids, onehot_generates, logits
 
 class FullPrompt(nn.Module):
     def __init__(self, n_tokens: int = 20, random_range: float = 0.5, config = None):

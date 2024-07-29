@@ -20,28 +20,38 @@ def sentiment_exp_loop(total_conf):
 
 
     ### LOADING MODELS
-    model = load_base_model(total_conf['sampler'], **total_conf["base_model_args"]).to(total_conf["device"])
+    model = load_base_model(total_conf['sampler'], mode='senti', **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_sentiment_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
     model.init_discriminator(discriminator)
     # initialize the directory for storing data
-    save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
-    save_dir = initialize_metric_storing(total_conf, save_dir)
+    save_dir = total_conf.get('prev_run_dir', None)
+    if save_dir is None:
+        save_dir = f"{total_conf['save_dir']}/sentiment_{total_conf['sentiment']}/{total_conf['sampler']}"
+        save_dir = initialize_metric_storing(total_conf, save_dir)
     total_conf['prev_run_dir'] = save_dir
     ### initializing samplers
+    # print(model.get_input_embeddings().weight.size())
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
+        bias_dim = model.get_input_embeddings().weight.shape[0]
     elif total_conf['sampler'] == "dlp":
         sampler = LangevinSampler(**total_conf)
+        if total_conf['bias_rep_space'] == "logit":
+            bias_dim = model.get_input_embeddings().weight.shape[0]
+        if total_conf['bias_rep_space'] == "embed":
+            bias_dim = model.get_input_embeddings().weight.shape[1]
     times = []
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
     total_sentences = []
+
     def energy_fn_wrapper(x, inputs):
-        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
         loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs, use_full_prompt=False, biases=x_full
+            **inputs, labels=inputs, use_full_prompt=False, biases=x_full, bias_rep_space = total_conf['bias_rep_space'], 
+            weight=total_conf['weight_val']
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
     
@@ -75,7 +85,9 @@ def sentiment_exp_loop(total_conf):
                 stored_sentence,
             )
         end = time.time()
-        times.append(end - start)
+        # print(end - start)
+        times.append(f"time: {end - start}")
+
 
         ### Freeing CUDA space
         del inputs 

@@ -16,11 +16,16 @@ from models import (
 import pickle
 
 
+def keyword_loss(logits, target_kw_idx, kw_token): 
+    return - logits.softmax(dim=-1)[torch.arange(logits.size(0)), target_kw_idx, kw_token].sum()
+
+
+
 def keywords_loop(total_conf):
     ### LOADING CONFIGS
     ### LOADING MODELS
     model = load_base_model(total_conf['sampler'], 
-                            use_senti=False, 
+                            mode='keywords', 
                             **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
@@ -40,9 +45,14 @@ def keywords_loop(total_conf):
     ### INITIALIZING SAMPLERS
     if total_conf['sampler'] == "bolt":
         sampler = BoltSampler(**total_conf)
-    elif total_conf['sampler'] == "dlp":
-        sampler = LangevinSampler(**total_conf)
+        bias_dim = model.get_input_embeddings().weight.shape[0]
 
+    elif total_conf['sampler'] == "dlp":
+        sampler = LangevinSampler(**total_conf, is_kw=True)
+        if total_conf['bias_rep_space'] == "logit":
+            bias_dim = model.get_input_embeddings().weight.shape[0]
+        else:
+            bias_dim = model.get_input_embeddings().weight.shape[1]
     ### INITIALIZE METADATA COLLECTION
     # TODO: do the above
     total_sentences = []
@@ -52,15 +62,21 @@ def keywords_loop(total_conf):
     keywords_list = total_conf["keywords_dict"][total_conf['keyword']]
     keywords_string = " ".join(keywords_list)
     keywords_token = tokenizer([keywords_string] * total_conf['batch_size'], return_tensors="pt")['input_ids'].to(total_conf['device'])
-    
-    
+     
     def energy_fn_wrapper(x, inputs):
-        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], 50257).to(total_conf["device"])
+        prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
-        loss, output_ids, onehot_generates, gpt_logit, senti_losses = model.soft_forward(
-            **inputs, labels=inputs.input_ids, use_full_prompt=False, biases=x_full, keywords=keywords_token
+        loss, output_ids, onehot_generates, gpt_logit = model.soft_forward(
+            **inputs, 
+            labels=inputs.input_ids, 
+            use_full_prompt=False, 
+            biases=x_full,
+            keywords=keywords_token, 
+            use_cnn_batchloss=total_conf['use_cnn_batchloss'],
+            bias_rep_space = total_conf['bias_rep_space'], 
+            weight=total_conf['weight_val']
         )
-        return loss, output_ids, onehot_generates, gpt_logit, senti_losses
+        return loss, output_ids, onehot_generates, gpt_logit
     
 
     for prompt in prompts:
@@ -73,7 +89,8 @@ def keywords_loop(total_conf):
             batch_size=total_conf["batch_size"], 
             prompt_length=inputs.input_ids.shape[1], 
             inputs=inputs,
-            sentiment=None
+            sentiment=None,
+            keyword_tokens=keywords_token
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
@@ -84,7 +101,9 @@ def keywords_loop(total_conf):
                 model=model, 
                 energy_fn=energy_fn, 
                 inputs=inputs, 
-                keywords=keywords_token
+                kw_tokens=keywords_token, 
+                keywords=keywords_token,
+                cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             updating_best_keywords(cur_iter=i,
@@ -94,8 +113,9 @@ def keywords_loop(total_conf):
                                    keywords_word=keywords_list,
                                    stored_sentence_list=stored_sentence)
             if all([idx != -1 for idx in success_idx]):
-                print("success")
+                # print("success")
                 break
+        # print(sentences)
 
         ### Freeing CUDA space
         del inputs 
@@ -107,3 +127,6 @@ def keywords_loop(total_conf):
     with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f: 
         pickle.dump(sampler.get_sampling_metrics(), f)
     return total_conf, total_sentences
+
+
+

@@ -6,4 +6,5 @@ optimizer_conf:
 noise_conf: 
   mean: 0.01 
   std: 0.01 
-  device: cpu 
+  device: cpu
+use_cnn_batchloss: true 

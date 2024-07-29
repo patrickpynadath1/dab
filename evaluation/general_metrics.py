@@ -26,6 +26,12 @@ def load_cola_model(cola_model = "textattack/roberta-base-CoLA"):
     model.eval()
     return tokenizer, model
 
+def load_internal_toxic(toxic_model="./checkpoints/replaced_vocab_roberta_for_jigsaw"):
+    tokenizer = RobertaTokenizerFast.from_pretrained(toxic_model)
+    model = RobertaForSequenceClassification.from_pretrained(toxic_model)
+    model.eval()
+    return tokenizer, model
+
 
 def load_external_sentiment(sentiment_model = "VictorSanh/roberta-base-finetuned-yelp-polarity", 
                             saved_model="checkpoints/RobertaExtClsf"):
@@ -85,11 +91,11 @@ def get_unique_ngram(sentence_batch, n):
 
 
 def compute_perplexity(sentence_batch):
-    results = perplexity.compute(predictions=sentence_batch, model_id='gpt2-xl')
+    results = perplexity.compute(predictions=sentence_batch, model_id='gpt2-xl', )
     return results['perplexities']
 
 
-def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
+def compute_classifier_attribute(sentence_batch, ext_tokenizer, ext_clf):
     with torch.no_grad():
         inputs = ext_tokenizer(sentence_batch, return_tensors="pt", padding=True).to(ext_clf.device)
         outputs = ext_clf(**inputs)
@@ -98,9 +104,10 @@ def compute_sentiment(sentence_batch, ext_tokenizer, ext_clf):
     return logits
 
 
-def compute_toxicity_score(sentences, 
+def compute_perspective_scores(sentences, 
                             save_dir,
-                           start_idx, rate_limit):
+                           start_idx, 
+                           rate_limit):
     api = PerspectiveAPI(rate_limit=rate_limit)
     print(len(sentences))
     api.request_bulk(sentences, output_file=f"{save_dir}/toxicity_scores_{start_idx}.json")

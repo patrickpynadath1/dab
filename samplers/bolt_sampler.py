@@ -18,7 +18,7 @@ class BoltSampler(BaseSampler):
         self.optimizer_kw = optimizer_conf
         self.noise_kw = noise_conf
         self.device = device
-        self.stored_biases = []
+        self.bias_max_val = []
 
     def initialize_batch(self, 
                          model, 
@@ -70,17 +70,14 @@ class BoltSampler(BaseSampler):
             ).to(self.device)
             for _ in range(len(model.biases))
         ]
-        cur_bias = []
+        cur_max_vals = []
         for i in range(len(model.biases)):
+            cur_max_vals.append(torch.max(model.biases[i], dim=-1).values.detach().cpu())
             model.biases[i].data = model.biases[i].data + noise[i]
-            cur_bias.append(model.biases[i].data.detach().cpu().numpy())
-        self.stored_biases.append(cur_bias)
+        self.bias_max_val.append(cur_max_vals)
         return x, loss, output_ids, otheroutputs
     
-    def get_sampling_metrics(self): 
-        return self.stored_biases
-    
-
-
+    def get_metrics_to_store(self): 
+        return {'bias_max_vals': self.bias_max_val}
 
         

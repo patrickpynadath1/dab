@@ -169,14 +169,16 @@ class GPTPromptTuningWithbiasesModelMixin:
                 output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, full_prompt=self.full_prompts, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
             else:
                 output_ids, onehot_generates, last_score, soft_generates, logits, _ = self.soft_greedy_search_with_biases(inputs_embeds, input_ids, logits_processor=self.logits_processor, len_logits_processor=self.len_logits_processor, stopping_criteria=self.stopping_criteria, pad_token_id=self.config.eos_token_id, inference=True, return_last_score=True, sent_labels=None, biases=self.biases, use_hidden_states_biases=True, return_logit=True, trainable_weights=self.trainable_weights, seq_len=self.seq_len)
+        
+        
         keywords_loss = batch_log_bleulosscnn_ae(logits, keywords, 1).mean()
 
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = 0.3 * keywords_loss + 1 * ppl_loss
 
-        print("keywords_loss:", keywords_loss)
-        print("ppl_loss:", ppl_loss)
+        # print("keywords_loss:", keywords_loss)
+        # print("ppl_loss:", ppl_loss)
 
         return loss, output_ids
 

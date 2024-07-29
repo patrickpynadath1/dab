@@ -59,9 +59,9 @@ class GPTPromptTuningWithbiasesModelMixin:
                    attribute, 
                    prompt_length,
                    device,
-                   init_noise_rate=0.5, **kwargs):
+                   init_noise_rate=0.5, disc_weight=.9, **kwargs):
         self.seq_len = seq_len
-
+        self.disc_weight = disc_weight
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
@@ -177,8 +177,14 @@ class GPTPromptTuningWithbiasesModelMixin:
         use_full_prompt=False,
         senti_label=None,
         biases=None,
+        bias_rep_space='logit',
+        weight=1,
         **kwargs
     ):
+        if bias_rep_space == 'logit':
+            forward_func = self.soft_greedy_search_with_biases
+        else: 
+            forward_func = self.soft_greedy_search_with_biases_embed
         if senti_label is not None:
             if type(senti_label) == int:
                 self.labels = torch.LongTensor([senti_label]).to(self.device)
@@ -194,7 +200,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -209,7 +215,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                     return_logit=True,
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
-                    is_dlp=True, 
+                    is_dlp=True,
+                    weight=weight, 
                 )
             else:
                 (
@@ -219,7 +226,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -234,6 +241,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight,
                 )
         else:
             if use_full_prompt:
@@ -244,7 +252,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -261,6 +269,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight, 
                 )
             else:
                 (
@@ -270,7 +279,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     soft_generates,
                     logits,
                     gpt_logit,
-                ) = self.soft_greedy_search_with_biases(
+                ) = forward_func(
                     inputs_embeds,
                     input_ids,
                     logits_processor=self.logits_processor,
@@ -286,6 +295,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     trainable_weights=self.trainable_weights,
                     seq_len=self.seq_len,
                     is_dlp=True,
+                    weight=weight,
                 )
 
         dis_embs = torch.matmul(
@@ -300,10 +310,10 @@ class GPTPromptTuningWithbiasesModelMixin:
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         labels = torch.argmax(onehot_generates, dim=-1)
-        loss = 1 * senti_loss + 0.1 * ppl_loss
+        loss = self.disc_weight * senti_loss + (1 - self.disc_weight) * ppl_loss
 
-        print("senti_loss:", senti_loss)
-        print("ppl_loss:", ppl_loss)
+        # print("senti_loss:", senti_loss)
+        # print("ppl_loss:", ppl_loss)
         
         return (loss, 
                 output_ids, 

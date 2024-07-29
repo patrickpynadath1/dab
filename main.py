@@ -1,7 +1,8 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-from eval import eval_loop, compute_toxicity_score, clean_for_eval
+from abductive_reasoning import abductive_reasoning_loop
+from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
 
@@ -26,16 +27,17 @@ if __name__ == "__main__":
     bolt_sampler = subparsers.add_parser('bolt')
     eval_only = subparsers.add_parser('eval_only')
     api_eval = subparsers.add_parser('api_eval')
-    api_eval.add_argument("--rate_limit", type=int, default=60)    
+    experiments = ['sentiment', 'detoxify', 'keywords', 'abductive_reasoning']
 
     # general arguments 
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
     parser.add_argument("--save_dir", type=str, default="results")
-    parser.add_argument("--exp", type=str, choices=['sentiment', 'detoxify', 'keywords'], required=True)
+    parser.add_argument("--exp", type=str, choices=experiments, required=True)
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--conf_file", type=str, default=None)
+    api_eval.add_argument("--rate_limit", type=int, default=60)
     conf_subparser(parser, 'exp')
     conf_subparser(dlp_sampler, 'dlp')
     conf_subparser(bolt_sampler, 'bolt')
@@ -56,6 +58,8 @@ if __name__ == "__main__":
             res = detoxify_loop(total_conf)
         elif args.exp == "keywords":
             res = keywords_loop(total_conf)
+        elif args.exp == 'abductive_reasoning': 
+            res = abductive_reasoning_loop(total_conf)
 
         total_conf, generated_sentences = res 
         if args.eval_on_fin: 
@@ -72,4 +76,4 @@ if __name__ == "__main__":
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx:args.end_idx]
         if args.exp == 'detoxify': 
-            compute_toxicity_score(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
+            compute_perspective_scores(cur_batch, initial_prev_run_dir, start_idx=args.start_idx, rate_limit=args.rate_limit)
