@@ -28,8 +28,9 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     cola_tokenizer, cola_model = load_cola_model()
     ext_senti_tokenizer, ext_senti_clf = load_external_sentiment()
     ext_toxic_tokenizer, ext_toxic_clf = load_internal_toxic()
-    # cola_model.to(total_conf['device'])
-    # ext_clf.to(total_conf['device'])
+    cola_model.to(total_conf['device'])
+    ext_senti_clf.to(total_conf['device'])
+    ext_toxic_clf.to(total_conf['device'])
     while cur_idx < len(generated_sentences): 
         print(cur_idx)
         batch = generated_sentences[cur_idx:cur_idx+batch_size]

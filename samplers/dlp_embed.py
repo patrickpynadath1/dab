@@ -349,7 +349,7 @@ class LangevinSampler(nn.Module):
     # use the gradient to compute the distribution over the top-k tokens 
     def step_soft_logit(self, x, energy_fn, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_embed_soft(cur_bias, energy_fn)
+        loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_logit_soft(cur_bias, energy_fn)
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
     
