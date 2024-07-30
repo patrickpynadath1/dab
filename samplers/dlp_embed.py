@@ -64,7 +64,8 @@ class LangevinSampler(nn.Module):
         # initializing sampling metrics to track
         self.sampled_tokens = []
         self.max_unnorm = []
-        self.energy = []
+        self.disc_loss = []
+        self.cur_disc_loss = None
 
     def calc_linear_weights(self, 
                             num_gen_tokens):
@@ -85,6 +86,9 @@ class LangevinSampler(nn.Module):
                          inputs,
                          keyword_tokens=None,
                          **kwargs):
+        if self.cur_disc_loss is not None: 
+            self.disc_loss.append(self.cur_disc_loss)
+        self.cur_disc_loss = []
         self.prompt_length = prompt_length
         model.set_biases(batch_size=batch_size, 
                         seq_len=seq_length,
@@ -112,15 +116,14 @@ class LangevinSampler(nn.Module):
         elif self.initialization == 'random_cont':
             initial_bias = self.initialization_noise_rate * torch.randn(batch_size, 
                         seq_length - prompt_length, 
-                        logit_dim).to(self.device)
+                        last_dim).to(self.device)
         elif self.initialization == 'zero':
             initial_bias = torch.zeros(batch_size, 
                         seq_length - prompt_length, 
-                        logit_dim).to(self.device)
+                        last_dim).to(self.device)
         elif self.initialization == 'kw':
             sampled_kw_idx = torch.randint(0, keyword_tokens.size(-1), (batch_size, seq_length - prompt_length)).to(self.device)
-            sampled_kw = keyword_tokens[torch.arange(keyword_tokens.size(0))[:, None, None], 
-                                        torch.arange(keyword_tokens.size(1))[None, :, None], 
+            sampled_kw = keyword_tokens[torch.arange(keyword_tokens.size(0))[:, None], 
                                         sampled_kw_idx]
             if last_dim == embed_dim: 
                 initial_bias = self.embed_map(sampled_kw)
@@ -135,6 +138,7 @@ class LangevinSampler(nn.Module):
         elif self.weight_strat == 'learn': 
             self.weights = torch.ones((initial_bias.size(0), initial_bias.size(1))).to(self.device)
             self.weight_optim = torch.optim.Adam([self.weights], lr=self.weight_lr)    
+        initial_bias = initial_bias.detach()
         initial_bias.requires_grad = True     
         return inputs, initial_bias
         
@@ -295,9 +299,9 @@ class LangevinSampler(nn.Module):
                         energy_fn, 
                         kw_tokens,
                         cur_iter): 
-        ppl_loss, output_ids, onehot, logits = energy_fn(cur_bias)
+        ppl_loss, output_ids, onehot, logits, kw_losses = energy_fn(cur_bias)
+        self.cur_disc_loss.append(kw_losses.mean().detach().cpu().numpy())  
         loss = ppl_loss
-        kw_losses = torch.zeros_like(logits)
         if self.proposal_rep_space == 'logit':
             gx = self.calc_grad_logit(loss, onehot)
         else: 
@@ -394,13 +398,14 @@ class LangevinSampler(nn.Module):
             bias = self.compute_bias_l2_inv(sampled_ids, kw_tokens)
         else: 
             bias = self.compute_bias_dot_exp(sampled_ids, kw_tokens)
-        if self.weight_strat == 'learn':
-            self.step_weights(cur_bias, energy_fn)
-        self.sampled_tokens.append(sampled_ids)
-        if self.weight_strat == 'learn':
-            bias = bias * self.weights.unsqueeze(dim=-1)
-        else: 
-            bias = bias * self.weights.unsqueeze(0).unsqueeze(-1)
+        # if self.weight_strat == 'learn':
+        #     self.step_weights(cur_bias, energy_fn)
+        # self.sampled_tokens.append(sampled_ids)
+        # if self.weight_strat == 'learn':
+        #     bias = bias * self.weights.unsqueeze(dim=-1)
+        # else: 
+        #     bias = bias * self.weights.unsqueeze(0).unsqueeze(-1)
+        bias = bias * self.weight_val
         return bias, loss, output_ids, [kw_losses]
     
     ### function for sampling POSITIONS along the sequence 
@@ -423,6 +428,9 @@ class LangevinSampler(nn.Module):
                                 kw_token]
         return -1 * (kw_log_prob)
     
-    def get_metrics_to_store(self): 
+    def get_sampling_metrics(self):
+        if self.cur_disc_loss is not None: 
+            self.disc_loss.append(self.cur_disc_loss)
         return {'bias_tokens': self.sampled_tokens, 
-                'max_unnorm': self.max_unnorm}
+                'max_unnorm': self.max_unnorm, 
+                'disc_loss': self.disc_loss}

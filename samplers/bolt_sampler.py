@@ -3,6 +3,7 @@ from torch.optim import SGD
 from transformers import AdamW
 import torch.distributions as dists
 import torch 
+import numpy as np
 
 
 class BoltSampler(BaseSampler): 
@@ -18,6 +19,8 @@ class BoltSampler(BaseSampler):
         self.optimizer_kw = optimizer_conf
         self.noise_kw = noise_conf
         self.device = device
+        self.grad_norms = []
+        self.cur_grad_norms = []
         self.bias_max_val = []
 
     def initialize_batch(self, 
@@ -31,6 +34,9 @@ class BoltSampler(BaseSampler):
                          attribute=sentiment,
                          device=self.device,
                          **kwargs)
+        if self.cur_grad_norms is not None: 
+            self.grad_norms.append(self.cur_grad_norms)
+        self.cur_grad_norms = []
         optimizer_grouped_parameters = [
             {
                 "params": [
@@ -62,6 +68,14 @@ class BoltSampler(BaseSampler):
                     **kwargs
                 )
         loss.backward()
+        cur_biases_norm = []
+        # tracking grad norms 
+        for i in range(len(model.biases)):
+            grad = model.biases[i].grad
+            if grad is not None: 
+                grad_norm = grad.detach().data.norm(2).detach().cpu().numpy()
+                cur_biases_norm.append(grad_norm)
+        self.cur_grad_norms.append(np.stack(cur_biases_norm))
         self.cur_optimizer.step()
         noise = [torch.normal(
             size=model.biases[0].shape,
@@ -77,7 +91,10 @@ class BoltSampler(BaseSampler):
         self.bias_max_val.append(cur_max_vals)
         return x, loss, output_ids, otheroutputs
     
-    def get_metrics_to_store(self): 
-        return {'bias_max_vals': self.bias_max_val}
+    def get_sampling_metrics(self): 
+        if self.cur_grad_norms is not None: 
+            self.grad_norms.append(self.cur_grad_norms)
+        return {'bias_max_vals': self.bias_max_val,
+                'grad_norms': self.grad_norms}
 
         

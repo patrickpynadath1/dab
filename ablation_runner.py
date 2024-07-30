@@ -64,7 +64,7 @@ def construct_all_configs(ablation_conf,
 
 def worker_writing_data(data_queue):
     (save_dir, data) = data_queue.get()
-    with open(f"{save_dir}/eval_metrics_abl.pkl", "wb") as f: 
+    with open(save_dir, "wb") as f: 
         pickle.dump(data, f)
     print(f"dumped data for {save_dir}")
     return
@@ -80,13 +80,14 @@ def worker_run_exp(run_dir, total_conf, gpu_queue, to_save_queue):
         if total_conf['exp'] == 'detoxify': 
             res = detoxify_loop(total_conf)
         elif total_conf['exp'] == 'keywords': 
-            res = keywords_loop(total_conf)
+            res = keywords_loop(total_conf, dump_sampling_metrics=False, return_sampling_metrics=True)
         elif total_conf['exp'] == 'sentiment': 
-            res = sentiment_exp_loop(total_conf)
-        total_conf, generated_sentences = res
+            res = sentiment_exp_loop(total_conf, dump_sampling_metrics=False, return_sampling_metrics=True)
+        total_conf, generated_sentences, sampling_metrics = res
+        to_save_queue.put((f"{run_dir}/sampling_metrics.pkl", sampling_metrics))
         total_conf['prev_run_dir'] = run_dir
         metrics = eval_loop(total_conf, generated_sentences, return_on_end=True, dump_on_end=False)
-        to_save_queue.put((run_dir, metrics))
+        to_save_queue.put((f"{run_dir}/eval_metrics_abl.pkl", metrics))
         print("sent to save queue")
     except Exception as e:
         print(f"error in {run_dir}")

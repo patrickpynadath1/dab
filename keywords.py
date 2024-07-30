@@ -21,7 +21,7 @@ def keyword_loss(logits, target_kw_idx, kw_token):
 
 
 
-def keywords_loop(total_conf):
+def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metrics=False):
     ### LOADING CONFIGS
     ### LOADING MODELS
     model = load_base_model(total_conf['sampler'], 
@@ -66,7 +66,7 @@ def keywords_loop(total_conf):
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(total_conf["device"])
         x_full = torch.concat([prompt_bias, x], dim=1)
-        loss, output_ids, onehot_generates, gpt_logit = model.soft_forward(
+        loss, output_ids, onehot_generates, gpt_logit, kw_losses = model.soft_forward(
             **inputs, 
             labels=inputs.input_ids, 
             use_full_prompt=False, 
@@ -76,7 +76,7 @@ def keywords_loop(total_conf):
             bias_rep_space = total_conf['bias_rep_space'], 
             weight=total_conf['weight_val']
         )
-        return loss, output_ids, onehot_generates, gpt_logit
+        return loss, output_ids, onehot_generates, gpt_logit, kw_losses
     
 
     for prompt in prompts:
@@ -115,8 +115,9 @@ def keywords_loop(total_conf):
             if all([idx != -1 for idx in success_idx]):
                 # print("success")
                 break
-        # print(sentences)
-
+        print(sentences)
+        if stored_sentence == [""] * total_conf["batch_size"]:
+            stored_sentence = sentences
         ### Freeing CUDA space
         del inputs 
         del cur_batch
@@ -124,9 +125,10 @@ def keywords_loop(total_conf):
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence) + "\n\n")
         output_file.flush()
-    # with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f: 
-    #     pickle.dump(sampler.get_sampling_metrics(), f)
-    return total_conf, total_sentences
-
-
+    if dump_sampling_metrics:
+        with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f: 
+            pickle.dump(sampler.get_sampling_metrics(), f)
+    if return_sampling_metrics:
+        return total_conf, total_sentences, sampler.get_sampling_metrics()
+    return total_conf, total_sentences 
 
