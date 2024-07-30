@@ -1,6 +1,7 @@
 weight_val: .1 
 k_val: 250 
 proposal_temp: .1
+initialization: random_disc
 use_diverse_initialization: false
 use_cnn_batchloss: True 
 filter_type: topk
@@ -17,3 +18,4 @@ step_size: .1
 disc_weight: .9
 use_bolt_weights: true 
 use_scale_weights: true 
+initialization_noise_rate: .5

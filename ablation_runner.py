@@ -138,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp', type=str, nargs='+', required=True)
     parser.add_argument('--gpu_ids', type=int, nargs='+', required=True)
     parser.add_argument('--sampler', type=str, required=True)
+    parser.add_argument('--save_dir', type=str, required=False, default='results')
     parser.add_argument('--jobs_per_gpu', type=int, default=1)
     args = parser.parse_args()
 
@@ -146,5 +147,6 @@ if __name__ == "__main__":
     base_conf = load_default_conf(args.sampler)
     base_conf = {**base_conf, **exp_conf}
     base_conf['exp'] = args.exp
+    base_conf['save_dir'] = args.save_dir
     all_configs = construct_all_configs(ablation_conf, base_conf, args.sampler, experiments=args.exp)
     run_ablations(all_configs, args.gpu_ids, args.jobs_per_gpu)

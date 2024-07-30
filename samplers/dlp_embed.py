@@ -29,7 +29,9 @@ class LangevinSampler(nn.Module):
                  step_size=.1,
                  disc_weight=.9, 
                  use_bolt_weights=True, 
-                 use_scale_weights=True, 
+                 use_scale_weights=True,
+                 initialization = 'random_disc',  
+                 initialization_noise_rate=.5,
                  **kwargs):
         super().__init__()
         self.weight_val = weight_val
@@ -57,7 +59,8 @@ class LangevinSampler(nn.Module):
         self.disc_weight = disc_weight
         self.use_bolt_weights = use_bolt_weights
         self.use_scale_weights = use_scale_weights
-
+        self.initialization = initialization
+        self.initialization_noise_rate= initialization_noise_rate
         # initializing sampling metrics to track
         self.sampled_tokens = []
         self.max_unnorm = []
@@ -91,19 +94,38 @@ class LangevinSampler(nn.Module):
                         disc_weight=self.disc_weight,
                         use_scale_weights=self.use_scale_weights, 
                         use_bolt_weights=self.use_bolt_weights)
-        logit_dim = model.get_input_embeddings().weight.size(0)
-        embed_dim = model.get_input_embeddings().weight.size(1)
-        if self.bias_rep_space == 'logit':
-            initial_bias = torch.zeros(batch_size, 
-                        seq_length - prompt_length, 
-                        logit_dim).to(self.device)
-        else: 
-            initial_bias = torch.zeros(batch_size, 
-                        seq_length - prompt_length, 
-                        embed_dim).to(self.device) 
         if keyword_tokens is not None: 
             self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(1, seq_length - prompt_length, 1)
         self.embed_map = model.get_input_embeddings()
+        logit_dim = model.get_input_embeddings().weight.size(0)
+        embed_dim = model.get_input_embeddings().weight.size(1)
+        if self.bias_rep_space == 'logit':
+            last_dim = logit_dim 
+        else: 
+            last_dim = embed_dim 
+        if self.initialization == 'random_disc':
+            sampled_ints = torch.randint(0, logit_dim, (batch_size, seq_length - prompt_length)).to(self.device)
+            if last_dim == embed_dim: 
+                initial_bias = self.embed_map(sampled_ints)
+            else: 
+                initial_bias = self.compute_bias_l2_pen(sampled_ints)
+        elif self.initialization == 'random_cont':
+            initial_bias = self.initialization_noise_rate * torch.randn(batch_size, 
+                        seq_length - prompt_length, 
+                        logit_dim).to(self.device)
+        elif self.initialization == 'zero':
+            initial_bias = torch.zeros(batch_size, 
+                        seq_length - prompt_length, 
+                        logit_dim).to(self.device)
+        elif self.initialization == 'kw':
+            sampled_kw_idx = torch.randint(0, keyword_tokens.size(-1), (batch_size, seq_length - prompt_length)).to(self.device)
+            sampled_kw = keyword_tokens[torch.arange(keyword_tokens.size(0))[:, None, None], 
+                                        torch.arange(keyword_tokens.size(1))[None, :, None], 
+                                        sampled_kw_idx]
+            if last_dim == embed_dim: 
+                initial_bias = self.embed_map(sampled_kw)
+            else: 
+                initial_bias = self.compute_bias_l2_pen(sampled_kw)
         if self.weight_strat == 'uniform':
             self.weights = self.weight_val 
         elif self.weight_strat == 'linear':

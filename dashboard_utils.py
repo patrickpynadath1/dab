@@ -28,14 +28,14 @@ def compile_res(file_paths, *hyper_param_of_imp):
             hp_setting = config.get(hp, None)
             cur_run_dct[hp] = hp_setting
         try: 
-            metrics = pickle.load(open(f"{fp}/eval_metrics_0_-1.pkl", "rb"))
+            metrics = pickle.load(open(f"{fp}/eval_metrics_abl.pkl", "rb"))
         except FileNotFoundError:
             continue
         for k,v in metrics.items():
             if k == "cola":
                 continue
             array_v = np.array(v)
-            if len(array_v.shape) == 2: 
+            if len(array_v.shape) <= 2: 
                 cur_run_dct[f"{k}_mean"] = array_v.mean()
                 cur_run_dct[f"{k}_std"] = array_v.std()
             elif len(array_v.shape) == 3: 
@@ -43,7 +43,7 @@ def compile_res(file_paths, *hyper_param_of_imp):
                 cur_run_dct[f"{k}_std"] = array_v[:, :, 1].std()
 
         res[fp] = cur_run_dct
-    return res
+    return pd.DataFrame(res).T
 
 
 def get_sampler_hyperparams(sampler, conf_dir = 'configs'): 

@@ -17,8 +17,8 @@ def exp_specific_metrics(exp, batch,  **kwargs):
 def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=True):
 
     cur_idx = 0
-    batch_size = total_conf['batch_size']
-    
+    # batch_size = total_conf['batch_size']
+    batch_size = 200    
     metrics = {
         'perp': [],
         'cola': [],
@@ -31,11 +31,12 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     cola_model.to(total_conf['device'])
     ext_senti_clf.to(total_conf['device'])
     ext_toxic_clf.to(total_conf['device'])
+    metrics['perp'] = compute_perplexity(generated_sentences)
     while cur_idx < len(generated_sentences): 
         print(cur_idx)
         batch = generated_sentences[cur_idx:cur_idx+batch_size]
         
-        metrics['perp'].append(compute_perplexity(batch))
+        # metrics['perp'].append(compute_perplexity(batch))
         # metrics['cola'].append(calc_cola(batch, cola_tokenizer, cola_model))
         # metrics['self_bleu'].append(calc_self_bleu(batch))
         if total_conf['exp'] != "detoxify":
