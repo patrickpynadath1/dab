@@ -3,7 +3,8 @@ from utils import (
     load_exp_conf,
     initialize_metric_storing,
     initialize_best_loss,
-    updating_best_keywords
+    updating_best_keywords, 
+    updating_best_loss
 )
 import torch
 from samplers import BoltSampler, LangevinSampler
@@ -94,7 +95,10 @@ def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metric
         )
         energy_fn = lambda x : energy_fn_wrapper(x, inputs)
         model.eval()
-        success_idx, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=False)
+        if total_conf['sampler'] == 'bolt':  
+            stored_res, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=False)
+        else: 
+            stored_res, stored_sentence = initialize_best_loss(total_conf["batch_size"], use_senti=True)
         for i in range(total_conf["num_steps"]):
             cur_batch, loss, output_ids, otheroutputs = sampler.step(
                 x=cur_batch, 
@@ -106,13 +110,21 @@ def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metric
                 cur_iter=i
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-            updating_best_keywords(cur_iter=i,
-                                   batch_size=total_conf["batch_size"],
-                                   sentences=sentences,
-                                   success_idx=success_idx,
-                                   keywords_word=keywords_list,
-                                   stored_sentence_list=stored_sentence)
-            if all([idx != -1 for idx in success_idx]):
+            if total_conf['sampler'] == "bolt":
+                updating_best_keywords(cur_iter=i,
+                                    batch_size=total_conf["batch_size"],
+                                    sentences=sentences,
+                                    success_idx=stored_res,
+                                    keywords_word=keywords_list,
+                                    stored_sentence_list=stored_sentence)
+            else:
+                print(otheroutputs[-1]) 
+                updating_best_loss(batch_size=total_conf["batch_size"],
+                                loss=otheroutputs[-1],
+                                sentences=sentences,
+                                min_loss_list=stored_res,
+                                stored_sentence_list=stored_sentence)
+            if all([idx != -1 for idx in stored_res]):
                 # print("success")
                 break
         print(sentences)
