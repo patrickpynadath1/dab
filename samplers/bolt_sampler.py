@@ -49,7 +49,7 @@ class BoltSampler(BaseSampler):
         ]
         if self.optimizer == "sgd": 
             self.cur_optimizer = SGD(optimizer_grouped_parameters, 
-                                     **self.optimizer_kw)
+                                    lr= self.optimizer_kw['lr'],)
         else: 
             self.cur_optimizer = AdamW(optimizer_grouped_parameters, 
                                        **self.optimizer_kw)
