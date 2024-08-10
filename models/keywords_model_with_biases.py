@@ -55,12 +55,14 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
     
-    def set_biases(self, batch_size, seq_len, device='cpu', **kwargs):
+    def set_biases(self, batch_size, seq_len, device='cpu', kw_embed=None ,**kwargs):
         self.seq_len = seq_len
 
-        self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).to(device)
+        if kw_embed is not None: 
+            self.biases = nn.ParameterList([nn.Parameter(kw_embed * torch.ones(batch_size, 1280).to(device)) for i in range(seq_len+5)]).to(device)
+        else: 
+            self.biases = nn.ParameterList([nn.Parameter(0.5 * torch.randn(batch_size, 1280)) for i in range(seq_len+5)]).to(device)
         self.trainable_weights = None
-
         self.labels = torch.LongTensor([1]).to(device)
         self.logits_processor = LogitsProcessorList(
             [
@@ -177,10 +179,11 @@ class GPTPromptTuningWithbiasesModelMixin:
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         loss = 0.3 * keywords_loss + 1 * ppl_loss
 
-        # print("keywords_loss:", keywords_loss)
-        # print("ppl_loss:", ppl_loss)
-
-        return loss, output_ids
+        print("keywords_loss:", keywords_loss)
+        print("ppl_loss:", ppl_loss)
+        losses_to_store = {'keywords_loss': keywords_loss.detach().cpu().item(),
+                            'ppl_loss': ppl_loss.detach().cpu().item()}
+        return loss, output_ids, keywords_loss, losses_to_store
 
 class FullPrompt(nn.Module):
     def __init__(self, n_tokens: int = 20, random_range: float = 0.5, config = None):

@@ -25,6 +25,8 @@ def keyword_loss(logits, target_kw_idx, kw_token):
 def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metrics=False):
     ### LOADING CONFIGS
     ### LOADING MODELS
+    if total_conf['device'] == 'cuda':
+        torch.cuda.set_device(total_conf["cuda_id"])
     model = load_base_model(total_conf['sampler'], 
                             mode='keywords', 
                             **total_conf["base_model_args"]).to(total_conf["device"])
@@ -45,7 +47,7 @@ def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metric
 
     ### INITIALIZING SAMPLERS
     if total_conf['sampler'] == "bolt":
-        sampler = BoltSampler(**total_conf)
+        sampler = BoltSampler(**total_conf, is_kw = True)
         bias_dim = model.get_input_embeddings().weight.shape[0]
 
     elif total_conf['sampler'] == "dlp":
@@ -124,7 +126,7 @@ def keywords_loop(total_conf, dump_sampling_metrics=True, return_sampling_metric
                                 sentences=sentences,
                                 min_loss_list=stored_res,
                                 stored_sentence_list=stored_sentence)
-            if all([idx != -1 for idx in stored_res]):
+            if all([idx != -1 for idx in stored_res]) and total_conf["early_stop"]:
                 # print("success")
                 break
         print(sentences)

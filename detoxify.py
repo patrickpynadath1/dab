@@ -19,6 +19,8 @@ def detoxify_loop(total_conf):
 
 
     ### LOADING MODELS
+    if total_conf['device'] == 'cuda': 
+        torch.cuda.set_device(total_conf["cuda_id"])
     model = load_base_model(total_conf['sampler'], mode='senti', **total_conf["base_model_args"]).to(total_conf["device"])
     discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
@@ -58,6 +60,7 @@ def detoxify_loop(total_conf):
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
 
     for prompt in prompts:
+        print(f"Memory allocated: {torch.cuda.memory_allocated()}")
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
@@ -90,6 +93,14 @@ def detoxify_loop(total_conf):
         del inputs 
         del cur_batch
         del output_ids
+        del loss
+        del minimum_loss
+        del losses_to_eval
+        del otheroutputs
+        if total_conf['sampler']=='bolt':
+            del model.biases
+            del sampler.cur_optimizer
+        torch.cuda.empty_cache()
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence))
         output_file.flush()

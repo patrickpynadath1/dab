@@ -1,4 +1,4 @@
-optimizer: sgd 
+optimizer: adam 
 optimizer_conf: 
   lr: .4
   eps: 1e-8
@@ -7,4 +7,5 @@ noise_conf:
   mean: 0.01 
   std: 0.01 
   device: cpu
-use_cnn_batchloss: true 
+use_cnn_batchloss: true
+use_kw_embed_init: false

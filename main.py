@@ -36,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--eval_on_fin", action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--cuda_id", type=int, default=0)
     parser.add_argument("--conf_file", type=str, default=None)
     api_eval.add_argument("--rate_limit", type=int, default=60)
     conf_subparser(parser, 'exp')
