@@ -33,8 +33,12 @@ if is_vision_available():
 class DiTIntegrationTest(unittest.TestCase):
     @slow
     def test_for_image_classification(self):
-        feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/dit-base-finetuned-rvlcdip")
-        model = AutoModelForImageClassification.from_pretrained("microsoft/dit-base-finetuned-rvlcdip")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "microsoft/dit-base-finetuned-rvlcdip"
+        )
+        model = AutoModelForImageClassification.from_pretrained(
+            "microsoft/dit-base-finetuned-rvlcdip"
+        )
         model.to(torch_device)
 
         from datasets import load_dataset

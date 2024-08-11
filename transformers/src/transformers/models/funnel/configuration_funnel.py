@@ -101,6 +101,7 @@ class FunnelConfig(PretrainedConfig):
         pool_q_only (`bool`, *optional*, defaults to `False`):
             Whether or not to apply the pooling only to the query or to query, key and values for the attention layers.
     """
+
     model_type = "funnel"
     attribute_map = {
         "hidden_size": "d_model",
@@ -131,11 +132,13 @@ class FunnelConfig(PretrainedConfig):
         separate_cls=True,
         truncate_seq=True,
         pool_q_only=True,
-        **kwargs
+        **kwargs,
     ):
         self.vocab_size = vocab_size
         self.block_sizes = block_sizes
-        self.block_repeats = [1] * len(block_sizes) if block_repeats is None else block_repeats
+        self.block_repeats = (
+            [1] * len(block_sizes) if block_repeats is None else block_repeats
+        )
         assert len(block_sizes) == len(
             self.block_repeats
         ), "`block_sizes` and `block_repeats` should have the same length."
@@ -185,4 +188,6 @@ class FunnelConfig(PretrainedConfig):
 
     @num_blocks.setter
     def num_blocks(self, value):
-        raise NotImplementedError("This model does not support the setting of `num_blocks`. Please set `block_sizes`.")
+        raise NotImplementedError(
+            "This model does not support the setting of `num_blocks`. Please set `block_sizes`."
+        )

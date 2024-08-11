@@ -92,7 +92,9 @@ class ViTMAEModelTester:
         self.seq_length = int(math.ceil((1 - mask_ratio) * (num_patches + 1)))
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
@@ -124,7 +126,10 @@ class ViTMAEModelTester:
         model.to(torch_device)
         model.eval()
         result = model(pixel_values)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_pretraining(self, config, pixel_values, labels):
         model = ViTMAEForPreTraining(config)
@@ -133,17 +138,23 @@ class ViTMAEModelTester:
         result = model(pixel_values)
         num_patches = (self.image_size // self.patch_size) ** 2
         expected_num_channels = self.patch_size**2 * self.num_channels
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, num_patches, expected_num_channels))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, num_patches, expected_num_channels)
+        )
 
         # test greyscale images
         config.num_channels = 1
         model = ViTMAEForPreTraining(config)
         model.to(torch_device)
         model.eval()
-        pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, 1, self.image_size, self.image_size]
+        )
         result = model(pixel_values)
         expected_num_channels = self.patch_size**2
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, num_patches, expected_num_channels))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, num_patches, expected_num_channels)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -159,7 +170,9 @@ class ViTMAEModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (ViTMAEModel, ViTMAEForPreTraining) if is_torch_available() else ()
+    all_model_classes = (
+        (ViTMAEModel, ViTMAEForPreTraining) if is_torch_available() else ()
+    )
 
     test_pruning = False
     test_torchscript = False
@@ -168,7 +181,9 @@ class ViTMAEModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = ViTMAEModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=ViTMAEConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=ViTMAEConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -213,7 +228,9 @@ class ViTMAEModelTest(ModelTesterMixin, unittest.TestCase):
         # make masks reproducible
         np.random.seed(2)
 
-        num_patches = int((pt_model.config.image_size // pt_model.config.patch_size) ** 2)
+        num_patches = int(
+            (pt_model.config.image_size // pt_model.config.patch_size) ** 2
+        )
         noise = np.random.uniform(size=(self.model_tester.batch_size, num_patches))
         pt_noise = torch.from_numpy(noise)
 
@@ -246,7 +263,9 @@ class ViTMAEModelTest(ModelTesterMixin, unittest.TestCase):
                 # make random mask reproducible
                 torch.manual_seed(2)
                 with torch.no_grad():
-                    after_outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                    after_outputs = model(
+                        **self._prepare_for_class(inputs_dict, model_class)
+                    )
 
                 # Make sure we don't have nans
                 out_1 = after_outputs[0].cpu().numpy()
@@ -275,7 +294,9 @@ class ViTMAEModelTest(ModelTesterMixin, unittest.TestCase):
     def test_save_load_fast_init_to_base(self):
         pass
 
-    @unittest.skip(reason="""ViTMAE returns a random mask + ids_restore in each forward pass. See test_save_load""")
+    @unittest.skip(
+        reason="""ViTMAE returns a random mask + ids_restore in each forward pass. See test_save_load"""
+    )
     def test_model_outputs_equivalence(self):
         pass
 
@@ -297,14 +318,20 @@ def prepare_img():
 class ViTMAEModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return ViTFeatureExtractor.from_pretrained("facebook/vit-mae-base") if is_vision_available() else None
+        return (
+            ViTFeatureExtractor.from_pretrained("facebook/vit-mae-base")
+            if is_vision_available()
+            else None
+        )
 
     @slow
     def test_inference_for_pretraining(self):
         # make random mask reproducible across the PT and TF model
         np.random.seed(2)
 
-        model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base").to(torch_device)
+        model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base").to(
+            torch_device
+        )
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -318,14 +345,24 @@ class ViTMAEModelIntegrationTest(unittest.TestCase):
 
         # forward pass
         with torch.no_grad():
-            outputs = model(**inputs, noise=torch.from_numpy(noise).to(device=torch_device))
+            outputs = model(
+                **inputs, noise=torch.from_numpy(noise).to(device=torch_device)
+            )
 
         # verify the logits
         expected_shape = torch.Size((1, 196, 768))
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[-0.0548, -1.7023, -0.9325], [0.3721, -0.5670, -0.2233], [0.8235, -1.3878, -0.3524]]
+            [
+                [-0.0548, -1.7023, -0.9325],
+                [0.3721, -0.5670, -0.2233],
+                [0.8235, -1.3878, -0.3524],
+            ]
         )
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice.to(torch_device), atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.logits[0, :3, :3], expected_slice.to(torch_device), atol=1e-4
+            )
+        )

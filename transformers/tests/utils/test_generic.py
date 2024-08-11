@@ -22,9 +22,24 @@ class GenericTester(unittest.TestCase):
     def test_flatten_dict(self):
         input_dict = {
             "task_specific_params": {
-                "summarization": {"length_penalty": 1.0, "max_length": 128, "min_length": 12, "num_beams": 4},
-                "summarization_cnn": {"length_penalty": 2.0, "max_length": 142, "min_length": 56, "num_beams": 4},
-                "summarization_xsum": {"length_penalty": 1.0, "max_length": 62, "min_length": 11, "num_beams": 6},
+                "summarization": {
+                    "length_penalty": 1.0,
+                    "max_length": 128,
+                    "min_length": 12,
+                    "num_beams": 4,
+                },
+                "summarization_cnn": {
+                    "length_penalty": 2.0,
+                    "max_length": 142,
+                    "min_length": 56,
+                    "num_beams": 4,
+                },
+                "summarization_xsum": {
+                    "length_penalty": 1.0,
+                    "max_length": 62,
+                    "min_length": 11,
+                    "num_beams": 6,
+                },
             }
         }
         expected_dict = {

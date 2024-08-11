@@ -85,11 +85,15 @@ class ZeroShotImageClassificationPipeline(ChunkPipeline):
 
         return preprocess_params, {}, {}
 
-    def preprocess(self, image, candidate_labels=None, hypothesis_template="This is a photo of {}."):
+    def preprocess(
+        self, image, candidate_labels=None, hypothesis_template="This is a photo of {}."
+    ):
         n = len(candidate_labels)
         for i, candidate_label in enumerate(candidate_labels):
             image = load_image(image)
-            images = self.feature_extractor(images=[image], return_tensors=self.framework)
+            images = self.feature_extractor(
+                images=[image], return_tensors=self.framework
+            )
             sequence = hypothesis_template.format(candidate_label)
             inputs = self.tokenizer(sequence, return_tensors=self.framework)
             inputs["pixel_values"] = images.pixel_values
@@ -120,12 +124,16 @@ class ZeroShotImageClassificationPipeline(ChunkPipeline):
             probs = logits.softmax(dim=0)
             scores = probs.tolist()
         else:
-            logits = tf.concat([output["logits_per_image"] for output in model_outputs], axis=0)
+            logits = tf.concat(
+                [output["logits_per_image"] for output in model_outputs], axis=0
+            )
             probs = stable_softmax(logits, axis=0)
             scores = probs.numpy().tolist()
 
         result = [
             {"score": score, "label": candidate_label}
-            for score, candidate_label in sorted(zip(scores, candidate_labels), key=lambda x: -x[0])
+            for score, candidate_label in sorted(
+                zip(scores, candidate_labels), key=lambda x: -x[0]
+            )
         ]
         return result

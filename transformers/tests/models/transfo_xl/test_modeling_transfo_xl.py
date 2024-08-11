@@ -18,7 +18,12 @@ import random
 import unittest
 
 from transformers import TransfoXLConfig, is_torch_available
-from transformers.testing_utils import require_torch, require_torch_multi_gpu, slow, torch_device
+from transformers.testing_utils import (
+    require_torch,
+    require_torch_multi_gpu,
+    slow,
+    torch_device,
+)
 
 from ...generation.test_generation_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -29,8 +34,14 @@ if is_torch_available():
     import torch
     from torch import nn
 
-    from transformers import TransfoXLForSequenceClassification, TransfoXLLMHeadModel, TransfoXLModel
-    from transformers.models.transfo_xl.modeling_transfo_xl import TRANSFO_XL_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers import (
+        TransfoXLForSequenceClassification,
+        TransfoXLLMHeadModel,
+        TransfoXLModel,
+    )
+    from transformers.models.transfo_xl.modeling_transfo_xl import (
+        TRANSFO_XL_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 class TransfoXLModelTester:
@@ -110,15 +121,23 @@ class TransfoXLModelTester:
         return outputs
 
     def check_transfo_xl_model_output(self, result):
-        self.parent.assertEqual(result["hidden_states_1"].shape, (self.batch_size, self.seq_length, self.hidden_size))
-        self.parent.assertEqual(result["hidden_states_2"].shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result["hidden_states_1"].shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result["hidden_states_2"].shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
         self.parent.assertListEqual(
             [mem.shape for mem in result["mems_1"]],
-            [(self.mem_len, self.batch_size, self.hidden_size)] * self.num_hidden_layers,
+            [(self.mem_len, self.batch_size, self.hidden_size)]
+            * self.num_hidden_layers,
         )
         self.parent.assertListEqual(
             [mem.shape for mem in result["mems_2"]],
-            [(self.mem_len, self.batch_size, self.hidden_size)] * self.num_hidden_layers,
+            [(self.mem_len, self.batch_size, self.hidden_size)]
+            * self.num_hidden_layers,
         )
 
     def create_transfo_xl_lm_head(self, config, input_ids_1, input_ids_2, lm_labels):
@@ -145,22 +164,36 @@ class TransfoXLModelTester:
 
     def check_transfo_xl_lm_head_output(self, result):
         self.parent.assertEqual(result["loss_1"].shape, ())
-        self.parent.assertEqual(result["losses_1"].shape, (self.batch_size, self.seq_length - 1))
-        self.parent.assertEqual(result["lm_logits_1"].shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result["losses_1"].shape, (self.batch_size, self.seq_length - 1)
+        )
+        self.parent.assertEqual(
+            result["lm_logits_1"].shape,
+            (self.batch_size, self.seq_length, self.vocab_size),
+        )
         self.parent.assertListEqual(
             [mem.shape for mem in result["mems_1"]],
-            [(self.mem_len, self.batch_size, self.hidden_size)] * self.num_hidden_layers,
+            [(self.mem_len, self.batch_size, self.hidden_size)]
+            * self.num_hidden_layers,
         )
 
         self.parent.assertEqual(result["loss_2"].shape, ())
-        self.parent.assertEqual(result["losses_2"].shape, (self.batch_size, self.seq_length - 1))
-        self.parent.assertEqual(result["lm_logits_2"].shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result["losses_2"].shape, (self.batch_size, self.seq_length - 1)
+        )
+        self.parent.assertEqual(
+            result["lm_logits_2"].shape,
+            (self.batch_size, self.seq_length, self.vocab_size),
+        )
         self.parent.assertListEqual(
             [mem.shape for mem in result["mems_2"]],
-            [(self.mem_len, self.batch_size, self.hidden_size)] * self.num_hidden_layers,
+            [(self.mem_len, self.batch_size, self.hidden_size)]
+            * self.num_hidden_layers,
         )
 
-    def create_transfo_xl_lm_head_trainer_compatible_tuple(self, config, input_ids_1, input_ids_2, lm_labels):
+    def create_transfo_xl_lm_head_trainer_compatible_tuple(
+        self, config, input_ids_1, input_ids_2, lm_labels
+    ):
         config.trainer_compatible = True
         model = TransfoXLLMHeadModel(config)
         model.to(torch_device)
@@ -187,7 +220,9 @@ class TransfoXLModelTester:
         config.trainer_compatible = None
         return outputs
 
-    def create_transfo_xl_lm_head_trainer_incompatible_tuple(self, config, input_ids_1, input_ids_2, lm_labels):
+    def create_transfo_xl_lm_head_trainer_incompatible_tuple(
+        self, config, input_ids_1, input_ids_2, lm_labels
+    ):
         config.trainer_compatible = False
         model = TransfoXLLMHeadModel(config)
         model.to(torch_device)
@@ -216,7 +251,9 @@ class TransfoXLModelTester:
         config.trainer_compatible = None
         return outputs
 
-    def create_and_check_transfo_xl_for_sequence_classification(self, config, input_ids_1, input_ids_2, lm_labels):
+    def create_and_check_transfo_xl_for_sequence_classification(
+        self, config, input_ids_1, input_ids_2, lm_labels
+    ):
         config.num_labels = self.num_labels
         model = TransfoXLForSequenceClassification(config)
         model.to(torch_device)
@@ -234,15 +271,26 @@ class TransfoXLModelTester:
 @require_torch
 class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (TransfoXLModel, TransfoXLLMHeadModel, TransfoXLForSequenceClassification) if is_torch_available() else ()
+        (TransfoXLModel, TransfoXLLMHeadModel, TransfoXLForSequenceClassification)
+        if is_torch_available()
+        else ()
     )
-    all_generative_model_classes = (TransfoXLLMHeadModel,) if is_torch_available() else ()
+    all_generative_model_classes = (
+        (TransfoXLLMHeadModel,) if is_torch_available() else ()
+    )
     test_pruning = False
     test_resize_embeddings = True
     test_mismatched_shapes = False
 
     def check_cutoffs_and_n_token(
-        self, copied_cutoffs, layer, model_embed, model, model_class, resized_value, vocab_size
+        self,
+        copied_cutoffs,
+        layer,
+        model_embed,
+        model,
+        model_class,
+        resized_value,
+        vocab_size,
     ):
         # Check that the cutoffs were modified accordingly
         for i in range(len(copied_cutoffs)):
@@ -253,11 +301,17 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 if i < len(model.config.cutoffs):
                     self.assertEqual(model.config.cutoffs[i], copied_cutoffs[i])
             else:
-                self.assertEqual(model_embed.cutoffs[i], copied_cutoffs[i] + resized_value)
+                self.assertEqual(
+                    model_embed.cutoffs[i], copied_cutoffs[i] + resized_value
+                )
                 if model_class == TransfoXLLMHeadModel:
-                    self.assertEqual(model.crit.cutoffs[i], copied_cutoffs[i] + resized_value)
+                    self.assertEqual(
+                        model.crit.cutoffs[i], copied_cutoffs[i] + resized_value
+                    )
                 if i < len(model.config.cutoffs):
-                    self.assertEqual(model.config.cutoffs[i], copied_cutoffs[i] + resized_value)
+                    self.assertEqual(
+                        model.config.cutoffs[i], copied_cutoffs[i] + resized_value
+                    )
 
         self.assertEqual(model_embed.n_token, vocab_size + resized_value)
         if model_class == TransfoXLLMHeadModel:
@@ -265,7 +319,9 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
     def setUp(self):
         self.model_tester = TransfoXLModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=TransfoXLConfig, d_embed=37)
+        self.config_tester = ConfigTester(
+            self, config_class=TransfoXLConfig, d_embed=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -283,15 +339,25 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
         output_result = self.model_tester.create_transfo_xl_lm_head(*config_and_inputs)
         self.model_tester.check_transfo_xl_lm_head_output(output_result)
 
-        output_result = self.model_tester.create_transfo_xl_lm_head_trainer_compatible_tuple(*config_and_inputs)
+        output_result = (
+            self.model_tester.create_transfo_xl_lm_head_trainer_compatible_tuple(
+                *config_and_inputs
+            )
+        )
         self.model_tester.check_transfo_xl_lm_head_output(output_result)
 
-        output_result = self.model_tester.create_transfo_xl_lm_head_trainer_incompatible_tuple(*config_and_inputs)
+        output_result = (
+            self.model_tester.create_transfo_xl_lm_head_trainer_incompatible_tuple(
+                *config_and_inputs
+            )
+        )
         self.model_tester.check_transfo_xl_lm_head_output(output_result)
 
     def test_transfo_xl_sequence_classification_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_transfo_xl_for_sequence_classification(*config_and_inputs)
+        self.model_tester.create_and_check_transfo_xl_for_sequence_classification(
+            *config_and_inputs
+        )
 
     def test_retain_grad_hidden_states_attentions(self):
         # xlnet cannot keep gradients in attentions or hidden states
@@ -309,7 +375,9 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
             self.assertIsNotNone(model)
 
     def test_resize_tokens_embeddings(self):
-        (original_config, inputs_dict) = self.model_tester.prepare_config_and_inputs_for_common()
+        (original_config, inputs_dict) = (
+            self.model_tester.prepare_config_and_inputs_for_common()
+        )
         if not self.test_resize_embeddings:
             return
 
@@ -331,13 +399,24 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
             test_layers = [x for x in range(config.div_val)]
             for layer in test_layers:
                 # Check that resizing the token embeddings with a larger vocab size increases the model's vocab size
-                model_embed = model.resize_token_embeddings(model_vocab_size + 10, layer)
+                model_embed = model.resize_token_embeddings(
+                    model_vocab_size + 10, layer
+                )
                 self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
                 # Check that it actually resizes the embeddings matrix
-                self.assertEqual(model_embed.emb_layers[layer].weight.shape[0], cloned_embeddings[layer].shape[0] + 10)
+                self.assertEqual(
+                    model_embed.emb_layers[layer].weight.shape[0],
+                    cloned_embeddings[layer].shape[0] + 10,
+                )
                 # Check that the cutoffs were modified accordingly
                 self.check_cutoffs_and_n_token(
-                    copied_cutoffs, layer, model_embed, model, model_class, 10, model_vocab_size
+                    copied_cutoffs,
+                    layer,
+                    model_embed,
+                    model,
+                    model_class,
+                    10,
+                    model_vocab_size,
                 )
 
                 # Check that the model can still do a forward pass successfully (every parameter should be resized)
@@ -347,10 +426,19 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 model_embed = model.resize_token_embeddings(model_vocab_size - 5, layer)
                 self.assertEqual(model.config.vocab_size, model_vocab_size - 5)
                 # Check that it actually resizes the embeddings matrix
-                self.assertEqual(model_embed.emb_layers[layer].weight.shape[0], cloned_embeddings[layer].shape[0] - 5)
+                self.assertEqual(
+                    model_embed.emb_layers[layer].weight.shape[0],
+                    cloned_embeddings[layer].shape[0] - 5,
+                )
                 # Check that the cutoffs were modified accordingly
                 self.check_cutoffs_and_n_token(
-                    copied_cutoffs, layer, model_embed, model, model_class, -5, model_vocab_size
+                    copied_cutoffs,
+                    layer,
+                    model_embed,
+                    model,
+                    model_class,
+                    -5,
+                    model_vocab_size,
                 )
 
                 # Check that the model can still do a forward pass successfully (every parameter should be resized)
@@ -360,7 +448,9 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
                 # Check that adding and removing tokens has not modified the first part of the embedding matrix.
                 models_equal = True
-                for p1, p2 in zip(cloned_embeddings[layer], model_embed.emb_layers[layer].weight):
+                for p1, p2 in zip(
+                    cloned_embeddings[layer], model_embed.emb_layers[layer].weight
+                ):
                     if p1.data.ne(p2.data).sum() > 0:
                         models_equal = False
 
@@ -369,24 +459,39 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 # Reset model embeddings to original size
                 model.resize_token_embeddings(model_vocab_size, layer)
                 self.assertEqual(model_vocab_size, model.config.vocab_size)
-                self.assertEqual(model_embed.emb_layers[layer].weight.shape[0], cloned_embeddings[layer].shape[0])
+                self.assertEqual(
+                    model_embed.emb_layers[layer].weight.shape[0],
+                    cloned_embeddings[layer].shape[0],
+                )
 
     def test_resize_embeddings_untied(self):
         # transfo-xl requires special resize for lm-head
         return
 
     def _check_attentions_for_generate(
-        self, batch_size, attentions, min_length, max_length, config, use_cache=False, num_beam_groups=1
+        self,
+        batch_size,
+        attentions,
+        min_length,
+        max_length,
+        config,
+        use_cache=False,
+        num_beam_groups=1,
     ):
         self.assertIsInstance(attentions, tuple)
         self.assertListEqual(
-            [isinstance(iter_attentions, tuple) for iter_attentions in attentions], [True] * len(attentions)
+            [isinstance(iter_attentions, tuple) for iter_attentions in attentions],
+            [True] * len(attentions),
         )
         self.assertEqual(len(attentions), (max_length - min_length) * num_beam_groups)
 
         for idx, iter_attentions in enumerate(attentions):
             tgt_len = min_length if idx == 0 else (min_length - 2)
-            src_len = (min_length + config.mem_len) if idx == 0 else (min_length + config.mem_len - 2)
+            src_len = (
+                (min_length + config.mem_len)
+                if idx == 0
+                else (min_length + config.mem_len - 2)
+            )
 
             expected_shape = (
                 batch_size * num_beam_groups,
@@ -397,25 +502,41 @@ class TransfoXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
             # check attn size
             self.assertListEqual(
-                [layer_attention.shape for layer_attention in iter_attentions], [expected_shape] * len(iter_attentions)
+                [layer_attention.shape for layer_attention in iter_attentions],
+                [expected_shape] * len(iter_attentions),
             )
 
     def _check_hidden_states_for_generate(
-        self, batch_size, hidden_states, min_length, max_length, config, use_cache=False, num_beam_groups=1
+        self,
+        batch_size,
+        hidden_states,
+        min_length,
+        max_length,
+        config,
+        use_cache=False,
+        num_beam_groups=1,
     ):
         self.assertIsInstance(hidden_states, tuple)
         self.assertListEqual(
-            [isinstance(iter_hidden_states, tuple) for iter_hidden_states in hidden_states],
+            [
+                isinstance(iter_hidden_states, tuple)
+                for iter_hidden_states in hidden_states
+            ],
             [True] * len(hidden_states),
         )
-        self.assertEqual(len(hidden_states), (max_length - min_length) * num_beam_groups)
+        self.assertEqual(
+            len(hidden_states), (max_length - min_length) * num_beam_groups
+        )
 
         for idx, iter_hidden_states in enumerate(hidden_states):
             seq_len = min_length if idx == 0 else min_length - 2
             expected_shape = (batch_size * num_beam_groups, seq_len, config.hidden_size)
             # check hidden size
             self.assertListEqual(
-                [layer_hidden_states.shape for layer_hidden_states in iter_hidden_states],
+                [
+                    layer_hidden_states.shape
+                    for layer_hidden_states in iter_hidden_states
+                ],
                 [expected_shape] * len(iter_hidden_states),
             )
 

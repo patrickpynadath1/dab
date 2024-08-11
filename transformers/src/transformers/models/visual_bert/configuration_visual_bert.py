@@ -35,7 +35,7 @@ VISUAL_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "uclanlp/visualbert-nlvr2-pre": "https://huggingface.co/uclanlp/visualbert-nlvr2-pre/resolve/main/config.json",
     "uclanlp/visualbert-nlvr2-coco-pre": (
         "https://huggingface.co/uclanlp/visualbert-nlvr2-coco-pre/resolve/main/config.json"
-    )
+    ),
     # See all VisualBERT models at https://huggingface.co/models?filter=visual_bert
 }
 
@@ -132,7 +132,12 @@ class VisualBertConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs
     ):
-        super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs
+        )
 
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

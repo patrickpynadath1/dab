@@ -35,6 +35,7 @@ class Speech2Text2Processor(ProcessorMixin):
         tokenizer (`Speech2Text2Tokenizer`):
             An instance of [`Speech2Text2Tokenizer`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "AutoFeatureExtractor"
     tokenizer_class = "Speech2Text2Tokenizer"
 
@@ -56,7 +57,9 @@ class Speech2Text2Processor(ProcessorMixin):
             return self.current_processor(*args, **kwargs)
 
         if "raw_speech" in kwargs:
-            warnings.warn("Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead.")
+            warnings.warn(
+                "Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead."
+            )
             audio = kwargs.pop("raw_speech")
         else:
             audio = kwargs.pop("audio", None)
@@ -66,7 +69,9 @@ class Speech2Text2Processor(ProcessorMixin):
             args = args[1:]
 
         if audio is None and text is None:
-            raise ValueError("You need to specify either an `audio` or `text` input to process.")
+            raise ValueError(
+                "You need to specify either an `audio` or `text` input to process."
+            )
 
         if audio is not None:
             inputs = self.feature_extractor(audio, *args, **kwargs)

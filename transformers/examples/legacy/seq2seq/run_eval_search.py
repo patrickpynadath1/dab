@@ -78,9 +78,15 @@ def run_search():
         help='param space to search, e.g. "num_beams=5:10 length_penalty=0.8:1.0:1.2"',
     )
     parser.add_argument(
-        "--bs", type=int, default=8, required=False, help="initial batch size (may get reduced if it's too big)"
+        "--bs",
+        type=int,
+        default=8,
+        required=False,
+        help="initial batch size (may get reduced if it's too big)",
     )
-    parser.add_argument("--task", type=str, help="used for task_specific_params + metrics")
+    parser.add_argument(
+        "--task", type=str, help="used for task_specific_params + metrics"
+    )
     parser.add_argument(
         "--info",
         nargs="?",
@@ -106,7 +112,9 @@ def run_search():
     for r in matrix:
         hparams = {k: v for k, v in (x.replace("--", "").split() for x in r)}
         args_exp = " ".join(r).split()
-        args_exp.extend(["--bs", str(args.bs)])  # in case we need to reduce its size due to CUDA OOM
+        args_exp.extend(
+            ["--bs", str(args.bs)]
+        )  # in case we need to reduce its size due to CUDA OOM
         sys.argv = args_normal + args_exp
 
         # XXX: need to trap CUDA OOM and lower args.bs if that happens and retry
@@ -125,7 +133,9 @@ def run_search():
             if l > col_widths[k]:
                 col_widths[k] = l
 
-    results_sorted = sorted(results, key=operator.itemgetter(*task_score_names[task]), reverse=True)
+    results_sorted = sorted(
+        results, key=operator.itemgetter(*task_score_names[task]), reverse=True
+    )
     print(" | ".join([f"{col:{col_widths[col]}}" for col in col_names]))
     print(" | ".join([f"{'-'*col_widths[col]}" for col in col_names]))
     for row in results_sorted:

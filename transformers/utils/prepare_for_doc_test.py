@@ -121,7 +121,11 @@ def process_doc_files(*files, add_new_line=True):
         # Treat folders
         if os.path.isdir(file):
             files = [os.path.join(file, f) for f in os.listdir(file)]
-            files = [f for f in files if os.path.isdir(f) or f.endswith(".mdx") or f.endswith(".py")]
+            files = [
+                f
+                for f in files
+                if os.path.isdir(f) or f.endswith(".mdx") or f.endswith(".py")
+            ]
             process_doc_files(*files, add_new_line=add_new_line)
         else:
             try:

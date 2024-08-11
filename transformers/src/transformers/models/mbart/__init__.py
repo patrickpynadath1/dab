@@ -28,7 +28,13 @@ from ...utils import (
 )
 
 
-_import_structure = {"configuration_mbart": ["MBART_PRETRAINED_CONFIG_ARCHIVE_MAP", "MBartConfig", "MBartOnnxConfig"]}
+_import_structure = {
+    "configuration_mbart": [
+        "MBART_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "MBartConfig",
+        "MBartOnnxConfig",
+    ]
+}
 
 try:
     if not is_sentencepiece_available():
@@ -90,7 +96,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_mbart import MBART_PRETRAINED_CONFIG_ARCHIVE_MAP, MBartConfig, MBartOnnxConfig
+    from .configuration_mbart import (
+        MBART_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        MBartConfig,
+        MBartOnnxConfig,
+    )
 
     try:
         if not is_sentencepiece_available():
@@ -130,7 +140,11 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_tf_mbart import TFMBartForConditionalGeneration, TFMBartModel, TFMBartPreTrainedModel
+        from .modeling_tf_mbart import (
+            TFMBartForConditionalGeneration,
+            TFMBartModel,
+            TFMBartPreTrainedModel,
+        )
 
     try:
         if not is_flax_available():
@@ -149,4 +163,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

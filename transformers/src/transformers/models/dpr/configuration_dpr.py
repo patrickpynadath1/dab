@@ -93,6 +93,7 @@ class DPRConfig(PretrainedConfig):
             Dimension of the projection for the context and question encoders. If it is set to zero (default), then no
             projection is done.
     """
+
     model_type = "dpr"
 
     def __init__(

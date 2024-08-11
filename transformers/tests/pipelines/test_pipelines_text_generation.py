@@ -14,7 +14,12 @@
 
 import unittest
 
-from transformers import MODEL_FOR_CAUSAL_LM_MAPPING, TF_MODEL_FOR_CAUSAL_LM_MAPPING, TextGenerationPipeline, pipeline
+from transformers import (
+    MODEL_FOR_CAUSAL_LM_MAPPING,
+    TF_MODEL_FOR_CAUSAL_LM_MAPPING,
+    TextGenerationPipeline,
+    pipeline,
+)
 from transformers.testing_utils import (
     is_pipeline_test,
     require_accelerate,
@@ -33,7 +38,9 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
 
     @require_torch
     def test_small_model_pt(self):
-        text_generator = pipeline(task="text-generation", model="sshleifer/tiny-ctrl", framework="pt")
+        text_generator = pipeline(
+            task="text-generation", model="sshleifer/tiny-ctrl", framework="pt"
+        )
         # Using `do_sample=False` to force deterministic output
         outputs = text_generator("This is a test", do_sample=False)
         self.assertEqual(
@@ -71,7 +78,12 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
             ],
         )
 
-        outputs = text_generator("This is a test", do_sample=True, num_return_sequences=2, return_tensors=True)
+        outputs = text_generator(
+            "This is a test",
+            do_sample=True,
+            num_return_sequences=2,
+            return_tensors=True,
+        )
         self.assertEqual(
             outputs,
             [
@@ -104,7 +116,9 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
 
     @require_tf
     def test_small_model_tf(self):
-        text_generator = pipeline(task="text-generation", model="sshleifer/tiny-ctrl", framework="tf")
+        text_generator = pipeline(
+            task="text-generation", model="sshleifer/tiny-ctrl", framework="tf"
+        )
 
         # Using `do_sample=False` to force deterministic output
         outputs = text_generator("This is a test", do_sample=False)
@@ -120,7 +134,9 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
             ],
         )
 
-        outputs = text_generator(["This is a test", "This is a second test"], do_sample=False)
+        outputs = text_generator(
+            ["This is a test", "This is a second test"], do_sample=False
+        )
         self.assertEqual(
             outputs,
             [
@@ -159,7 +175,12 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(outputs, [{"generated_text": ANY(str)}])
         self.assertNotIn("This is a test", outputs[0]["generated_text"])
 
-        text_generator = pipeline(task="text-generation", model=model, tokenizer=tokenizer, return_full_text=False)
+        text_generator = pipeline(
+            task="text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            return_full_text=False,
+        )
         outputs = text_generator("This is a test")
         self.assertEqual(outputs, [{"generated_text": ANY(str)}])
         self.assertNotIn("This is a test", outputs[0]["generated_text"])
@@ -168,7 +189,11 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(outputs, [{"generated_text": ANY(str)}])
         self.assertTrue(outputs[0]["generated_text"].startswith("This is a test"))
 
-        outputs = text_generator(["This is great !", "Something else"], num_return_sequences=2, do_sample=True)
+        outputs = text_generator(
+            ["This is great !", "Something else"],
+            num_return_sequences=2,
+            do_sample=True,
+        )
         self.assertEqual(
             outputs,
             [
@@ -179,7 +204,10 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
 
         if text_generator.tokenizer.pad_token is not None:
             outputs = text_generator(
-                ["This is great !", "Something else"], num_return_sequences=2, batch_size=2, do_sample=True
+                ["This is great !", "Something else"],
+                num_return_sequences=2,
+                batch_size=2,
+                do_sample=True,
             )
             self.assertEqual(
                 outputs,
@@ -193,7 +221,10 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         # it requires BOS token to exist.
         # Special case for Pegasus which will always append EOS so will
         # work even without BOS.
-        if text_generator.tokenizer.bos_token_id is not None or "Pegasus" in tokenizer.__class__.__name__:
+        if (
+            text_generator.tokenizer.bos_token_id is not None
+            or "Pegasus" in tokenizer.__class__.__name__
+        ):
             outputs = text_generator("")
             self.assertEqual(outputs, [{"generated_text": ANY(str)}])
         else:
@@ -208,12 +239,19 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         # We don't care about infinite range models.
         # They already work.
         # Skip this test for XGLM, since it uses sinusoidal positional embeddings which are resized on-the-fly.
-        if tokenizer.model_max_length < 10000 and "XGLM" not in tokenizer.__class__.__name__:
+        if (
+            tokenizer.model_max_length < 10000
+            and "XGLM" not in tokenizer.__class__.__name__
+        ):
             # Handling of large generations
-            with self.assertRaises((RuntimeError, IndexError, ValueError, AssertionError)):
+            with self.assertRaises(
+                (RuntimeError, IndexError, ValueError, AssertionError)
+            ):
                 text_generator("This is a test" * 500, max_new_tokens=20)
 
-            outputs = text_generator("This is a test" * 500, handle_long_generation="hole", max_new_tokens=20)
+            outputs = text_generator(
+                "This is a test" * 500, handle_long_generation="hole", max_new_tokens=20
+            )
             # Hole strategy cannot work
             with self.assertRaises(ValueError):
                 text_generator(
@@ -249,7 +287,11 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         )
 
         # Upgraded those two to real pipeline arguments (they just get sent for the model as they're unlikely to mean anything else.)
-        pipe = pipeline(model="hf-internal-testing/tiny-random-bloom", device_map="auto", torch_dtype=torch.bfloat16)
+        pipe = pipeline(
+            model="hf-internal-testing/tiny-random-bloom",
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+        )
         self.assertEqual(pipe.model.device, torch.device(0))
         self.assertEqual(pipe.model.lm_head.weight.dtype, torch.bfloat16)
         out = pipe("This is a test")
@@ -266,7 +308,9 @@ class TextGenerationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         )
 
         # torch_dtype not necessary
-        pipe = pipeline(model="hf-internal-testing/tiny-random-bloom", device_map="auto")
+        pipe = pipeline(
+            model="hf-internal-testing/tiny-random-bloom", device_map="auto"
+        )
         self.assertEqual(pipe.model.device, torch.device(0))
         self.assertEqual(pipe.model.lm_head.weight.dtype, torch.bfloat16)
         out = pipe("This is a test")

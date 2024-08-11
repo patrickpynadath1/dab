@@ -31,7 +31,11 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 if is_timm_available():
     import torch
 
-    from transformers import ConditionalDetrForObjectDetection, ConditionalDetrForSegmentation, ConditionalDetrModel
+    from transformers import (
+        ConditionalDetrForObjectDetection,
+        ConditionalDetrForSegmentation,
+        ConditionalDetrModel,
+    )
 
 
 if is_vision_available():
@@ -80,13 +84,19 @@ class ConditionalDetrModelTester:
         self.num_labels = num_labels
 
         # we also set the expected seq length for both encoder and decoder
-        self.encoder_seq_length = math.ceil(self.min_size / 32) * math.ceil(self.max_size / 32)
+        self.encoder_seq_length = math.ceil(self.min_size / 32) * math.ceil(
+            self.max_size / 32
+        )
         self.decoder_seq_length = self.num_queries
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.min_size, self.max_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.min_size, self.max_size]
+        )
 
-        pixel_mask = torch.ones([self.batch_size, self.min_size, self.max_size], device=torch_device)
+        pixel_mask = torch.ones(
+            [self.batch_size, self.min_size, self.max_size], device=torch_device
+        )
 
         labels = None
         if self.use_labels:
@@ -98,7 +108,9 @@ class ConditionalDetrModelTester:
                     high=self.num_labels, size=(self.n_targets,), device=torch_device
                 )
                 target["boxes"] = torch.rand(self.n_targets, 4, device=torch_device)
-                target["masks"] = torch.rand(self.n_targets, self.min_size, self.max_size, device=torch_device)
+                target["masks"] = torch.rand(
+                    self.n_targets, self.min_size, self.max_size, device=torch_device
+                )
                 labels.append(target)
 
         config = self.get_config()
@@ -124,7 +136,9 @@ class ConditionalDetrModelTester:
         inputs_dict = {"pixel_values": pixel_values, "pixel_mask": pixel_mask}
         return config, inputs_dict
 
-    def create_and_check_conditional_detr_model(self, config, pixel_values, pixel_mask, labels):
+    def create_and_check_conditional_detr_model(
+        self, config, pixel_values, pixel_mask, labels
+    ):
         model = ConditionalDetrModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -133,10 +147,13 @@ class ConditionalDetrModelTester:
         result = model(pixel_values)
 
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.decoder_seq_length, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.decoder_seq_length, self.hidden_size),
         )
 
-    def create_and_check_conditional_detr_object_detection_head_model(self, config, pixel_values, pixel_mask, labels):
+    def create_and_check_conditional_detr_object_detection_head_model(
+        self, config, pixel_values, pixel_mask, labels
+    ):
         model = ConditionalDetrForObjectDetection(config=config)
         model.to(torch_device)
         model.eval()
@@ -144,18 +161,28 @@ class ConditionalDetrModelTester:
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_queries, self.num_labels))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_queries, 4))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_queries, self.num_labels)
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_queries, 4)
+        )
 
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels)
 
         self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_queries, self.num_labels))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_queries, 4))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_queries, self.num_labels)
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_queries, 4)
+        )
 
 
 @require_timm
-class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class ConditionalDetrModelTest(
+    ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
+):
     all_model_classes = (
         (
             ConditionalDetrModel,
@@ -173,18 +200,28 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
 
     # special case for head models
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels
+        )
 
         if return_labels:
-            if model_class.__name__ in ["ConditionalDetrForObjectDetection", "ConditionalDetrForSegmentation"]:
+            if model_class.__name__ in [
+                "ConditionalDetrForObjectDetection",
+                "ConditionalDetrForSegmentation",
+            ]:
                 labels = []
                 for i in range(self.model_tester.batch_size):
                     target = {}
                     target["class_labels"] = torch.ones(
-                        size=(self.model_tester.n_targets,), device=torch_device, dtype=torch.long
+                        size=(self.model_tester.n_targets,),
+                        device=torch_device,
+                        dtype=torch.long,
                     )
                     target["boxes"] = torch.ones(
-                        self.model_tester.n_targets, 4, device=torch_device, dtype=torch.float
+                        self.model_tester.n_targets,
+                        4,
+                        device=torch_device,
+                        dtype=torch.float,
                     )
                     target["masks"] = torch.ones(
                         self.model_tester.n_targets,
@@ -200,7 +237,9 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
 
     def setUp(self):
         self.model_tester = ConditionalDetrModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=ConditionalDetrConfig, has_text_modality=False)
+        self.config_tester = ConfigTester(
+            self, config_class=ConditionalDetrConfig, has_text_modality=False
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -211,13 +250,17 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
 
     def test_conditional_detr_object_detection_head_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_conditional_detr_object_detection_head_model(*config_and_inputs)
+        self.model_tester.create_and_check_conditional_detr_object_detection_head_model(
+            *config_and_inputs
+        )
 
     @unittest.skip(reason="CONDITIONAL_DETR does not use inputs_embeds")
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip(reason="CONDITIONAL_DETR does not have a get_input_embeddings method")
+    @unittest.skip(
+        reason="CONDITIONAL_DETR does not have a get_input_embeddings method"
+    )
     def test_model_common_attributes(self):
         pass
 
@@ -252,7 +295,11 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
             model.eval()
             with torch.no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-            attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
+            attentions = (
+                outputs.encoder_attentions
+                if config.is_encoder_decoder
+                else outputs.attentions
+            )
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
             # check that output_attentions also work using config
@@ -263,12 +310,20 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
             model.eval()
             with torch.no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-            attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
+            attentions = (
+                outputs.encoder_attentions
+                if config.is_encoder_decoder
+                else outputs.attentions
+            )
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
             self.assertListEqual(
                 list(attentions[0].shape[-3:]),
-                [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_seq_length,
+                    encoder_key_length,
+                ],
             )
             out_len = len(outputs)
 
@@ -292,16 +347,24 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
                 # decoder attentions
                 decoder_attentions = outputs.decoder_attentions
                 self.assertIsInstance(decoder_attentions, (list, tuple))
-                self.assertEqual(len(decoder_attentions), self.model_tester.num_hidden_layers)
+                self.assertEqual(
+                    len(decoder_attentions), self.model_tester.num_hidden_layers
+                )
                 self.assertListEqual(
                     list(decoder_attentions[0].shape[-3:]),
-                    [self.model_tester.num_attention_heads, decoder_seq_length, decoder_key_length],
+                    [
+                        self.model_tester.num_attention_heads,
+                        decoder_seq_length,
+                        decoder_key_length,
+                    ],
                 )
 
                 # cross attentions
                 cross_attentions = outputs.cross_attentions
                 self.assertIsInstance(cross_attentions, (list, tuple))
-                self.assertEqual(len(cross_attentions), self.model_tester.num_hidden_layers)
+                self.assertEqual(
+                    len(cross_attentions), self.model_tester.num_hidden_layers
+                )
                 self.assertListEqual(
                     list(cross_attentions[0].shape[-3:]),
                     [
@@ -328,12 +391,20 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
                 added_hidden_states = 1
             self.assertEqual(out_len + added_hidden_states, len(outputs))
 
-            self_attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
+            self_attentions = (
+                outputs.encoder_attentions
+                if config.is_encoder_decoder
+                else outputs.attentions
+            )
 
             self.assertEqual(len(self_attentions), self.model_tester.num_hidden_layers)
             self.assertListEqual(
                 list(self_attentions[0].shape[-3:]),
-                [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_seq_length,
+                    encoder_key_length,
+                ],
             )
 
     def test_retain_grad_hidden_states_attentions(self):
@@ -388,7 +459,9 @@ class ConditionalDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
                     if "head_mask" and "decoder_head_mask" in arg_names
                     else []
                 )
-                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+                self.assertListEqual(
+                    arg_names[: len(expected_arg_names)], expected_arg_names
+                )
             else:
                 expected_arg_names = ["pixel_values", "pixel_mask"]
                 self.assertListEqual(arg_names[:1], expected_arg_names)
@@ -456,13 +529,17 @@ class ConditionalDetrModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
         return (
-            ConditionalDetrFeatureExtractor.from_pretrained("microsoft/conditional-detr-resnet-50")
+            ConditionalDetrFeatureExtractor.from_pretrained(
+                "microsoft/conditional-detr-resnet-50"
+            )
             if is_vision_available()
             else None
         )
 
     def test_inference_no_head(self):
-        model = ConditionalDetrModel.from_pretrained("microsoft/conditional-detr-resnet-50").to(torch_device)
+        model = ConditionalDetrModel.from_pretrained(
+            "microsoft/conditional-detr-resnet-50"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -474,14 +551,22 @@ class ConditionalDetrModelIntegrationTests(unittest.TestCase):
         expected_shape = torch.Size((1, 300, 256))
         self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
         expected_slice = torch.tensor(
-            [[0.0616, -0.5146, -0.4032], [-0.7629, -0.4934, -1.7153], [-0.4768, -0.6403, -0.7826]]
+            [
+                [0.0616, -0.5146, -0.4032],
+                [-0.7629, -0.4934, -1.7153],
+                [-0.4768, -0.6403, -0.7826],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4
+            )
+        )
 
     def test_inference_object_detection_head(self):
-        model = ConditionalDetrForObjectDetection.from_pretrained("microsoft/conditional-detr-resnet-50").to(
-            torch_device
-        )
+        model = ConditionalDetrForObjectDetection.from_pretrained(
+            "microsoft/conditional-detr-resnet-50"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -492,24 +577,40 @@ class ConditionalDetrModelIntegrationTests(unittest.TestCase):
         with torch.no_grad():
             outputs = model(pixel_values, pixel_mask)
 
-        expected_shape_logits = torch.Size((1, model.config.num_queries, model.config.num_labels))
+        expected_shape_logits = torch.Size(
+            (1, model.config.num_queries, model.config.num_labels)
+        )
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
         expected_slice_logits = torch.tensor(
-            [[-19.1194, -0.0893, -11.0154], [-17.3640, -1.8035, -14.0219], [-20.0461, -0.5837, -11.1060]]
+            [
+                [-19.1194, -0.0893, -11.0154],
+                [-17.3640, -1.8035, -14.0219],
+                [-20.0461, -0.5837, -11.1060],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4)
+        )
 
         expected_shape_boxes = torch.Size((1, model.config.num_queries, 4))
         self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
         expected_slice_boxes = torch.tensor(
-            [[0.4433, 0.5302, 0.8853], [0.5494, 0.2517, 0.0529], [0.4998, 0.5360, 0.9956]]
+            [
+                [0.4433, 0.5302, 0.8853],
+                [0.5494, 0.2517, 0.0529],
+                [0.4998, 0.5360, 0.9956],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4
+            )
+        )
 
     def test_inference_panoptic_segmentation_head(self):
-        model = ConditionalDetrForSegmentation.from_pretrained("microsoft/conditional-detr-resnet-50-panoptic").to(
-            torch_device
-        )
+        model = ConditionalDetrForSegmentation.from_pretrained(
+            "microsoft/conditional-detr-resnet-50-panoptic"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -520,23 +621,47 @@ class ConditionalDetrModelIntegrationTests(unittest.TestCase):
         with torch.no_grad():
             outputs = model(pixel_values, pixel_mask)
 
-        expected_shape_logits = torch.Size((1, model.config.num_queries, model.config.num_labels))
+        expected_shape_logits = torch.Size(
+            (1, model.config.num_queries, model.config.num_labels)
+        )
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
         expected_slice_logits = torch.tensor(
-            [[-18.1565, -1.7568, -13.5029], [-16.8888, -1.4138, -14.1028], [-17.5709, -2.5080, -11.8654]]
+            [
+                [-18.1565, -1.7568, -13.5029],
+                [-16.8888, -1.4138, -14.1028],
+                [-17.5709, -2.5080, -11.8654],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4)
+        )
 
         expected_shape_boxes = torch.Size((1, model.config.num_queries, 4))
         self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
         expected_slice_boxes = torch.tensor(
-            [[0.5344, 0.1789, 0.9285], [0.4420, 0.0572, 0.0875], [0.6630, 0.6887, 0.1017]]
+            [
+                [0.5344, 0.1789, 0.9285],
+                [0.4420, 0.0572, 0.0875],
+                [0.6630, 0.6887, 0.1017],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4
+            )
+        )
 
         expected_shape_masks = torch.Size((1, model.config.num_queries, 200, 267))
         self.assertEqual(outputs.pred_masks.shape, expected_shape_masks)
         expected_slice_masks = torch.tensor(
-            [[-7.7558, -10.8788, -11.9797], [-11.8881, -16.4329, -17.7451], [-14.7316, -19.7383, -20.3004]]
+            [
+                [-7.7558, -10.8788, -11.9797],
+                [-11.8881, -16.4329, -17.7451],
+                [-14.7316, -19.7383, -20.3004],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.pred_masks[0, 0, :3, :3], expected_slice_masks, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(
+                outputs.pred_masks[0, 0, :3, :3], expected_slice_masks, atol=1e-3
+            )
+        )

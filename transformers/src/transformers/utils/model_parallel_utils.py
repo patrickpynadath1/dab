@@ -19,7 +19,9 @@ from math import ceil
 def assert_device_map(device_map, num_blocks):
     blocks = list(range(0, num_blocks))
 
-    device_map_blocks = [item for sublist in list(device_map.values()) for item in sublist]
+    device_map_blocks = [
+        item for sublist in list(device_map.values()) for item in sublist
+    ]
 
     # Duplicate check
     duplicate_blocks = []
@@ -39,8 +41,7 @@ def assert_device_map(device_map, num_blocks):
     if len(missing_blocks) != 0:
         raise ValueError(
             "There are attention blocks for this model that are not specified in the device_map. Add these attention "
-            "blocks to a device on the device_map: "
-            + str(missing_blocks)
+            "blocks to a device on the device_map: " + str(missing_blocks)
         )
     if len(extra_blocks) != 0:
         raise ValueError(

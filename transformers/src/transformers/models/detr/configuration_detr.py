@@ -124,6 +124,7 @@ class DetrConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "detr"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {
@@ -188,7 +189,9 @@ class DetrConfig(PretrainedConfig):
         self.encoder_layerdrop = encoder_layerdrop
         self.decoder_layerdrop = decoder_layerdrop
         self.num_hidden_layers = encoder_layers
-        self.scale_embedding = scale_embedding  # scale factor will be sqrt(d_model) if True
+        self.scale_embedding = (
+            scale_embedding  # scale factor will be sqrt(d_model) if True
+        )
         self.auxiliary_loss = auxiliary_loss
         self.position_embedding_type = position_embedding_type
         self.backbone = backbone
@@ -223,7 +226,10 @@ class DetrOnnxConfig(OnnxConfig):
     def inputs(self) -> Mapping[str, Mapping[int, str]]:
         return OrderedDict(
             [
-                ("pixel_values", {0: "batch", 1: "num_channels", 2: "height", 3: "width"}),
+                (
+                    "pixel_values",
+                    {0: "batch", 1: "num_channels", 2: "height", 3: "width"},
+                ),
                 ("pixel_mask", {0: "batch"}),
             ]
         )

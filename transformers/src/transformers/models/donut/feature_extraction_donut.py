@@ -88,14 +88,18 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
         self.do_align_long_axis = do_align_long_axis
         self.do_pad = do_pad
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_STANDARD_STD
 
     def rotate_image(self, image, size):
         if not isinstance(image, Image.Image):
             image = self.to_pil_image(image)
 
-        if (size[1] > size[0] and image.width > image.height) or (size[1] < size[0] and image.width < image.height):
+        if (size[1] > size[0] and image.width > image.height) or (
+            size[1] < size[0] and image.width < image.height
+        ):
             image = self.rotate(image, angle=-90, expand=True)
 
         return image
@@ -108,7 +112,9 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
 
         return image
 
-    def pad(self, image: Image.Image, size: Tuple[int, int], random_padding: bool = False) -> Image.Image:
+    def pad(
+        self, image: Image.Image, size: Tuple[int, int], random_padding: bool = False
+    ) -> Image.Image:
         delta_width = size[0] - image.width
         delta_height = size[1] - image.height
 
@@ -119,7 +125,12 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
             pad_width = delta_width // 2
             pad_height = delta_height // 2
 
-        padding = (pad_width, pad_height, delta_width - pad_width, delta_height - pad_height)
+        padding = (
+            pad_width,
+            pad_height,
+            delta_width - pad_width,
+            delta_height - pad_height,
+        )
         return ImageOps.expand(image, padding)
 
     def __call__(
@@ -169,7 +180,11 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -180,7 +195,10 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -191,15 +209,26 @@ class DonutFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
             images = [self.rotate_image(image, self.size) for image in images]
         if self.do_resize and self.size is not None:
             images = [
-                self.resize(image=image, size=min(self.size), resample=self.resample, default_to_square=False)
+                self.resize(
+                    image=image,
+                    size=min(self.size),
+                    resample=self.resample,
+                    default_to_square=False,
+                )
                 for image in images
             ]
         if self.do_thumbnail and self.size is not None:
             images = [self.thumbnail(image=image, size=self.size) for image in images]
         if self.do_pad and self.size is not None:
-            images = [self.pad(image=image, size=self.size, random_padding=random_padding) for image in images]
+            images = [
+                self.pad(image=image, size=self.size, random_padding=random_padding)
+                for image in images
+            ]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

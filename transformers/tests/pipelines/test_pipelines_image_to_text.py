@@ -14,9 +14,19 @@
 
 import unittest
 
-from transformers import MODEL_FOR_VISION_2_SEQ_MAPPING, TF_MODEL_FOR_VISION_2_SEQ_MAPPING, is_vision_available
+from transformers import (
+    MODEL_FOR_VISION_2_SEQ_MAPPING,
+    TF_MODEL_FOR_VISION_2_SEQ_MAPPING,
+    is_vision_available,
+)
 from transformers.pipelines import pipeline
-from transformers.testing_utils import is_pipeline_test, require_tf, require_torch, require_vision, slow
+from transformers.testing_utils import (
+    is_pipeline_test,
+    require_tf,
+    require_torch,
+    require_vision,
+    slow,
+)
 
 from .test_pipelines_common import ANY, PipelineTestCaseMeta
 
@@ -38,7 +48,12 @@ class ImageToTextPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
     tf_model_mapping = TF_MODEL_FOR_VISION_2_SEQ_MAPPING
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
-        pipe = pipeline("image-to-text", model=model, tokenizer=tokenizer, feature_extractor=feature_extractor)
+        pipe = pipeline(
+            "image-to-text",
+            model=model,
+            tokenizer=tokenizer,
+            feature_extractor=feature_extractor,
+        )
         examples = [
             Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png"),
             "./tests/fixtures/tests_samples/COCO/000000039769.png",
@@ -57,7 +72,9 @@ class ImageToTextPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
 
     @require_tf
     def test_small_model_tf(self):
-        pipe = pipeline("image-to-text", model="hf-internal-testing/tiny-random-vit-gpt2")
+        pipe = pipeline(
+            "image-to-text", model="hf-internal-testing/tiny-random-vit-gpt2"
+        )
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
 
         outputs = pipe(image)
@@ -104,7 +121,9 @@ class ImageToTextPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
 
     @require_torch
     def test_small_model_pt(self):
-        pipe = pipeline("image-to-text", model="hf-internal-testing/tiny-random-vit-gpt2")
+        pipe = pipeline(
+            "image-to-text", model="hf-internal-testing/tiny-random-vit-gpt2"
+        )
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
 
         outputs = pipe(image)
@@ -141,14 +160,29 @@ class ImageToTextPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
 
         outputs = pipe(image)
-        self.assertEqual(outputs, [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}])
+        self.assertEqual(
+            outputs,
+            [
+                {
+                    "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                }
+            ],
+        )
 
         outputs = pipe([image, image])
         self.assertEqual(
             outputs,
             [
-                [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}],
-                [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}],
+                [
+                    {
+                        "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                    }
+                ],
+                [
+                    {
+                        "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                    }
+                ],
             ],
         )
 
@@ -159,13 +193,28 @@ class ImageToTextPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
 
         outputs = pipe(image)
-        self.assertEqual(outputs, [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}])
+        self.assertEqual(
+            outputs,
+            [
+                {
+                    "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                }
+            ],
+        )
 
         outputs = pipe([image, image])
         self.assertEqual(
             outputs,
             [
-                [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}],
-                [{"generated_text": "a cat laying on a blanket next to a cat laying on a bed "}],
+                [
+                    {
+                        "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                    }
+                ],
+                [
+                    {
+                        "generated_text": "a cat laying on a blanket next to a cat laying on a bed "
+                    }
+                ],
             ],
         )

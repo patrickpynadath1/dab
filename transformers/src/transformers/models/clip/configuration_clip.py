@@ -91,6 +91,7 @@ class CLIPTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "clip_text_model"
 
     def __init__(
@@ -110,9 +111,14 @@ class CLIPTextConfig(PretrainedConfig):
         pad_token_id=1,
         bos_token_id=0,
         eos_token_id=2,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs,
+        )
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -128,15 +134,23 @@ class CLIPTextConfig(PretrainedConfig):
         self.attention_dropout = attention_dropout
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> "PretrainedConfig":
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
 
         # get the text config dict if we are loading from CLIPConfig
         if config_dict.get("model_type") == "clip":
             config_dict = config_dict["text_config"]
 
-        if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
+        if (
+            "model_type" in config_dict
+            and hasattr(cls, "model_type")
+            and config_dict["model_type"] != cls.model_type
+        ):
             logger.warning(
                 f"You are using a model of type {config_dict['model_type']} to instantiate a model of type "
                 f"{cls.model_type}. This is not supported for all configurations of models and can yield errors."
@@ -215,7 +229,7 @@ class CLIPVisionConfig(PretrainedConfig):
         attention_dropout=0.0,
         initializer_range=0.02,
         initializer_factor=1.0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
@@ -234,15 +248,23 @@ class CLIPVisionConfig(PretrainedConfig):
         self.hidden_act = hidden_act
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> "PretrainedConfig":
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
 
         # get the vision config dict if we are loading from CLIPConfig
         if config_dict.get("model_type") == "clip":
             config_dict = config_dict["vision_config"]
 
-        if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
+        if (
+            "model_type" in config_dict
+            and hasattr(cls, "model_type")
+            and config_dict["model_type"] != cls.model_type
+        ):
             logger.warning(
                 f"You are using a model of type {config_dict['model_type']} to instantiate a model of type "
                 f"{cls.model_type}. This is not supported for all configurations of models and can yield errors."
@@ -281,17 +303,25 @@ class CLIPConfig(PretrainedConfig):
         vision_config_dict=None,
         projection_dim=512,
         logit_scale_init_value=2.6592,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(text_config_dict=text_config_dict, vision_config_dict=vision_config_dict, **kwargs)
+        super().__init__(
+            text_config_dict=text_config_dict,
+            vision_config_dict=vision_config_dict,
+            **kwargs,
+        )
 
         if text_config_dict is None:
             text_config_dict = {}
-            logger.info("text_config_dict is None. Initializing the CLIPTextConfig with default values.")
+            logger.info(
+                "text_config_dict is None. Initializing the CLIPTextConfig with default values."
+            )
 
         if vision_config_dict is None:
             vision_config_dict = {}
-            logger.info("vision_config_dict is None. initializing the CLIPVisionConfig with default values.")
+            logger.info(
+                "vision_config_dict is None. initializing the CLIPVisionConfig with default values."
+            )
 
         self.text_config = CLIPTextConfig(**text_config_dict)
         self.vision_config = CLIPVisionConfig(**vision_config_dict)
@@ -301,7 +331,9 @@ class CLIPConfig(PretrainedConfig):
         self.initializer_factor = 1.0
 
     @classmethod
-    def from_text_vision_configs(cls, text_config: CLIPTextConfig, vision_config: CLIPVisionConfig, **kwargs):
+    def from_text_vision_configs(
+        cls, text_config: CLIPTextConfig, vision_config: CLIPVisionConfig, **kwargs
+    ):
         r"""
         Instantiate a [`CLIPConfig`] (or a derived class) from clip text model configuration and clip vision model
         configuration.
@@ -310,7 +342,11 @@ class CLIPConfig(PretrainedConfig):
             [`CLIPConfig`]: An instance of a configuration object
         """
 
-        return cls(text_config_dict=text_config.to_dict(), vision_config_dict=vision_config.to_dict(), **kwargs)
+        return cls(
+            text_config_dict=text_config.to_dict(),
+            vision_config_dict=vision_config.to_dict(),
+            **kwargs,
+        )
 
     def to_dict(self):
         """
@@ -332,7 +368,10 @@ class CLIPOnnxConfig(OnnxConfig):
         return OrderedDict(
             [
                 ("input_ids", {0: "batch", 1: "sequence"}),
-                ("pixel_values", {0: "batch", 1: "num_channels", 2: "height", 3: "width"}),
+                (
+                    "pixel_values",
+                    {0: "batch", 1: "num_channels", 2: "height", 3: "width"},
+                ),
                 ("attention_mask", {0: "batch", 1: "sequence"}),
             ]
         )
@@ -358,8 +397,12 @@ class CLIPOnnxConfig(OnnxConfig):
         framework: Optional["TensorType"] = None,
     ) -> Mapping[str, Any]:
 
-        text_input_dict = super().generate_dummy_inputs(processor.tokenizer, framework=framework)
-        image_input_dict = super().generate_dummy_inputs(processor.feature_extractor, framework=framework)
+        text_input_dict = super().generate_dummy_inputs(
+            processor.tokenizer, framework=framework
+        )
+        image_input_dict = super().generate_dummy_inputs(
+            processor.feature_extractor, framework=framework
+        )
         return {**text_input_dict, **image_input_dict}
 
     @property

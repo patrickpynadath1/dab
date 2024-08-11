@@ -83,7 +83,10 @@ class LevitFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
         self.image_std = image_std
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -122,7 +125,11 @@ class LevitFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -133,7 +140,10 @@ class LevitFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -143,13 +153,21 @@ class LevitFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
         if self.do_resize and self.size is not None:
             size_ = int((256 / 224) * self.size)
             images = [
-                self.resize(image=image, size=size_, resample=self.resample, default_to_square=False)
+                self.resize(
+                    image=image,
+                    size=size_,
+                    resample=self.resample,
+                    default_to_square=False,
+                )
                 for image in images
             ]
         if self.do_center_crop:
             images = [self.center_crop(image=image, size=self.size) for image in images]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

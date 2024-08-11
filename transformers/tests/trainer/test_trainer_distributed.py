@@ -15,7 +15,12 @@
 import sys
 from typing import Dict
 
-from transformers import EvalPrediction, HfArgumentParser, TrainingArguments, is_torch_available
+from transformers import (
+    EvalPrediction,
+    HfArgumentParser,
+    TrainingArguments,
+    is_torch_available,
+)
 from transformers.testing_utils import (
     TestCasePlus,
     execute_subprocess_async,
@@ -47,7 +52,10 @@ if is_torch_available():
 
     class DummyDataCollator:
         def __call__(self, features):
-            return {"input_ids": torch.tensor(features), "labels": torch.tensor(features)}
+            return {
+                "input_ids": torch.tensor(features),
+                "labels": torch.tensor(features),
+            }
 
     class DummyModel(nn.Module):
         def __init__(self):
@@ -99,7 +107,10 @@ if __name__ == "__main__":
 
         def compute_metrics(p: EvalPrediction) -> Dict:
             sequential = list(range(len(dataset)))
-            success = p.predictions.tolist() == sequential and p.label_ids.tolist() == sequential
+            success = (
+                p.predictions.tolist() == sequential
+                and p.label_ids.tolist() == sequential
+            )
             if not success and training_args.local_rank == 0:
                 logger.warning(
                     "Predictions and/or labels do not match expected results:\n  - predictions: "

@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -75,9 +78,13 @@ class ConvNextFeatureExtractionTester(unittest.TestCase):
 
 @require_torch
 @require_vision
-class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestCase):
+class ConvNextFeatureExtractionTest(
+    FeatureExtractionSavingTestMixin, unittest.TestCase
+):
 
-    feature_extraction_class = ConvNextFeatureExtractor if is_vision_available() else None
+    feature_extraction_class = (
+        ConvNextFeatureExtractor if is_vision_available() else None
+    )
 
     def setUp(self):
         self.feature_extract_tester = ConvNextFeatureExtractionTester(self)
@@ -102,12 +109,16 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -119,7 +130,9 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -134,12 +147,16 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -151,7 +168,9 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -166,12 +185,16 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -183,7 +206,9 @@ class ConvNextFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (

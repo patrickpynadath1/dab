@@ -121,7 +121,11 @@ class TFCLIPOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["text_model_output", "vision_model_output"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
 
@@ -146,7 +150,9 @@ class TFCLIPVisionEmbeddings(tf.keras.layers.Layer):
             padding="valid",
             data_format="channels_last",
             use_bias=False,
-            kernel_initializer=get_initializer(self.config.initializer_range * self.config.initializer_factor),
+            kernel_initializer=get_initializer(
+                self.config.initializer_range * self.config.initializer_factor
+            ),
             name="patch_embedding",
         )
 
@@ -185,10 +191,14 @@ class TFCLIPVisionEmbeddings(tf.keras.layers.Layer):
 
         # Change the 2D spatial dimensions to a single temporal dimension.
         # shape = (batch_size, num_patches, out_channels=embed_dim)
-        patch_embeds = tf.reshape(tensor=patch_embeds, shape=(batch_size, self.num_patches, -1))
+        patch_embeds = tf.reshape(
+            tensor=patch_embeds, shape=(batch_size, self.num_patches, -1)
+        )
 
         # add the [CLS] token to the embedded patch tokens
-        class_embeds = tf.broadcast_to(self.class_embedding, shape=(batch_size, 1, self.embed_dim))
+        class_embeds = tf.broadcast_to(
+            self.class_embedding, shape=(batch_size, 1, self.embed_dim)
+        )
         embeddings = tf.concat((class_embeds, patch_embeds), axis=1)
 
         embeddings = embeddings + self.position_embedding
@@ -210,7 +220,9 @@ class TFCLIPTextEmbeddings(tf.keras.layers.Layer):
         with tf.name_scope("token_embedding"):
             self.weight = self.add_weight(
                 shape=(self.vocab_size, self.embed_dim),
-                initializer=get_initializer(self.config.initializer_factor * self.config.initializer_range),
+                initializer=get_initializer(
+                    self.config.initializer_factor * self.config.initializer_range
+                ),
                 trainable=True,
                 name="weight",
             )
@@ -218,7 +230,9 @@ class TFCLIPTextEmbeddings(tf.keras.layers.Layer):
         with tf.name_scope("position_embedding"):
             self.position_embedding = self.add_weight(
                 shape=(self.config.max_position_embeddings, self.embed_dim),
-                initializer=get_initializer(self.config.initializer_factor * self.config.initializer_range),
+                initializer=get_initializer(
+                    self.config.initializer_factor * self.config.initializer_range
+                ),
                 trainable=True,
                 name="embeddings",
             )
@@ -256,10 +270,16 @@ class TFCLIPTextEmbeddings(tf.keras.layers.Layer):
         input_shape = shape_list(inputs_embeds)[:-1]
 
         if position_ids is None:
-            position_ids = tf.expand_dims(tf.range(start=0, limit=input_shape[-1]), axis=0)
+            position_ids = tf.expand_dims(
+                tf.range(start=0, limit=input_shape[-1]), axis=0
+            )
 
-        position_embeds = tf.gather(params=self.position_embedding, indices=position_ids)
-        position_embeds = tf.tile(input=position_embeds, multiples=(input_shape[0], 1, 1))
+        position_embeds = tf.gather(
+            params=self.position_embedding, indices=position_ids
+        )
+        position_embeds = tf.tile(
+            input=position_embeds, multiples=(input_shape[0], 1, 1)
+        )
         final_embeddings = inputs_embeds + position_embeds
 
         return final_embeddings
@@ -281,31 +301,44 @@ class TFCLIPAttention(tf.keras.layers.Layer):
             )
 
         factor = config.initializer_factor
-        in_proj_std = (self.embed_dim**-0.5) * ((2 * config.num_hidden_layers) ** -0.5) * factor
+        in_proj_std = (
+            (self.embed_dim**-0.5) * ((2 * config.num_hidden_layers) ** -0.5) * factor
+        )
         out_proj_std = (self.embed_dim**-0.5) * factor
 
         self.sqrt_att_head_size = math.sqrt(self.attention_head_size)
 
         self.q_proj = tf.keras.layers.Dense(
-            units=self.embed_dim, kernel_initializer=get_initializer(in_proj_std), name="q_proj"
+            units=self.embed_dim,
+            kernel_initializer=get_initializer(in_proj_std),
+            name="q_proj",
         )
         self.k_proj = tf.keras.layers.Dense(
-            units=self.embed_dim, kernel_initializer=get_initializer(in_proj_std), name="k_proj"
+            units=self.embed_dim,
+            kernel_initializer=get_initializer(in_proj_std),
+            name="k_proj",
         )
         self.v_proj = tf.keras.layers.Dense(
-            units=self.embed_dim, kernel_initializer=get_initializer(in_proj_std), name="v_proj"
+            units=self.embed_dim,
+            kernel_initializer=get_initializer(in_proj_std),
+            name="v_proj",
         )
 
         self.dropout = tf.keras.layers.Dropout(rate=config.attention_dropout)
 
         self.out_proj = tf.keras.layers.Dense(
-            units=self.embed_dim, kernel_initializer=get_initializer(out_proj_std), name="out_proj"
+            units=self.embed_dim,
+            kernel_initializer=get_initializer(out_proj_std),
+            name="out_proj",
         )
 
     # copied from transformers.models.bert.modeling_tf_bert.TFBertSelfAttention.transpose_for_scores
     def transpose_for_scores(self, tensor: tf.Tensor, batch_size: int) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size] to [batch_size, seq_length, num_attention_heads, attention_head_size]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size] to [batch_size, num_attention_heads, seq_length, attention_head_size]
         return tf.transpose(tensor, perm=[0, 2, 1, 3])
@@ -354,12 +387,18 @@ class TFCLIPAttention(tf.keras.layers.Layer):
         attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
 
         # (batch_size, seq_len_q, embed_dim)
-        attention_output = tf.reshape(tensor=attention_output, shape=(batch_size, -1, self.embed_dim))
+        attention_output = tf.reshape(
+            tensor=attention_output, shape=(batch_size, -1, self.embed_dim)
+        )
 
         attention_output = self.out_proj(attention_output, training=training)
         # In TFBert, attention weights are returned after dropout.
         # However, in CLIP, they are returned before dropout.
-        outputs = (attention_output, _attention_probs) if output_attentions else (attention_output,)
+        outputs = (
+            (attention_output, _attention_probs)
+            if output_attentions
+            else (attention_output,)
+        )
 
         return outputs
 
@@ -371,14 +410,22 @@ class TFCLIPMLP(tf.keras.layers.Layer):
         self.activation_fn = get_tf_activation(config.hidden_act)
 
         factor = config.initializer_factor
-        in_proj_std = (config.hidden_size**-0.5) * ((2 * config.num_hidden_layers) ** -0.5) * factor
+        in_proj_std = (
+            (config.hidden_size**-0.5)
+            * ((2 * config.num_hidden_layers) ** -0.5)
+            * factor
+        )
         fc_std = (2 * config.hidden_size) ** -0.5 * factor
 
         self.fc1 = tf.keras.layers.Dense(
-            units=config.intermediate_size, kernel_initializer=get_initializer(fc_std), name="fc1"
+            units=config.intermediate_size,
+            kernel_initializer=get_initializer(fc_std),
+            name="fc1",
         )
         self.fc2 = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(in_proj_std), name="fc2"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(in_proj_std),
+            name="fc2",
         )
 
     def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
@@ -395,9 +442,13 @@ class TFCLIPEncoderLayer(tf.keras.layers.Layer):
 
         self.embed_dim = config.hidden_size
         self.self_attn = TFCLIPAttention(config, name="self_attn")
-        self.layer_norm1 = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm1")
+        self.layer_norm1 = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm1"
+        )
         self.mlp = TFCLIPMLP(config, name="mlp")
-        self.layer_norm2 = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm2")
+        self.layer_norm2 = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm2"
+        )
 
     def call(
         self,
@@ -436,7 +487,9 @@ class TFCLIPEncoderLayer(tf.keras.layers.Layer):
         hidden_states = self.mlp(hidden_states=hidden_states)
         hidden_states = residual + hidden_states
 
-        outputs = (hidden_states,) + attention_outputs[1:]  # add attentions if we output them
+        outputs = (hidden_states,) + attention_outputs[
+            1:
+        ]  # add attentions if we output them
 
         return outputs
 
@@ -453,7 +506,10 @@ class TFCLIPEncoder(tf.keras.layers.Layer):
     def __init__(self, config: CLIPConfig, **kwargs):
         super().__init__(**kwargs)
 
-        self.layers = [TFCLIPEncoderLayer(config, name=f"layers_._{i}") for i in range(config.num_hidden_layers)]
+        self.layers = [
+            TFCLIPEncoderLayer(config, name=f"layers_._{i}")
+            for i in range(config.num_hidden_layers)
+        ]
 
     def call(
         self,
@@ -489,10 +545,16 @@ class TFCLIPEncoder(tf.keras.layers.Layer):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_attentions]
+                if v is not None
+            )
 
         return TFBaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_attentions,
         )
 
 
@@ -518,12 +580,16 @@ class TFCLIPTextTransformer(tf.keras.layers.Layer):
     ) -> Union[TFBaseModelOutputWithPooling, Tuple[tf.Tensor]]:
         input_shape = shape_list(input_ids)
 
-        embedding_output = self.embeddings(input_ids=input_ids, position_ids=position_ids)
+        embedding_output = self.embeddings(
+            input_ids=input_ids, position_ids=position_ids
+        )
 
         batch_size, seq_length = input_shape
         # CLIP's text model uses causal mask, prepare it here.
         # https://github.com/openai/CLIP/blob/cfcffb90e69f37bf2ff1e988237a0fbe41f33c04/clip/model.py#L324
-        causal_attention_mask = self._build_causal_attention_mask(batch_size, seq_length, dtype=embedding_output.dtype)
+        causal_attention_mask = self._build_causal_attention_mask(
+            batch_size, seq_length, dtype=embedding_output.dtype
+        )
 
         # check attention mask and invert
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
@@ -547,7 +613,11 @@ class TFCLIPTextTransformer(tf.keras.layers.Layer):
         pooled_output = tf.gather_nd(
             params=sequence_output,
             indices=tf.stack(
-                values=(tf.range(input_shape[0], dtype=tf.int64), tf.math.argmax(input_ids, axis=-1)), axis=1
+                values=(
+                    tf.range(input_shape[0], dtype=tf.int64),
+                    tf.math.argmax(input_ids, axis=-1),
+                ),
+                axis=1,
             ),
         )
 
@@ -577,7 +647,9 @@ class TFCLIPTextTransformer(tf.keras.layers.Layer):
         # to_mask = tf.linalg.band_part(to_mask, -1, 0)
         to_mask = tf.linalg.set_diag(to_mask, diagonal=diag)
 
-        return tf.broadcast_to(input=to_mask, shape=(batch_size, 1, seq_length, seq_length))
+        return tf.broadcast_to(
+            input=to_mask, shape=(batch_size, 1, seq_length, seq_length)
+        )
 
 
 @keras_serializable
@@ -633,9 +705,13 @@ class TFCLIPVisionTransformer(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.embeddings = TFCLIPVisionEmbeddings(config, name="embeddings")
-        self.pre_layernorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="pre_layrnorm")
+        self.pre_layernorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="pre_layrnorm"
+        )
         self.encoder = TFCLIPEncoder(config, name="encoder")
-        self.post_layernorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="post_layernorm")
+        self.post_layernorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="post_layernorm"
+        )
 
     def call(
         self,
@@ -741,14 +817,18 @@ class TFCLIPMainLayer(tf.keras.layers.Layer):
 
         self.visual_projection = tf.keras.layers.Dense(
             units=self.projection_dim,
-            kernel_initializer=get_initializer(vision_config.hidden_size**-0.5 * self.config.initializer_factor),
+            kernel_initializer=get_initializer(
+                vision_config.hidden_size**-0.5 * self.config.initializer_factor
+            ),
             use_bias=False,
             name="visual_projection",
         )
 
         self.text_projection = tf.keras.layers.Dense(
             units=self.projection_dim,
-            kernel_initializer=get_initializer(text_config.hidden_size**-0.5 * self.config.initializer_factor),
+            kernel_initializer=get_initializer(
+                text_config.hidden_size**-0.5 * self.config.initializer_factor
+            ),
             use_bias=False,
             name="text_projection",
         )
@@ -757,7 +837,9 @@ class TFCLIPMainLayer(tf.keras.layers.Layer):
 
         self.logit_scale = self.add_weight(
             shape=(1,),
-            initializer=tf.keras.initializers.Constant(self.config.logit_scale_init_value),
+            initializer=tf.keras.initializers.Constant(
+                self.config.logit_scale_init_value
+            ),
             trainable=True,
             name="logit_scale",
         )
@@ -873,12 +955,18 @@ class TFCLIPMainLayer(tf.keras.layers.Layer):
         text_embeds = self.text_projection(inputs=text_embeds)
 
         # normalized features
-        image_embeds = image_embeds / tf.norm(tensor=image_embeds, ord="euclidean", axis=-1, keepdims=True)
-        text_embeds = text_embeds / tf.norm(tensor=text_embeds, ord="euclidean", axis=-1, keepdims=True)
+        image_embeds = image_embeds / tf.norm(
+            tensor=image_embeds, ord="euclidean", axis=-1, keepdims=True
+        )
+        text_embeds = text_embeds / tf.norm(
+            tensor=text_embeds, ord="euclidean", axis=-1, keepdims=True
+        )
 
         # cosine similarity as logits
         logit_scale = tf.math.exp(self.logit_scale)
-        logits_per_text = tf.matmul(text_embeds, image_embeds, transpose_b=True) * logit_scale
+        logits_per_text = (
+            tf.matmul(text_embeds, image_embeds, transpose_b=True) * logit_scale
+        )
         logits_per_image = tf.transpose(logits_per_text)
 
         loss = None
@@ -887,7 +975,14 @@ class TFCLIPMainLayer(tf.keras.layers.Layer):
             loss = tf.reshape(loss, (1,))
 
         if not return_dict:
-            output = (logits_per_image, logits_per_text, text_embeds, image_embeds, text_outputs, vision_outputs)
+            output = (
+                logits_per_image,
+                logits_per_text,
+                text_embeds,
+                image_embeds,
+                text_outputs,
+                vision_outputs,
+            )
             return (loss,) + output if loss is not None else output
 
         return TFCLIPOutput(
@@ -1062,8 +1157,12 @@ class TFCLIPTextModel(TFCLIPPreTrainedModel):
         self.clip = TFCLIPTextMainLayer(config, name="clip")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(CLIP_TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFBaseModelOutputWithPooling, config_class=CLIPTextConfig)
+    @add_start_docstrings_to_model_forward(
+        CLIP_TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFBaseModelOutputWithPooling, config_class=CLIPTextConfig
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1108,7 +1207,9 @@ class TFCLIPTextModel(TFCLIPPreTrainedModel):
         input_signature=[
             {
                 "input_ids": tf.TensorSpec((None, None), tf.int64, name="input_ids"),
-                "attention_mask": tf.TensorSpec((None, None), tf.int64, name="attention_mask"),
+                "attention_mask": tf.TensorSpec(
+                    (None, None), tf.int64, name="attention_mask"
+                ),
             }
         ]
     )
@@ -1116,9 +1217,19 @@ class TFCLIPTextModel(TFCLIPPreTrainedModel):
         output = self.call(inputs)
         return self.serving_output(output)
 
-    def serving_output(self, output: TFBaseModelOutputWithPooling) -> TFBaseModelOutputWithPooling:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFBaseModelOutputWithPooling
+    ) -> TFBaseModelOutputWithPooling:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFBaseModelOutputWithPooling(
             last_hidden_state=output.last_hidden_state,
@@ -1146,14 +1257,22 @@ class TFCLIPVisionModel(TFCLIPPreTrainedModel):
             `Dict[str, tf.Tensor]`: The dummy inputs.
         """
         VISION_DUMMY_INPUTS = tf.random.uniform(
-            shape=(len(DUMMY_INPUTS), 3, self.config.image_size, self.config.image_size), dtype=tf.float32
+            shape=(
+                len(DUMMY_INPUTS),
+                3,
+                self.config.image_size,
+                self.config.image_size,
+            ),
+            dtype=tf.float32,
         )
         return {"pixel_values": VISION_DUMMY_INPUTS}
 
     @tf.function(
         input_signature=[
             {
-                "pixel_values": tf.TensorSpec((None, None, None, None), tf.float32, name="pixel_values"),
+                "pixel_values": tf.TensorSpec(
+                    (None, None, None, None), tf.float32, name="pixel_values"
+                ),
             }
         ]
     )
@@ -1171,7 +1290,9 @@ class TFCLIPVisionModel(TFCLIPPreTrainedModel):
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(CLIP_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFBaseModelOutputWithPooling, config_class=CLIPVisionConfig)
+    @replace_return_docstrings(
+        output_type=TFBaseModelOutputWithPooling, config_class=CLIPVisionConfig
+    )
     def call(
         self,
         pixel_values: Optional[TFModelInputType] = None,
@@ -1213,9 +1334,19 @@ class TFCLIPVisionModel(TFCLIPPreTrainedModel):
 
         return outputs
 
-    def serving_output(self, output: TFBaseModelOutputWithPooling) -> TFBaseModelOutputWithPooling:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFBaseModelOutputWithPooling
+    ) -> TFBaseModelOutputWithPooling:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFBaseModelOutputWithPooling(
             last_hidden_state=output.last_hidden_state,
@@ -1243,7 +1374,12 @@ class TFCLIPModel(TFCLIPPreTrainedModel):
             `Dict[str, tf.Tensor]`: The dummy inputs.
         """
         VISION_DUMMY_INPUTS = tf.random.uniform(
-            shape=(len(DUMMY_INPUTS), 3, self.config.vision_config.image_size, self.config.vision_config.image_size),
+            shape=(
+                len(DUMMY_INPUTS),
+                3,
+                self.config.vision_config.image_size,
+                self.config.vision_config.image_size,
+            ),
             dtype=tf.float32,
         )
         return {
@@ -1255,8 +1391,12 @@ class TFCLIPModel(TFCLIPPreTrainedModel):
         input_signature=[
             {
                 "input_ids": tf.TensorSpec((None, None), tf.int32, name="input_ids"),
-                "pixel_values": tf.TensorSpec((None, None, None, None), tf.float32, name="pixel_values"),
-                "attention_mask": tf.TensorSpec((None, None), tf.int32, name="attention_mask"),
+                "pixel_values": tf.TensorSpec(
+                    (None, None, None, None), tf.float32, name="pixel_values"
+                ),
+                "attention_mask": tf.TensorSpec(
+                    (None, None), tf.int32, name="attention_mask"
+                ),
             }
         ]
     )
@@ -1273,7 +1413,9 @@ class TFCLIPModel(TFCLIPPreTrainedModel):
         return self.serving_output(output)
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(CLIP_TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        CLIP_TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     def get_text_features(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1355,7 +1497,9 @@ class TFCLIPModel(TFCLIPPreTrainedModel):
         return image_features
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(CLIP_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        CLIP_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @replace_return_docstrings(output_type=TFCLIPOutput, config_class=CLIPConfig)
     def call(
         self,

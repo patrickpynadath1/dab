@@ -67,14 +67,20 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         pad_token="<pad>",
         extra_ids=125,
         additional_special_tokens=None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # Add extra_ids to the special token list
         if extra_ids > 0 and additional_special_tokens is None:
             additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
         elif extra_ids > 0 and additional_special_tokens is not None:
             # Check that we have the right number of extra_id special tokens
-            extra_tokens = len(set(filter(lambda x: bool("extra_id" in str(x)), additional_special_tokens)))
+            extra_tokens = len(
+                set(
+                    filter(
+                        lambda x: bool("extra_id" in str(x)), additional_special_tokens
+                    )
+                )
+            )
             if extra_tokens != extra_ids:
                 raise ValueError(
                     f"Both extra_ids ({extra_ids}) and additional_special_tokens ({additional_special_tokens}) are"
@@ -82,9 +88,21 @@ class ByT5Tokenizer(PreTrainedTokenizer):
                     " extra_ids tokens"
                 )
 
-        pad_token = AddedToken(pad_token, lstrip=False, rstrip=False) if isinstance(pad_token, str) else pad_token
-        eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
-        unk_token = AddedToken(unk_token, lstrip=False, rstrip=False) if isinstance(unk_token, str) else unk_token
+        pad_token = (
+            AddedToken(pad_token, lstrip=False, rstrip=False)
+            if isinstance(pad_token, str)
+            else pad_token
+        )
+        eos_token = (
+            AddedToken(eos_token, lstrip=False, rstrip=False)
+            if isinstance(eos_token, str)
+            else eos_token
+        )
+        unk_token = (
+            AddedToken(unk_token, lstrip=False, rstrip=False)
+            if isinstance(unk_token, str)
+            else unk_token
+        )
 
         super().__init__(
             eos_token=eos_token,
@@ -109,14 +127,19 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         n = len(additional_special_tokens)
         for i, token in enumerate(additional_special_tokens):
             self.special_tokens_encoder[token] = self.vocab_size + i - n
-        self.special_tokens_decoder: Dict[str, int] = {v: k for k, v in self.special_tokens_encoder.items()}
+        self.special_tokens_decoder: Dict[str, int] = {
+            v: k for k, v in self.special_tokens_encoder.items()
+        }
 
     @property
     def vocab_size(self):
         return self._utf_vocab_size + self._num_special_tokens + self._extra_ids
 
     def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
@@ -135,7 +158,9 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         """
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
+                token_ids_0=token_ids_0,
+                token_ids_1=token_ids_1,
+                already_has_special_tokens=True,
             )
 
         # normal case: some special tokens
@@ -246,5 +271,7 @@ class ByT5Tokenizer(PreTrainedTokenizer):
         return string
 
     # ByT5Tokenizer has no vocab file
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         return ()

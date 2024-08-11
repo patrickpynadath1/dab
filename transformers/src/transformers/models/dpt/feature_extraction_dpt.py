@@ -88,17 +88,25 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         self.ensure_multiple_of = ensure_multiple_of
         self.resample = resample
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_STANDARD_STD
 
     def constrain_to_multiple_of(self, size, min_val=0, max_val=None):
-        y = (np.round(size / self.ensure_multiple_of) * self.ensure_multiple_of).astype(int)
+        y = (np.round(size / self.ensure_multiple_of) * self.ensure_multiple_of).astype(
+            int
+        )
 
         if max_val is not None and y > max_val:
-            y = (np.floor(size / self.ensure_multiple_of) * self.ensure_multiple_of).astype(int)
+            y = (
+                np.floor(size / self.ensure_multiple_of) * self.ensure_multiple_of
+            ).astype(int)
 
         if y < min_val:
-            y = (np.ceil(size / self.ensure_multiple_of) * self.ensure_multiple_of).astype(int)
+            y = (
+                np.ceil(size / self.ensure_multiple_of) * self.ensure_multiple_of
+            ).astype(int)
 
         return y
 
@@ -133,7 +141,10 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         return (new_width, new_height)
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -172,7 +183,11 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -183,7 +198,10 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -195,7 +213,10 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
                 size = self.update_size(image)
                 images[idx] = self.resize(image, size=size, resample=self.resample)
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}
@@ -203,7 +224,9 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         return encoded_inputs
 
-    def post_process_semantic_segmentation(self, outputs, target_sizes: List[Tuple] = None):
+    def post_process_semantic_segmentation(
+        self, outputs, target_sizes: List[Tuple] = None
+    ):
         """
         Converts the output of [`DPTForSemanticSegmentation`] into semantic segmentation maps. Only supports PyTorch.
 
@@ -234,12 +257,17 @@ class DPTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
             for idx in range(len(logits)):
                 resized_logits = torch.nn.functional.interpolate(
-                    logits[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
+                    logits[idx].unsqueeze(dim=0),
+                    size=target_sizes[idx],
+                    mode="bilinear",
+                    align_corners=False,
                 )
                 semantic_map = resized_logits[0].argmax(dim=0)
                 semantic_segmentation.append(semantic_map)
         else:
             semantic_segmentation = logits.argmax(dim=1)
-            semantic_segmentation = [semantic_segmentation[i] for i in range(semantic_segmentation.shape[0])]
+            semantic_segmentation = [
+                semantic_segmentation[i] for i in range(semantic_segmentation.shape[0])
+            ]
 
         return semantic_segmentation

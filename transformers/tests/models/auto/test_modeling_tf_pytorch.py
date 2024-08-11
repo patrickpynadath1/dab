@@ -17,7 +17,12 @@
 import unittest
 
 from transformers import is_tf_available, is_torch_available
-from transformers.testing_utils import DUMMY_UNKNOWN_IDENTIFIER, SMALL_MODEL_IDENTIFIER, is_pt_tf_cross_test, slow
+from transformers.testing_utils import (
+    DUMMY_UNKNOWN_IDENTIFIER,
+    SMALL_MODEL_IDENTIFIER,
+    is_pt_tf_cross_test,
+    slow,
+)
 
 
 if is_tf_available():
@@ -43,9 +48,15 @@ if is_tf_available():
         TFRobertaForMaskedLM,
         TFT5ForConditionalGeneration,
     )
-    from transformers.models.bert.modeling_tf_bert import TF_BERT_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.gpt2.modeling_tf_gpt2 import TF_GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.t5.modeling_tf_t5 import TF_T5_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.bert.modeling_tf_bert import (
+        TF_BERT_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
+    from transformers.models.gpt2.modeling_tf_gpt2 import (
+        TF_GPT2_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
+    from transformers.models.t5.modeling_tf_t5 import (
+        TF_T5_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 if is_torch_available():
     from transformers import (
@@ -188,11 +199,15 @@ class TFPTAutoModelTest(unittest.TestCase):
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
 
-            model = TFAutoModelForSequenceClassification.from_pretrained(model_name, from_pt=True)
+            model = TFAutoModelForSequenceClassification.from_pretrained(
+                model_name, from_pt=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, TFBertForSequenceClassification)
 
-            model = AutoModelForSequenceClassification.from_pretrained(model_name, from_tf=True)
+            model = AutoModelForSequenceClassification.from_pretrained(
+                model_name, from_tf=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForSequenceClassification)
 
@@ -204,32 +219,44 @@ class TFPTAutoModelTest(unittest.TestCase):
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
 
-            model = TFAutoModelForQuestionAnswering.from_pretrained(model_name, from_pt=True)
+            model = TFAutoModelForQuestionAnswering.from_pretrained(
+                model_name, from_pt=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, TFBertForQuestionAnswering)
 
-            model = AutoModelForQuestionAnswering.from_pretrained(model_name, from_tf=True)
+            model = AutoModelForQuestionAnswering.from_pretrained(
+                model_name, from_tf=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForQuestionAnswering)
 
     def test_from_pretrained_identifier(self):
-        model = TFAutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER, from_pt=True)
+        model = TFAutoModelWithLMHead.from_pretrained(
+            SMALL_MODEL_IDENTIFIER, from_pt=True
+        )
         self.assertIsInstance(model, TFBertForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
 
-        model = AutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER, from_tf=True)
+        model = AutoModelWithLMHead.from_pretrained(
+            SMALL_MODEL_IDENTIFIER, from_tf=True
+        )
         self.assertIsInstance(model, BertForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
 
     def test_from_identifier_from_model_type(self):
-        model = TFAutoModelWithLMHead.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, from_pt=True)
+        model = TFAutoModelWithLMHead.from_pretrained(
+            DUMMY_UNKNOWN_IDENTIFIER, from_pt=True
+        )
         self.assertIsInstance(model, TFRobertaForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
 
-        model = AutoModelWithLMHead.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, from_tf=True)
+        model = AutoModelWithLMHead.from_pretrained(
+            DUMMY_UNKNOWN_IDENTIFIER, from_tf=True
+        )
         self.assertIsInstance(model, RobertaForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)

@@ -22,7 +22,12 @@ import numpy as np
 from PIL import Image
 
 from ...feature_extraction_utils import BatchFeature, FeatureExtractionMixin
-from ...image_utils import IMAGENET_STANDARD_MEAN, IMAGENET_STANDARD_STD, ImageFeatureExtractionMixin, is_torch_tensor
+from ...image_utils import (
+    IMAGENET_STANDARD_MEAN,
+    IMAGENET_STANDARD_STD,
+    ImageFeatureExtractionMixin,
+    is_torch_tensor,
+)
 from ...utils import TensorType, is_pytesseract_available, logging, requires_backends
 
 
@@ -33,7 +38,12 @@ if is_pytesseract_available():
 logger = logging.get_logger(__name__)
 
 ImageInput = Union[
-    Image.Image, np.ndarray, "torch.Tensor", List[Image.Image], List[np.ndarray], List["torch.Tensor"]  # noqa
+    Image.Image,
+    np.ndarray,
+    "torch.Tensor",
+    List[Image.Image],
+    List[np.ndarray],
+    List["torch.Tensor"],  # noqa
 ]
 
 
@@ -46,11 +56,21 @@ def normalize_box(box, width, height):
     ]
 
 
-def apply_tesseract(image: Image.Image, lang: Optional[str], tesseract_config: Optional[str]):
+def apply_tesseract(
+    image: Image.Image, lang: Optional[str], tesseract_config: Optional[str]
+):
     """Applies Tesseract OCR on a document image, and returns recognized words + normalized bounding boxes."""
     # apply OCR
-    data = pytesseract.image_to_data(image, lang=lang, output_type="dict", config=tesseract_config)
-    words, left, top, width, height = data["text"], data["left"], data["top"], data["width"], data["height"]
+    data = pytesseract.image_to_data(
+        image, lang=lang, output_type="dict", config=tesseract_config
+    )
+    words, left, top, width, height = (
+        data["text"],
+        data["left"],
+        data["top"],
+        data["width"],
+        data["height"],
+    )
 
     # filter empty words and corresponding coordinates
     irrelevant_indices = [idx for idx, word in enumerate(words) if not word.strip()]
@@ -58,7 +78,9 @@ def apply_tesseract(image: Image.Image, lang: Optional[str], tesseract_config: O
     left = [coord for idx, coord in enumerate(left) if idx not in irrelevant_indices]
     top = [coord for idx, coord in enumerate(top) if idx not in irrelevant_indices]
     width = [coord for idx, coord in enumerate(width) if idx not in irrelevant_indices]
-    height = [coord for idx, coord in enumerate(height) if idx not in irrelevant_indices]
+    height = [
+        coord for idx, coord in enumerate(height) if idx not in irrelevant_indices
+    ]
 
     # turn coordinates into (left, top, left+width, top+height) format
     actual_boxes = []
@@ -73,7 +95,9 @@ def apply_tesseract(image: Image.Image, lang: Optional[str], tesseract_config: O
     for box in actual_boxes:
         normalized_boxes.append(normalize_box(box, image_width, image_height))
 
-    assert len(words) == len(normalized_boxes), "Not as many words as there are bounding boxes"
+    assert len(words) == len(
+        normalized_boxes
+    ), "Not as many words as there are bounding boxes"
 
     return words, normalized_boxes
 
@@ -131,21 +155,26 @@ class LayoutLMv3FeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionM
         apply_ocr=True,
         ocr_lang=None,
         tesseract_config="",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.do_resize = do_resize
         self.size = size
         self.resample = resample
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_STANDARD_STD
         self.apply_ocr = apply_ocr
         self.ocr_lang = ocr_lang
         self.tesseract_config = tesseract_config
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs,
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -202,7 +231,11 @@ class LayoutLMv3FeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionM
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -214,7 +247,10 @@ class LayoutLMv3FeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionM
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -226,15 +262,23 @@ class LayoutLMv3FeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionM
             words_batch = []
             boxes_batch = []
             for image in images:
-                words, boxes = apply_tesseract(self.to_pil_image(image), self.ocr_lang, self.tesseract_config)
+                words, boxes = apply_tesseract(
+                    self.to_pil_image(image), self.ocr_lang, self.tesseract_config
+                )
                 words_batch.append(words)
                 boxes_batch.append(boxes)
 
         # transformations (resizing + normalization)
         if self.do_resize and self.size is not None:
-            images = [self.resize(image=image, size=self.size, resample=self.resample) for image in images]
+            images = [
+                self.resize(image=image, size=self.size, resample=self.resample)
+                for image in images
+            ]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

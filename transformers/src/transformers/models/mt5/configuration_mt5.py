@@ -66,6 +66,7 @@ class MT5Config(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models).
     """
+
     model_type = "mt5"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -91,7 +92,7 @@ class MT5Config(PretrainedConfig):
         pad_token_id=0,
         eos_token_id=1,
         decoder_start_token_id=0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             is_encoder_decoder=is_encoder_decoder,
@@ -158,10 +159,16 @@ class MT5OnnxConfig(OnnxSeq2SeqConfigWithPast):
         if self.use_past:
             common_inputs["attention_mask"][1] = "past_encoder_sequence + sequence"
             common_inputs["decoder_input_ids"] = {0: "batch"}
-            common_inputs["decoder_attention_mask"] = {0: "batch", 1: "past_decoder_sequence + sequence"}
+            common_inputs["decoder_attention_mask"] = {
+                0: "batch",
+                1: "past_decoder_sequence + sequence",
+            }
         else:
             common_inputs["decoder_input_ids"] = {0: "batch", 1: "decoder_sequence"}
-            common_inputs["decoder_attention_mask"] = {0: "batch", 1: "decoder_sequence"}
+            common_inputs["decoder_attention_mask"] = {
+                0: "batch",
+                1: "decoder_sequence",
+            }
 
         if self.use_past:
             self.fill_with_past_key_values_(common_inputs, direction="inputs")

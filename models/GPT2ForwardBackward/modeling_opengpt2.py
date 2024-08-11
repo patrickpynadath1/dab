@@ -55,7 +55,7 @@ from transformers.utils.model_parallel_utils import assert_device_map, get_devic
 from configuration_opengpt2 import OpenGPT2Config
 
 ## PETER: replaced these relative imports with imports from the package (above)
-'''
+"""
 from ...activations import ACT2FN
 from ...file_utils import (
     ModelOutput,
@@ -78,8 +78,7 @@ from ...modeling_utils import (
 )
 from ...utils import logging
 from ...utils.model_parallel_utils import assert_device_map, get_device_map
-'''
-
+"""
 
 
 logger = logging.get_logger(__name__)
@@ -157,15 +156,18 @@ def load_tf_weights_in_gpt2(model, config, gpt2_checkpoint_path):
 class Attention(nn.Module):
     def __init__(self, nx, n_ctx, config, scale=False, is_cross_attention=False):
         super().__init__()
-        
+
         # don't allow cross attention for now
-        assert(not is_cross_attention)
+        assert not is_cross_attention
 
         n_state = nx  # in Attention: n_state=768 (nx=n_embd)
         # [switch nx => n_state from Block to Attention to keep identical to TF implem]
         assert n_state % config.num_attention_heads == 0
         self.register_buffer(
-            "bias", torch.tril(torch.ones((n_ctx, n_ctx), dtype=torch.uint8)).view(1, 1, n_ctx, n_ctx)
+            "bias",
+            torch.tril(torch.ones((n_ctx, n_ctx), dtype=torch.uint8)).view(
+                1, 1, n_ctx, n_ctx
+            ),
         )
         self.register_buffer("masked_bias", torch.tensor(-1e4))
         self.n_head = config.num_attention_heads
@@ -173,9 +175,9 @@ class Attention(nn.Module):
         self.scale = scale
         self.is_cross_attention = is_cross_attention
         if self.is_cross_attention:
-            assert(False) # PETER: not allowed in this version
-            #self.c_attn = Conv1D(2 * n_state, nx)
-            #self.q_attn = Conv1D(n_state, nx)
+            assert False  # PETER: not allowed in this version
+            # self.c_attn = Conv1D(2 * n_state, nx)
+            # self.q_attn = Conv1D(n_state, nx)
         else:
             # PETER: opengpt2/grover breaks c_attn into 3 convolutions
             self.c_attn_q = Conv1D(n_state, nx)
@@ -187,14 +189,16 @@ class Attention(nn.Module):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-        assert(False) # PETER: not implemented for opengpt2 (code below still uses gpt2 params)
-        
+        assert False  # PETER: not implemented for opengpt2 (code below still uses gpt2 params)
+
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
             heads, self.n_head, self.split_size // self.n_head, self.pruned_heads
         )
-        index_attn = torch.cat([index, index + self.split_size, index + (2 * self.split_size)])
+        index_attn = torch.cat(
+            [index, index + self.split_size, index + (2 * self.split_size)]
+        )
 
         # Prune conv1d layers
         self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
@@ -205,37 +209,39 @@ class Attention(nn.Module):
         self.n_head = self.n_head - len(heads)
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def _attn(self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False):
+    def _attn(
+        self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False
+    ):
         w = torch.matmul(q, k)
         if self.scale:
             w = w / (float(v.size(-1)) ** 0.5)
         nd, ns = w.size(-2), w.size(-1)
-        
+
         ## good up to here
 
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
             nd, ns = w.size(-2), w.size(-1)
-            b = self.bias[:, :, ns-nd:ns, :ns]
+            b = self.bias[:, :, ns - nd : ns, :ns]
             w = w * b - 1e4 * (1 - b)
-            
+
             # PETER: this was the huggingface code, replaced with mine above to match Grover code
-            #mask = self.bias[:, :, ns - nd : ns, :ns]
-            #w = torch.where(mask.bool(), w, self.masked_bias.to(w.dtype))
+            # mask = self.bias[:, :, ns - nd : ns, :ns]
+            # w = torch.where(mask.bool(), w, self.masked_bias.to(w.dtype))
 
         if attention_mask is not None:
             # Apply the attention mask
             w = w + attention_mask
 
         w = nn.Softmax(dim=-1)(w)
-        
+
         # PETER: not included in Grover tf code
-        #w = self.attn_dropout(w)
+        # w = self.attn_dropout(w)
 
         # PETER: not included in Grover tf code
         # Mask heads if we want to
-#        if head_mask is not None:
-#            w = w * head_mask
+        #        if head_mask is not None:
+        #            w = w * head_mask
 
         outputs = (torch.matmul(w, v),)
         if output_attentions:
@@ -267,39 +273,48 @@ class Attention(nn.Module):
         output_attentions=False,
     ):
         if encoder_hidden_states is not None:
-            assert(False) # PETER: for now, encoder_hidden_states functionality is not included
-            
-            
+            assert False  # PETER: for now, encoder_hidden_states functionality is not included
+
             assert hasattr(
                 self, "q_attn"
             ), "If class is used as cross attention, the weights `q_attn` have to be defined. Please make sure to instantiate class with `Attention(..., is_cross_attention=True)`."
             query = self.q_attn(hidden_states)
-            key, value = self.c_attn(encoder_hidden_states).split(self.split_size, dim=2)
+            key, value = self.c_attn(encoder_hidden_states).split(
+                self.split_size, dim=2
+            )
             attention_mask = encoder_attention_mask
         else:
-            query, key, value = self.c_attn_q(hidden_states), self.c_attn_k(hidden_states), self.c_attn_v(hidden_states)
+            query, key, value = (
+                self.c_attn_q(hidden_states),
+                self.c_attn_k(hidden_states),
+                self.c_attn_v(hidden_states),
+            )
 
             # PETER: replacing below code with above (to handle Conv1D difference
-            #query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=2)
-
-            
+            # query, key, value = self.c_attn(hidden_states).split(self.split_size, dim=2)
 
         query = self.split_heads(query)
         key = self.split_heads(key, k=True)
         value = self.split_heads(value)
         if layer_past is not None:
-            past_key, past_value = layer_past[0].transpose(-2, -1), layer_past[1]  # transpose back cf below
+            past_key, past_value = (
+                layer_past[0].transpose(-2, -1),
+                layer_past[1],
+            )  # transpose back cf below
             key = torch.cat((past_key, key), dim=-1)
             value = torch.cat((past_value, value), dim=-2)
 
         if use_cache is True:
-            present = torch.stack((key.transpose(-2, -1), value))  # transpose to have same shapes for stacking
+            present = torch.stack(
+                (key.transpose(-2, -1), value)
+            )  # transpose to have same shapes for stacking
         else:
             present = None
 
-        
-        attn_outputs = self._attn(query, key, value, attention_mask, head_mask, output_attentions)
-        
+        attn_outputs = self._attn(
+            query, key, value, attention_mask, head_mask, output_attentions
+        )
+
         a = attn_outputs[0]
 
         a = self.merge_heads(a)
@@ -309,53 +324,57 @@ class Attention(nn.Module):
         return (a, present) + attn_outputs[1:]  # a, present, (attentions)
 
 
-# PETER: added this for the residual_MLP below 
+# PETER: added this for the residual_MLP below
 def gelu(x):
     cdf = 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
     return x * cdf
+
 
 # PETER: this is rewritten, different enough from MLP (in original OpenAI gpt2) to
 # just write it from scratch
 class residual_MLP(nn.Module):
     def __init__(self, intermediate_size, config):  # in MLP: n_state=3072 (4 * n_embd)
         super(residual_MLP, self).__init__()
-        nx = config.hidden_size 
-        
+        nx = config.hidden_size
+
         self.act = gelu
-        self.linear_intermediate = nn.Linear(nx, intermediate_size) 
-        self.linear_output = nn.Linear(intermediate_size,nx)
+        self.linear_intermediate = nn.Linear(nx, intermediate_size)
+        self.linear_output = nn.Linear(intermediate_size, nx)
         self.ln_0 = nn.LayerNorm(nx, eps=1e-5)
         self.ln_1 = nn.LayerNorm(nx, eps=1e-5)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        
+
     def forward(self, x):
         x_norm = self.ln_0(x)
         intermediate = self.act(self.linear_intermediate(x_norm))
         output_for_resid = self.dropout(self.linear_output(intermediate))
         layer_output = self.ln_1(x + output_for_resid)
-        return layer_output 
-    
+        return layer_output
 
 
 class Block(nn.Module):
     def __init__(self, n_ctx, config, scale=False):
         super().__init__()
         hidden_size = config.hidden_size
-        
+
         # PETER: changed this to match grover config
-        inner_dim = config.intermediate_size #config.n_inner if config.n_inner is not None else 4 * hidden_size
+        inner_dim = (
+            config.intermediate_size
+        )  # config.n_inner if config.n_inner is not None else 4 * hidden_size
         # self.ln_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.attn = Attention(hidden_size, n_ctx, config, scale)
         # self.ln_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
-        
+
         # PETER: just removed the cross-attention option below
         if config.add_cross_attention:
-            assert(False)
+            assert False
         #    self.crossattention = Attention(hidden_size, n_ctx, config, scale, is_cross_attention=True)
         #    self.ln_cross_attn = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
-        
+
         # PETER: using our redisual_MLP
-        self.mlp = residual_MLP(config.intermediate_size, config) # MLP(inner_dim, config)
+        self.mlp = residual_MLP(
+            config.intermediate_size, config
+        )  # MLP(inner_dim, config)
 
     def forward(
         self,
@@ -368,7 +387,7 @@ class Block(nn.Module):
         use_cache=False,
         output_attentions=False,
     ):
-        
+
         attn_outputs = self.attn(
             hidden_states,
             layer_past=layer_past,
@@ -377,26 +396,25 @@ class Block(nn.Module):
             use_cache=use_cache,
             output_attentions=output_attentions,
         )
-        
-        # PETER: this code is replaced with above, 
-        #attn_outputs = self.attn(
+
+        # PETER: this code is replaced with above,
+        # attn_outputs = self.attn(
         #    self.ln_1(hidden_states),
         #    layer_past=layer_past,
         #    attention_mask=attention_mask,
         #    head_mask=head_mask,
         #    use_cache=use_cache,
         #    output_attentions=output_attentions,
-        #)
+        # )
         attn_output = attn_outputs[0]  # output_attn: a, present, (attentions)
-        
-        
+
         outputs = attn_outputs[1:]
         # residual connection
         hidden_states = attn_output + hidden_states
 
         if encoder_hidden_states is not None:
             # add one self-attention block for cross-attention
-            assert(False) # PETER: for now, encoder_hidden_states functionality is not included
+            assert False  # PETER: for now, encoder_hidden_states functionality is not included
 
             assert hasattr(
                 self, "crossattention"
@@ -412,16 +430,18 @@ class Block(nn.Module):
             attn_output = cross_attn_outputs[0]
             # residual connection
             hidden_states = hidden_states + attn_output
-            outputs = outputs + cross_attn_outputs[2:]  # add cross attentions if we output attention weights
+            outputs = (
+                outputs + cross_attn_outputs[2:]
+            )  # add cross attentions if we output attention weights
 
         feed_forward_hidden_states = self.mlp(hidden_states)
-                
+
         # PETER: replaced this code with above, because no layer-norm here in Grover code
-        #feed_forward_hidden_states = self.mlp(self.ln_2(hidden_states))
-        
+        # feed_forward_hidden_states = self.mlp(self.ln_2(hidden_states))
+
         # PETER: we don't do this residual connection in Grover
         # residual connection
-        #hidden_states = hidden_states + feed_forward_hidden_states
+        # hidden_states = hidden_states + feed_forward_hidden_states
 
         if use_cache:
             outputs = (feed_forward_hidden_states,) + outputs
@@ -635,27 +655,31 @@ DEPARALLELIZE_DOCSTRING = r"""
 class OpenGPT2Model(OpenGPT2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        
-        
-        self.output_hidden_states = True #config.output_hidden_states
-        self.output_attentions = True #config.output_attentions
 
-        
-        self.wte = nn.Embedding(config.vocab_size, config.hidden_size)#config.n_embd)
-        self.wpe = nn.Embedding(config.max_position_embeddings, config.hidden_size)#  n_positions, config.n_embd)
-        self.drop = nn.Dropout(config.hidden_dropout_prob) #embd_pdrop)
-        self.h = nn.ModuleList([Block(config.max_position_embeddings, config, scale=True) for _ in range(config.num_hidden_layers)]) 
-        self.ln_embed = nn.LayerNorm(config.hidden_size, eps=1e-5)#
-        
+        self.output_hidden_states = True  # config.output_hidden_states
+        self.output_attentions = True  # config.output_attentions
+
+        self.wte = nn.Embedding(config.vocab_size, config.hidden_size)  # config.n_embd)
+        self.wpe = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )  #  n_positions, config.n_embd)
+        self.drop = nn.Dropout(config.hidden_dropout_prob)  # embd_pdrop)
+        self.h = nn.ModuleList(
+            [
+                Block(config.max_position_embeddings, config, scale=True)
+                for _ in range(config.num_hidden_layers)
+            ]
+        )
+        self.ln_embed = nn.LayerNorm(config.hidden_size, eps=1e-5)  #
+
         # PETER: replaced the below block with above (to match Grover config)
 
-        #self.wte = nn.Embedding(config.vocab_size, config.n_embd)
-        #self.wpe = nn.Embedding(config.n_positions, config.n_embd)
-        #self.drop = nn.Dropout(config.embd_pdrop)
-        #self.h = nn.ModuleList([Block(config.n_ctx, config, scale=True) for _ in range(config.n_layer)])
-        #self.ln_f = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        # self.wte = nn.Embedding(config.vocab_size, config.n_embd)
+        # self.wpe = nn.Embedding(config.n_positions, config.n_embd)
+        # self.drop = nn.Dropout(config.embd_pdrop)
+        # self.h = nn.ModuleList([Block(config.n_ctx, config, scale=True) for _ in range(config.n_layer)])
+        # self.ln_f = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
-        
         self.init_weights()
         # Model parallel
         self.model_parallel = False
@@ -665,11 +689,17 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
     def parallelize(self, device_map=None):
         # Check validity of device_map
         self.device_map = (
-            get_device_map(len(self.h), range(torch.cuda.device_count())) if device_map is None else device_map
+            get_device_map(len(self.h), range(torch.cuda.device_count()))
+            if device_map is None
+            else device_map
         )
         assert_device_map(self.device_map, len(self.h))
         self.model_parallel = True
-        self.first_device = "cpu" if "cpu" in self.device_map.keys() else "cuda:" + str(min(self.device_map.keys()))
+        self.first_device = (
+            "cpu"
+            if "cpu" in self.device_map.keys()
+            else "cuda:" + str(min(self.device_map.keys()))
+        )
         self.last_device = "cuda:" + str(max(self.device_map.keys()))
         self.wte = self.wte.to(self.first_device)
         self.wpe = self.wpe.to(self.first_device)
@@ -730,15 +760,25 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = input_ids.size()
             input_ids = input_ids.view(-1, input_shape[-1])
@@ -761,7 +801,12 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
             past_length = past_key_values[0][0].size(-2)
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
-            position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
+            position_ids = torch.arange(
+                past_length,
+                input_shape[-1] + past_length,
+                dtype=torch.long,
+                device=device,
+            )
             position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
 
         # Attention mask.
@@ -786,7 +831,9 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
         # If a 2D ou 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.config.add_cross_attention and encoder_hidden_states is not None:
-            encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
+            encoder_batch_size, encoder_sequence_length, _ = (
+                encoder_hidden_states.size()
+            )
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
                 encoder_attention_mask = torch.ones(encoder_hidden_shape, device=device)
@@ -806,19 +853,21 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
         hidden_states = inputs_embeds + position_embeds
 
         if token_type_ids is not None:
-            print('TOKEN TYPES')
+            print("TOKEN TYPES")
             token_type_embeds = self.wte(token_type_ids)
             hidden_states = hidden_states + token_type_embeds
 
         hidden_states = self.ln_embed(hidden_states)
-                
+
         hidden_states = self.drop(hidden_states)
 
         output_shape = input_shape + (hidden_states.size(-1),)
 
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+        all_cross_attentions = (
+            () if output_attentions and self.config.add_cross_attention else None
+        )
         all_hidden_states = () if output_hidden_states else None
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
             # Model parallel
@@ -840,7 +889,10 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
                 def create_custom_forward(module):
                     def custom_forward(*inputs):
                         # checkpointing only works with tuple returns, not with lists
-                        return tuple(output for output in module(*inputs, use_cache, output_attentions))
+                        return tuple(
+                            output
+                            for output in module(*inputs, use_cache, output_attentions)
+                        )
 
                     return custom_forward
 
@@ -870,9 +922,13 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
                 presents = presents + (outputs[1],)
 
             if output_attentions:
-                all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
+                all_self_attentions = all_self_attentions + (
+                    outputs[2 if use_cache else 1],
+                )
                 if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + (outputs[3 if use_cache else 2],)
+                    all_cross_attentions = all_cross_attentions + (
+                        outputs[3 if use_cache else 2],
+                    )
 
             # Model Parallel: If it's the last layer for that device, put things on the next device
             if self.model_parallel:
@@ -880,8 +936,8 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
                     if i == v[-1] and "cuda:" + str(k) != self.last_device:
                         hidden_states = hidden_states.to("cuda:" + str(k + 1))
 
-        # PETER: actually, ln_embed should be applied way earlier...                 
-        #hidden_states = self.ln_embed(hidden_states)
+        # PETER: actually, ln_embed should be applied way earlier...
+        # hidden_states = self.ln_embed(hidden_states)
         # PETER: replaced below line with above for naming purposes
         # hidden_states = self.ln_f(hidden_states)
 
@@ -891,7 +947,16 @@ class OpenGPT2Model(OpenGPT2PreTrainedModel):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [
+                    hidden_states,
+                    presents,
+                    all_hidden_states,
+                    all_self_attentions,
+                ]
+                if v is not None
+            )
 
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
@@ -1005,7 +1070,9 @@ class OpenGPT2LMHeadModel(OpenGPT2PreTrainedModel):
             ``labels = input_ids`` Indices are selected in ``[-100, 0, ..., config.vocab_size]`` All labels set to
             ``-100`` are ignored (masked), the loss is only computed for labels in ``[0, ..., config.vocab_size]``
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -1038,7 +1105,9 @@ class OpenGPT2LMHeadModel(OpenGPT2PreTrainedModel):
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            loss = loss_fct(
+                shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
+            )
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -1109,7 +1178,9 @@ class OpenGPT2DoubleHeadsModel(OpenGPT2PreTrainedModel):
         }
 
     @add_start_docstrings_to_model_forward(OpenGPT2_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=OpenGPT2DoubleHeadsModelOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=OpenGPT2DoubleHeadsModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids=None,
@@ -1168,7 +1239,9 @@ class OpenGPT2DoubleHeadsModel(OpenGPT2PreTrainedModel):
             >>> mc_logits = outputs.mc_logits
 
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -1192,13 +1265,17 @@ class OpenGPT2DoubleHeadsModel(OpenGPT2PreTrainedModel):
         mc_loss = None
         if mc_labels is not None:
             loss_fct = CrossEntropyLoss()
-            mc_loss = loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
+            mc_loss = loss_fct(
+                mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1)
+            )
         lm_loss = None
         if labels is not None:
             shift_logits = lm_logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
             loss_fct = CrossEntropyLoss()
-            lm_loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            lm_loss = loss_fct(
+                shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
+            )
 
         if not return_dict:
             output = (lm_logits, mc_logits) + transformer_outputs[1:]
@@ -1271,7 +1348,9 @@ class OpenGPT2ForSequenceClassification(OpenGPT2PreTrainedModel):
             config.num_labels - 1]`. If :obj:`config.num_labels == 1` a regression loss is computed (Mean-Square loss),
             If :obj:`config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -1301,7 +1380,9 @@ class OpenGPT2ForSequenceClassification(OpenGPT2PreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+                sequence_lengths = (
+                    torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+                )
             else:
                 sequence_lengths = -1
                 logger.warning(
@@ -1319,7 +1400,9 @@ class OpenGPT2ForSequenceClassification(OpenGPT2PreTrainedModel):
                 loss = loss_fct(pooled_logits.view(-1), labels.to(self.dtype).view(-1))
             else:
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(
+                    pooled_logits.view(-1, self.num_labels), labels.view(-1)
+                )
 
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]

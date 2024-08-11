@@ -53,28 +53,32 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
 
-    def set_biases(self, 
-                   batch_size, 
-                   seq_len, 
-                   attribute, 
-                   prompt_length,
-                   device,
-                   use_scale_weights,
-                   use_bolt_weights,
-                   init_noise_rate=0.5, disc_weight=.9, **kwargs):
+    def set_biases(
+        self,
+        batch_size,
+        seq_len,
+        attribute,
+        prompt_length,
+        device,
+        use_scale_weights,
+        use_bolt_weights,
+        init_noise_rate=0.5,
+        disc_weight=0.9,
+        **kwargs,
+    ):
         self.seq_len = seq_len
         self.disc_weight = disc_weight
-        self.use_scale_weights=use_scale_weights
-        self.use_bolt_weights=use_bolt_weights
+        self.use_scale_weights = use_scale_weights
+        self.use_bolt_weights = use_bolt_weights
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
         if attribute == "pos":
             self.labels = torch.LongTensor([1]).to(device)
         elif attribute == "neg":
-            self.labels = torch.LongTensor([0]).to(device) 
+            self.labels = torch.LongTensor([0]).to(device)
         elif attribute == "non_toxic":
-            self.labels = torch.LongTensor([0]).to(device) # non-toxic
+            self.labels = torch.LongTensor([0]).to(device)  # non-toxic
         else:
             raise Exception("Invalid attribute")
         self.logits_processor = LogitsProcessorList(
@@ -181,13 +185,13 @@ class GPTPromptTuningWithbiasesModelMixin:
         use_full_prompt=False,
         senti_label=None,
         biases=None,
-        bias_rep_space='logit',
+        bias_rep_space="logit",
         weight=1,
-        **kwargs
+        **kwargs,
     ):
-        if bias_rep_space == 'logit':
+        if bias_rep_space == "logit":
             forward_func = self.soft_greedy_search_with_biases
-        else: 
+        else:
             forward_func = self.soft_greedy_search_with_biases_embed
         if senti_label is not None:
             if type(senti_label) == int:
@@ -316,7 +320,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         senti_logits = self.discriminator(
             inputs_embeds=dis_embs, labels=self.labels.repeat(dis_embs.shape[0])
         ).logits
-        senti_losses = - (senti_logits[:, 1] - senti_logits[:, 0])
+        senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
         senti_loss = torch.sum(senti_losses)
 
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
@@ -326,12 +330,8 @@ class GPTPromptTuningWithbiasesModelMixin:
 
         # print("senti_loss:", senti_loss)
         # print("ppl_loss:", ppl_loss)
-        
-        return (loss, 
-                output_ids, 
-                onehot_generates, 
-                gpt_logit, 
-                senti_losses)
+
+        return (loss, output_ids, onehot_generates, gpt_logit, senti_losses)
 
     def soft_forward_without_decoding(
         self,
@@ -356,9 +356,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     ):
         if senti_label is not None:
             if type(senti_label) == int:
-                self.labels = torch.LongTensor([senti_label])   
+                self.labels = torch.LongTensor([senti_label])
             else:
-                self.labels = torch.LongTensor(senti_label)   
+                self.labels = torch.LongTensor(senti_label)
         for i in range(gpt_logit.size(1)):
             if i < input_ids.size(1):
                 continue
@@ -395,9 +395,7 @@ class GPTPromptTuningWithbiasesModelMixin:
             torch.matmul(lm_embs, lm_embs.transpose(1, 2)), diagonal=-1
         )
         if self.sim_count is None:
-            self.sim_count = torch.tril(
-                torch.ones(sim_lm_embs.shape), diagonal=-1
-            )   
+            self.sim_count = torch.tril(torch.ones(sim_lm_embs.shape), diagonal=-1)
         sim_loss = torch.sum(sim_lm_embs * self.sim_count) / torch.sum(self.sim_count)
         loss = 1 * senti_loss + 5 * ppl_loss + 0 * sim_loss
 

@@ -77,10 +77,15 @@ class LongformerConfig(RobertaConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "longformer"
 
     def __init__(
-        self, attention_window: Union[List[int], int] = 512, sep_token_id: int = 2, onnx_export: bool = False, **kwargs
+        self,
+        attention_window: Union[List[int], int] = 512,
+        sep_token_id: int = 2,
+        onnx_export: bool = False,
+        **kwargs
     ):
         super().__init__(sep_token_id=sep_token_id, **kwargs)
         self.attention_window = attention_window
@@ -88,7 +93,12 @@ class LongformerConfig(RobertaConfig):
 
 
 class LongformerOnnxConfig(OnnxConfig):
-    def __init__(self, config: "PretrainedConfig", task: str = "default", patching_specs: "List[PatchingSpec]" = None):
+    def __init__(
+        self,
+        config: "PretrainedConfig",
+        task: str = "default",
+        patching_specs: "List[PatchingSpec]" = None,
+    ):
         super().__init__(config, task, patching_specs)
         config.onnx_export = True
 
@@ -137,7 +147,11 @@ class LongformerOnnxConfig(OnnxConfig):
         framework: Optional[TensorType] = None,
     ) -> Mapping[str, Any]:
         inputs = super().generate_dummy_inputs(
-            preprocessor=tokenizer, batch_size=batch_size, seq_length=seq_length, is_pair=is_pair, framework=framework
+            preprocessor=tokenizer,
+            batch_size=batch_size,
+            seq_length=seq_length,
+            is_pair=is_pair,
+            framework=framework,
         )
         import torch
 

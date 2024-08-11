@@ -32,7 +32,12 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
     test_rust_tokenizer = True
     test_slow_tokenizer = False
     from_pretrained_vocab_key = "tokenizer_file"
-    special_tokens_map = {"bos_token": "<s>", "eos_token": "</s>", "unk_token": "<unk>", "pad_token": "<pad>"}
+    special_tokens_map = {
+        "bos_token": "<s>",
+        "eos_token": "</s>",
+        "unk_token": "<unk>",
+        "pad_token": "<pad>",
+    }
 
     def setUp(self):
         super().setUp()
@@ -50,7 +55,10 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         tokenizer = self.get_rust_tokenizer()
 
         INPUT_SENTENCES = ["The quick brown fox</s>", "jumps over the lazy dog</s>"]
-        TARGET_TOKENS = [[2175, 23714, 73173, 144252, 2], [77, 132619, 3478, 368, 109586, 35433, 2]]
+        TARGET_TOKENS = [
+            [2175, 23714, 73173, 144252, 2],
+            [77, 132619, 3478, 368, 109586, 35433, 2],
+        ]
 
         computed_tokens = tokenizer.batch_encode_plus(INPUT_SENTENCES)["input_ids"]
         self.assertListEqual(TARGET_TOKENS, computed_tokens)
@@ -61,7 +69,9 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
     def test_padding(self, max_length=6):
         for tokenizer, pretrained_name, kwargs in self.tokenizers_list:
             with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
-                tokenizer_r = self.rust_tokenizer_class.from_pretrained(pretrained_name, **kwargs)
+                tokenizer_r = self.rust_tokenizer_class.from_pretrained(
+                    pretrained_name, **kwargs
+                )
                 # tokenizer_r.pad_token = None # Hotfixing padding = None
                 # Simple input
                 s = "This is a simple input"
@@ -84,10 +94,22 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                     self.fail("Bloom Tokenizer should be able to deal with padding")
 
                 tokenizer_r.pad_token = None  # Hotfixing padding = None
-                self.assertRaises(ValueError, tokenizer_r.encode, s, max_length=max_length, padding="max_length")
+                self.assertRaises(
+                    ValueError,
+                    tokenizer_r.encode,
+                    s,
+                    max_length=max_length,
+                    padding="max_length",
+                )
 
                 # Simple input
-                self.assertRaises(ValueError, tokenizer_r.encode_plus, s, max_length=max_length, padding="max_length")
+                self.assertRaises(
+                    ValueError,
+                    tokenizer_r.encode_plus,
+                    s,
+                    max_length=max_length,
+                    padding="max_length",
+                )
 
                 # Simple input
                 self.assertRaises(
@@ -99,10 +121,22 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
 
                 # Pair input
-                self.assertRaises(ValueError, tokenizer_r.encode, p, max_length=max_length, padding="max_length")
+                self.assertRaises(
+                    ValueError,
+                    tokenizer_r.encode,
+                    p,
+                    max_length=max_length,
+                    padding="max_length",
+                )
 
                 # Pair input
-                self.assertRaises(ValueError, tokenizer_r.encode_plus, p, max_length=max_length, padding="max_length")
+                self.assertRaises(
+                    ValueError,
+                    tokenizer_r.encode_plus,
+                    p,
+                    max_length=max_length,
+                    padding="max_length",
+                )
 
                 # Pair input
                 self.assertRaises(
@@ -125,7 +159,12 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         input_text = list(sample_data.values())
 
         output_tokens = list(map(tokenizer.encode, input_text))
-        predicted_text = list(map(lambda x: tokenizer.decode(x, clean_up_tokenization_spaces=False), output_tokens))
+        predicted_text = list(
+            map(
+                lambda x: tokenizer.decode(x, clean_up_tokenization_spaces=False),
+                output_tokens,
+            )
+        )
         self.assertListEqual(predicted_text, input_text)
 
     def test_pretrained_model_lists(self):
@@ -133,4 +172,6 @@ class BloomTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         # any sequence length constraints. This test of the parent class will fail since it relies on the
         # maximum sequence length of the positoonal embeddings.
         self.assertGreaterEqual(len(self.tokenizer_class.pretrained_vocab_files_map), 1)
-        self.assertGreaterEqual(len(list(self.tokenizer_class.pretrained_vocab_files_map.values())[0]), 1)
+        self.assertGreaterEqual(
+            len(list(self.tokenizer_class.pretrained_vocab_files_map.values())[0]), 1
+        )

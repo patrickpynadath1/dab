@@ -50,9 +50,13 @@ def ffmpeg_read(bpayload: bytes, sampling_rate: int) -> np.array:
     ]
 
     try:
-        ffmpeg_process = subprocess.Popen(ffmpeg_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        ffmpeg_process = subprocess.Popen(
+            ffmpeg_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        )
     except FileNotFoundError:
-        raise ValueError("ffmpeg was not found but is required to load audio files from filename")
+        raise ValueError(
+            "ffmpeg was not found but is required to load audio files from filename"
+        )
     output_stream = ffmpeg_process.communicate(bpayload)
     out_bytes = output_stream[0]
 
@@ -135,10 +139,14 @@ class AudioClassificationPipeline(Pipeline):
         if not isinstance(inputs, np.ndarray):
             raise ValueError("We expect a numpy ndarray as input")
         if len(inputs.shape) != 1:
-            raise ValueError("We expect a single channel audio input for AutomaticSpeechRecognitionPipeline")
+            raise ValueError(
+                "We expect a single channel audio input for AutomaticSpeechRecognitionPipeline"
+            )
 
         processed = self.feature_extractor(
-            inputs, sampling_rate=self.feature_extractor.sampling_rate, return_tensors="pt"
+            inputs,
+            sampling_rate=self.feature_extractor.sampling_rate,
+            return_tensors="pt",
         )
         return processed
 
@@ -153,6 +161,9 @@ class AudioClassificationPipeline(Pipeline):
         scores = scores.tolist()
         ids = ids.tolist()
 
-        labels = [{"score": score, "label": self.model.config.id2label[_id]} for score, _id in zip(scores, ids)]
+        labels = [
+            {"score": score, "label": self.model.config.id2label[_id]}
+            for score, _id in zip(scores, ids)
+        ]
 
         return labels

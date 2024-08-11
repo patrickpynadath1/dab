@@ -45,12 +45,16 @@ else:
 
 @is_pipeline_test
 @require_vision
-class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta):
+class ImageClassificationPipelineTests(
+    unittest.TestCase, metaclass=PipelineTestCaseMeta
+):
     model_mapping = MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING
     tf_model_mapping = TF_MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
-        image_classifier = ImageClassificationPipeline(model=model, feature_extractor=feature_extractor, top_k=2)
+        image_classifier = ImageClassificationPipeline(
+            model=model, feature_extractor=feature_extractor, top_k=2
+        )
         examples = [
             Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png"),
             "http://images.cocodataset.org/val2017/000000039769.jpg",
@@ -58,7 +62,9 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         return image_classifier, examples
 
     def run_pipeline_test(self, image_classifier, examples):
-        outputs = image_classifier("./tests/fixtures/tests_samples/COCO/000000039769.png")
+        outputs = image_classifier(
+            "./tests/fixtures/tests_samples/COCO/000000039769.png"
+        )
 
         self.assertEqual(
             outputs,
@@ -70,7 +76,9 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
 
         import datasets
 
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
 
         # Accepts URL + PIL.Image + lists
         outputs = image_classifier(
@@ -116,10 +124,15 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         small_model = "hf-internal-testing/tiny-random-vit"
         image_classifier = pipeline("image-classification", model=small_model)
 
-        outputs = image_classifier("http://images.cocodataset.org/val2017/000000039769.jpg")
+        outputs = image_classifier(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
-            [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
+            [
+                {"label": "LABEL_1", "score": 0.574},
+                {"label": "LABEL_0", "score": 0.426},
+            ],
         )
 
         outputs = image_classifier(
@@ -132,8 +145,14 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
-                [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
+                [
+                    {"label": "LABEL_1", "score": 0.574},
+                    {"label": "LABEL_0", "score": 0.426},
+                ],
+                [
+                    {"label": "LABEL_1", "score": 0.574},
+                    {"label": "LABEL_0", "score": 0.426},
+                ],
             ],
         )
 
@@ -142,10 +161,15 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         small_model = "hf-internal-testing/tiny-random-vit"
         image_classifier = pipeline("image-classification", model=small_model)
 
-        outputs = image_classifier("http://images.cocodataset.org/val2017/000000039769.jpg")
+        outputs = image_classifier(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
-            [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
+            [
+                {"label": "LABEL_1", "score": 0.574},
+                {"label": "LABEL_0", "score": 0.426},
+            ],
         )
 
         outputs = image_classifier(
@@ -158,8 +182,14 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
-                [{"label": "LABEL_1", "score": 0.574}, {"label": "LABEL_0", "score": 0.426}],
+                [
+                    {"label": "LABEL_1", "score": 0.574},
+                    {"label": "LABEL_0", "score": 0.426},
+                ],
+                [
+                    {"label": "LABEL_1", "score": 0.574},
+                    {"label": "LABEL_0", "score": 0.426},
+                ],
             ],
         )
 
@@ -168,7 +198,9 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
 
         # Assert that the pipeline can be initialized with a feature extractor that is not in any mapping
         image_classifier = pipeline(
-            "image-classification", model="hf-internal-testing/tiny-random-vit", tokenizer=tokenizer
+            "image-classification",
+            model="hf-internal-testing/tiny-random-vit",
+            tokenizer=tokenizer,
         )
 
         self.assertIs(image_classifier.tokenizer, tokenizer)
@@ -179,8 +211,12 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         # Perceiver is not tested by `run_pipeline_test` properly.
         # That is because the type of feature_extractor and model preprocessor need to be kept
         # in sync, which is not the case in the current design
-        image_classifier = pipeline("image-classification", model="deepmind/vision-perceiver-conv")
-        outputs = image_classifier("http://images.cocodataset.org/val2017/000000039769.jpg")
+        image_classifier = pipeline(
+            "image-classification", model="deepmind/vision-perceiver-conv"
+        )
+        outputs = image_classifier(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -192,8 +228,12 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
             ],
         )
 
-        image_classifier = pipeline("image-classification", model="deepmind/vision-perceiver-fourier")
-        outputs = image_classifier("http://images.cocodataset.org/val2017/000000039769.jpg")
+        image_classifier = pipeline(
+            "image-classification", model="deepmind/vision-perceiver-fourier"
+        )
+        outputs = image_classifier(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -205,8 +245,12 @@ class ImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
             ],
         )
 
-        image_classifier = pipeline("image-classification", model="deepmind/vision-perceiver-learned")
-        outputs = image_classifier("http://images.cocodataset.org/val2017/000000039769.jpg")
+        image_classifier = pipeline(
+            "image-classification", model="deepmind/vision-perceiver-learned"
+        )
+        outputs = image_classifier(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [

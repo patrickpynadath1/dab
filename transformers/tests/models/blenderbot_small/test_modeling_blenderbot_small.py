@@ -29,7 +29,11 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 if is_torch_available():
     import torch
 
-    from transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallModel, BlenderbotSmallTokenizer
+    from transformers import (
+        BlenderbotSmallForConditionalGeneration,
+        BlenderbotSmallModel,
+        BlenderbotSmallTokenizer,
+    )
     from transformers.models.blenderbot_small.modeling_blenderbot_small import (
         BlenderbotSmallDecoder,
         BlenderbotSmallEncoder,
@@ -52,11 +56,17 @@ def prepare_blenderbot_small_inputs_dict(
     if decoder_attention_mask is None:
         decoder_attention_mask = decoder_input_ids.ne(config.pad_token_id)
     if head_mask is None:
-        head_mask = torch.ones(config.encoder_layers, config.encoder_attention_heads, device=torch_device)
+        head_mask = torch.ones(
+            config.encoder_layers, config.encoder_attention_heads, device=torch_device
+        )
     if decoder_head_mask is None:
-        decoder_head_mask = torch.ones(config.decoder_layers, config.decoder_attention_heads, device=torch_device)
+        decoder_head_mask = torch.ones(
+            config.decoder_layers, config.decoder_attention_heads, device=torch_device
+        )
     if cross_attn_head_mask is None:
-        cross_attn_head_mask = torch.ones(config.decoder_layers, config.decoder_attention_heads, device=torch_device)
+        cross_attn_head_mask = torch.ones(
+            config.decoder_layers, config.decoder_attention_heads, device=torch_device
+        )
     return {
         "input_ids": input_ids,
         "decoder_input_ids": decoder_input_ids,
@@ -114,15 +124,21 @@ class BlenderbotSmallModelTester:
         self.forced_eos_token_id = None
 
     def prepare_config_and_inputs(self):
-        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size).clamp(
+        input_ids = ids_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size
+        ).clamp(
             3,
         )
         input_ids[:, -1] = self.eos_token_id  # Eos Token
 
-        decoder_input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        decoder_input_ids = ids_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size
+        )
 
         config = self.get_config()
-        inputs_dict = prepare_blenderbot_small_inputs_dict(config, input_ids, decoder_input_ids)
+        inputs_dict = prepare_blenderbot_small_inputs_dict(
+            config, input_ids, decoder_input_ids
+        )
         return config, inputs_dict
 
     def get_config(self):
@@ -150,13 +166,20 @@ class BlenderbotSmallModelTester:
         return config, inputs_dict
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = BlenderbotSmallModel(config=config).get_decoder().to(torch_device).eval()
+        model = (
+            BlenderbotSmallModel(config=config).get_decoder().to(torch_device).eval()
+        )
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
 
         # first forward pass
-        outputs = model(input_ids, attention_mask=attention_mask, head_mask=head_mask, use_cache=True)
+        outputs = model(
+            input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            use_cache=True,
+        )
 
         output, past_key_values = outputs.to_tuple()
 
@@ -168,20 +191,28 @@ class BlenderbotSmallModelTester:
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
         next_attention_mask = torch.cat([attention_mask, next_attn_mask], dim=-1)
 
-        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
-        output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
+        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)[
             "last_hidden_state"
         ]
+        output_from_past = model(
+            next_tokens,
+            attention_mask=next_attention_mask,
+            past_key_values=past_key_values,
+        )["last_hidden_state"]
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -3:, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
         model = BlenderbotSmallModel(config=config).to(torch_device).eval()
@@ -193,18 +224,25 @@ class BlenderbotSmallModelTester:
         with tempfile.TemporaryDirectory() as tmpdirname:
             encoder = model.get_encoder()
             encoder.save_pretrained(tmpdirname)
-            encoder = BlenderbotSmallEncoder.from_pretrained(tmpdirname).to(torch_device)
+            encoder = BlenderbotSmallEncoder.from_pretrained(tmpdirname).to(
+                torch_device
+            )
 
-        encoder_last_hidden_state_2 = encoder(inputs_dict["input_ids"], attention_mask=inputs_dict["attention_mask"])[
-            0
-        ]
+        encoder_last_hidden_state_2 = encoder(
+            inputs_dict["input_ids"], attention_mask=inputs_dict["attention_mask"]
+        )[0]
 
-        self.parent.assertTrue((encoder_last_hidden_state_2 - encoder_last_hidden_state).abs().max().item() < 1e-3)
+        self.parent.assertTrue(
+            (encoder_last_hidden_state_2 - encoder_last_hidden_state).abs().max().item()
+            < 1e-3
+        )
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             decoder = model.get_decoder()
             decoder.save_pretrained(tmpdirname)
-            decoder = BlenderbotSmallDecoder.from_pretrained(tmpdirname).to(torch_device)
+            decoder = BlenderbotSmallDecoder.from_pretrained(tmpdirname).to(
+                torch_device
+            )
 
         last_hidden_state_2 = decoder(
             input_ids=inputs_dict["decoder_input_ids"],
@@ -213,13 +251,23 @@ class BlenderbotSmallModelTester:
             encoder_attention_mask=inputs_dict["attention_mask"],
         )[0]
 
-        self.parent.assertTrue((last_hidden_state_2 - last_hidden_state).abs().max().item() < 1e-3)
+        self.parent.assertTrue(
+            (last_hidden_state_2 - last_hidden_state).abs().max().item() < 1e-3
+        )
 
 
 @require_torch
-class BlenderbotSmallModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
-    all_model_classes = (BlenderbotSmallModel, BlenderbotSmallForConditionalGeneration) if is_torch_available() else ()
-    all_generative_model_classes = (BlenderbotSmallForConditionalGeneration,) if is_torch_available() else ()
+class BlenderbotSmallModelTest(
+    ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
+):
+    all_model_classes = (
+        (BlenderbotSmallModel, BlenderbotSmallForConditionalGeneration)
+        if is_torch_available()
+        else ()
+    )
+    all_generative_model_classes = (
+        (BlenderbotSmallForConditionalGeneration,) if is_torch_available() else ()
+    )
     is_encoder_decoder = True
     fx_compatible = True
     test_pruning = False
@@ -239,12 +287,16 @@ class BlenderbotSmallModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
 
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
-                model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
+                model2, info = model_class.from_pretrained(
+                    tmpdirname, output_loading_info=True
+                )
             self.assertEqual(info["missing_keys"], [])
 
     def test_decoder_model_past_with_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_decoder_model_past_large_inputs(*config_and_inputs)
+        self.model_tester.create_and_check_decoder_model_past_large_inputs(
+            *config_and_inputs
+        )
 
     def test_encoder_decoder_model_standalone(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_common()
@@ -258,7 +310,9 @@ class BlenderbotSmallModelTest(ModelTesterMixin, GenerationTesterMixin, unittest
         if torch_device == "cuda":
             model.half()
         model.generate(input_ids, attention_mask=attention_mask)
-        model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
+        model.generate(
+            num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3
+        )
 
 
 def assert_tensors_close(a, b, atol=1e-12, prefix=""):
@@ -286,7 +340,9 @@ class Blenderbot90MIntegrationTests(unittest.TestCase):
 
     @cached_property
     def model(self):
-        model = BlenderbotSmallForConditionalGeneration.from_pretrained(self.ckpt).to(torch_device)
+        model = BlenderbotSmallForConditionalGeneration.from_pretrained(self.ckpt).to(
+            torch_device
+        )
         if torch_device == "cuda":
             model = model.half()
         return model
@@ -307,7 +363,9 @@ class Blenderbot90MIntegrationTests(unittest.TestCase):
 
         assert isinstance(self.tokenizer, BlenderbotSmallTokenizer)
         generated_ids = self.model.generate(**model_inputs)[0]
-        reply = self.tokenizer.decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+        reply = self.tokenizer.decode(
+            generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )
 
         assert reply in (
             "i don't know. i just feel like i'm going to throw up. it's not fun.",
@@ -321,7 +379,9 @@ class Blenderbot90MIntegrationTests(unittest.TestCase):
         generated_utterances = self.model.generate(**model_inputs)
 
         clean_txt = self.tokenizer.decode(
-            generated_utterances[0], skip_special_tokens=True, clean_up_tokenization_spaces=True
+            generated_utterances[0],
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
         )
         assert clean_txt in (
             "have you ever been to a sam club? it's a great club in the south.",
@@ -386,15 +446,21 @@ class BlenderbotSmallStandaloneDecoderModelTester:
         self.decoder_attention_idx = 1
 
     def prepare_config_and_inputs(self):
-        input_ids = ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size)
+        input_ids = ids_tensor(
+            [self.batch_size, self.decoder_seq_length], self.vocab_size
+        )
 
         attention_mask = None
         if self.use_attention_mask:
-            attention_mask = ids_tensor([self.batch_size, self.decoder_seq_length], vocab_size=2)
+            attention_mask = ids_tensor(
+                [self.batch_size, self.decoder_seq_length], vocab_size=2
+            )
 
         lm_labels = None
         if self.use_labels:
-            lm_labels = ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size)
+            lm_labels = ids_tensor(
+                [self.batch_size, self.decoder_seq_length], self.vocab_size
+            )
 
         config = BlenderbotSmallConfig(
             vocab_size=self.vocab_size,
@@ -445,15 +511,21 @@ class BlenderbotSmallStandaloneDecoderModelTester:
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
-        output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
+        output_from_past = model(next_tokens, past_key_values=past_key_values)[
+            "last_hidden_state"
+        ]
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, next_input_ids.shape[-1] - 1, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, next_input_ids.shape[-1] - 1, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, 0, random_slice_idx].detach()
 
         # test that outputs are equal for slice
-        assert torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        assert torch.allclose(
+            output_from_past_slice, output_from_no_past_slice, atol=1e-3
+        )
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -471,36 +543,51 @@ class BlenderbotSmallStandaloneDecoderModelTester:
         attn_mask[:, half_seq_length:] = 0
 
         # first forward pass
-        past_key_values = model(input_ids, attention_mask=attn_mask, use_cache=True)["past_key_values"]
+        past_key_values = model(input_ids, attention_mask=attn_mask, use_cache=True)[
+            "past_key_values"
+        ]
 
         # create hypothetical next token and extent to next_input_ids
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # change a random masked slice from input_ids
         random_seq_idx_to_change = ids_tensor((1,), half_seq_length).item() + 1
-        random_other_next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size).squeeze(-1)
+        random_other_next_tokens = ids_tensor(
+            (self.batch_size, 1), config.vocab_size
+        ).squeeze(-1)
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
         attn_mask = torch.cat(
-            [attn_mask, torch.ones((attn_mask.shape[0], 1), dtype=torch.long, device=torch_device)],
+            [
+                attn_mask,
+                torch.ones(
+                    (attn_mask.shape[0], 1), dtype=torch.long, device=torch_device
+                ),
+            ],
             dim=1,
         )
 
         # get two different outputs
-        output_from_no_past = model(next_input_ids, attention_mask=attn_mask)["last_hidden_state"]
-        output_from_past = model(next_tokens, past_key_values=past_key_values, attention_mask=attn_mask)[
+        output_from_no_past = model(next_input_ids, attention_mask=attn_mask)[
             "last_hidden_state"
         ]
+        output_from_past = model(
+            next_tokens, past_key_values=past_key_values, attention_mask=attn_mask
+        )["last_hidden_state"]
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, next_input_ids.shape[-1] - 1, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, next_input_ids.shape[-1] - 1, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, 0, random_slice_idx].detach()
 
         # test that outputs are equal for slice
-        assert torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        assert torch.allclose(
+            output_from_past_slice, output_from_no_past_slice, atol=1e-3
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -519,16 +606,26 @@ class BlenderbotSmallStandaloneDecoderModelTester:
 
 
 @require_torch
-class BlenderbotSmallStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
-    all_model_classes = (BlenderbotSmallDecoder, BlenderbotSmallForCausalLM) if is_torch_available() else ()
-    all_generative_model_classes = (BlenderbotSmallForCausalLM,) if is_torch_available() else ()
+class BlenderbotSmallStandaloneDecoderModelTest(
+    ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
+):
+    all_model_classes = (
+        (BlenderbotSmallDecoder, BlenderbotSmallForCausalLM)
+        if is_torch_available()
+        else ()
+    )
+    all_generative_model_classes = (
+        (BlenderbotSmallForCausalLM,) if is_torch_available() else ()
+    )
     test_pruning = False
     is_encoder_decoder = False
 
     def setUp(
         self,
     ):
-        self.model_tester = BlenderbotSmallStandaloneDecoderModelTester(self, is_training=False)
+        self.model_tester = BlenderbotSmallStandaloneDecoderModelTester(
+            self, is_training=False
+        )
         self.config_tester = ConfigTester(self, config_class=BlenderbotSmallConfig)
 
     def test_config(self):
@@ -540,7 +637,9 @@ class BlenderbotSmallStandaloneDecoderModelTest(ModelTesterMixin, GenerationTest
 
     def test_decoder_model_attn_mask_past(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_decoder_model_attention_mask_past(*config_and_inputs)
+        self.model_tester.create_and_check_decoder_model_attention_mask_past(
+            *config_and_inputs
+        )
 
     def test_retain_grad_hidden_states_attentions(self):
         # decoder cannot keep gradients

@@ -52,7 +52,9 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
             "image_mean": [0.5, 0.5, 0.5],
             "image_std": [0.5, 0.5, 0.5],
         }
-        self.feature_extractor_file = os.path.join(self.tmpdirname, FEATURE_EXTRACTOR_NAME)
+        self.feature_extractor_file = os.path.join(
+            self.tmpdirname, FEATURE_EXTRACTOR_NAME
+        )
         with open(self.feature_extractor_file, "w", encoding="utf-8") as fp:
             json.dump(feature_extractor_map, fp)
 
@@ -80,7 +82,9 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
         tokenizer = self.get_tokenizer()
         feature_extractor = self.get_feature_extractor()
 
-        processor = VisionTextDualEncoderProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = VisionTextDualEncoderProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         processor.save_pretrained(self.tmpdirname)
         processor = VisionTextDualEncoderProcessor.from_pretrained(self.tmpdirname)
@@ -88,33 +92,50 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
         self.assertEqual(processor.tokenizer.get_vocab(), tokenizer.get_vocab())
         self.assertIsInstance(processor.tokenizer, (BertTokenizer, BertTokenizerFast))
 
-        self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor.to_json_string())
+        self.assertEqual(
+            processor.feature_extractor.to_json_string(),
+            feature_extractor.to_json_string(),
+        )
         self.assertIsInstance(processor.feature_extractor, ViTFeatureExtractor)
 
     def test_save_load_pretrained_additional_features(self):
         processor = VisionTextDualEncoderProcessor(
-            tokenizer=self.get_tokenizer(), feature_extractor=self.get_feature_extractor()
+            tokenizer=self.get_tokenizer(),
+            feature_extractor=self.get_feature_extractor(),
         )
         processor.save_pretrained(self.tmpdirname)
 
         tokenizer_add_kwargs = self.get_tokenizer(bos_token="(BOS)", eos_token="(EOS)")
-        feature_extractor_add_kwargs = self.get_feature_extractor(do_normalize=False, padding_value=1.0)
-
-        processor = VisionTextDualEncoderProcessor.from_pretrained(
-            self.tmpdirname, bos_token="(BOS)", eos_token="(EOS)", do_normalize=False, padding_value=1.0
+        feature_extractor_add_kwargs = self.get_feature_extractor(
+            do_normalize=False, padding_value=1.0
         )
 
-        self.assertEqual(processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab())
+        processor = VisionTextDualEncoderProcessor.from_pretrained(
+            self.tmpdirname,
+            bos_token="(BOS)",
+            eos_token="(EOS)",
+            do_normalize=False,
+            padding_value=1.0,
+        )
+
+        self.assertEqual(
+            processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab()
+        )
         self.assertIsInstance(processor.tokenizer, (BertTokenizer, BertTokenizerFast))
 
-        self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor_add_kwargs.to_json_string())
+        self.assertEqual(
+            processor.feature_extractor.to_json_string(),
+            feature_extractor_add_kwargs.to_json_string(),
+        )
         self.assertIsInstance(processor.feature_extractor, ViTFeatureExtractor)
 
     def test_feature_extractor(self):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = VisionTextDualEncoderProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = VisionTextDualEncoderProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         image_input = self.prepare_image_inputs()
 
@@ -122,13 +143,17 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
         input_processor = processor(images=image_input, return_tensors="np")
 
         for key in input_feat_extract.keys():
-            self.assertAlmostEqual(input_feat_extract[key].sum(), input_processor[key].sum(), delta=1e-2)
+            self.assertAlmostEqual(
+                input_feat_extract[key].sum(), input_processor[key].sum(), delta=1e-2
+            )
 
     def test_tokenizer(self):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = VisionTextDualEncoderProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = VisionTextDualEncoderProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         input_str = "lower newer"
 
@@ -143,14 +168,19 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = VisionTextDualEncoderProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = VisionTextDualEncoderProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         input_str = "lower newer"
         image_input = self.prepare_image_inputs()
 
         inputs = processor(text=input_str, images=image_input)
 
-        self.assertListEqual(list(inputs.keys()), ["input_ids", "token_type_ids", "attention_mask", "pixel_values"])
+        self.assertListEqual(
+            list(inputs.keys()),
+            ["input_ids", "token_type_ids", "attention_mask", "pixel_values"],
+        )
 
         # test if it raises when no input is passed
         with self.assertRaises(ValueError):
@@ -160,7 +190,9 @@ class VisionTextDualEncoderProcessorTest(unittest.TestCase):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = VisionTextDualEncoderProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = VisionTextDualEncoderProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         predicted_ids = [[1, 4, 5, 8, 1, 0, 8], [3, 4, 3, 1, 1, 8, 9]]
 

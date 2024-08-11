@@ -18,8 +18,16 @@ from shutil import copyfile
 
 from transformers import SPIECE_UNDERLINE, is_sentencepiece_available
 from transformers.models.speech_to_text import Speech2TextTokenizer
-from transformers.models.speech_to_text.tokenization_speech_to_text import VOCAB_FILES_NAMES, save_json
-from transformers.testing_utils import get_tests_dir, require_sentencepiece, require_tokenizers, slow
+from transformers.models.speech_to_text.tokenization_speech_to_text import (
+    VOCAB_FILES_NAMES,
+    save_json,
+)
+from transformers.testing_utils import (
+    get_tests_dir,
+    require_sentencepiece,
+    require_tokenizers,
+    slow,
+)
 
 from ...test_tokenization_common import TokenizerTesterMixin
 
@@ -97,7 +105,32 @@ class SpeechToTextTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
             # fmt: on
         )
         ids = tokenizer.convert_tokens_to_ids(tokens)
-        self.assertListEqual(ids, [12, 25, 88, 59, 28, 23, 11, 4, 606, 351, 351, 351, 7, 16, 70, 50, 76, 84, 10, 4, 8])
+        self.assertListEqual(
+            ids,
+            [
+                12,
+                25,
+                88,
+                59,
+                28,
+                23,
+                11,
+                4,
+                606,
+                351,
+                351,
+                351,
+                7,
+                16,
+                70,
+                50,
+                76,
+                84,
+                10,
+                4,
+                8,
+            ],
+        )
 
         back_tokens = tokenizer.convert_ids_to_tokens(ids)
         self.assertListEqual(
@@ -129,7 +162,9 @@ class SpeechToTextTokenizerMultilinguialTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.tokenizer: Speech2TextTokenizer = Speech2TextTokenizer.from_pretrained(cls.checkpoint_name)
+        cls.tokenizer: Speech2TextTokenizer = Speech2TextTokenizer.from_pretrained(
+            cls.checkpoint_name
+        )
         return cls
 
     def check_language_codes(self):
@@ -145,7 +180,9 @@ class SpeechToTextTokenizerMultilinguialTest(unittest.TestCase):
         self.assertIn(ES_CODE, self.tokenizer.all_special_ids)
         generated_ids = [ES_CODE, 4, 1601, 47, 7647, 2]
         result = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-        expected_spanish = self.tokenizer.decode(generated_ids[1:], skip_special_tokens=True)
+        expected_spanish = self.tokenizer.decode(
+            generated_ids[1:], skip_special_tokens=True
+        )
         self.assertEqual(result, expected_spanish)
         self.assertNotIn(self.tokenizer.eos_token, result)
 

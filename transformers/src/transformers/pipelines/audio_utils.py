@@ -29,10 +29,14 @@ def ffmpeg_read(bpayload: bytes, sampling_rate: int) -> np.array:
     ]
 
     try:
-        with subprocess.Popen(ffmpeg_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as ffmpeg_process:
+        with subprocess.Popen(
+            ffmpeg_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        ) as ffmpeg_process:
             output_stream = ffmpeg_process.communicate(bpayload)
     except FileNotFoundError as error:
-        raise ValueError("ffmpeg was not found but is required to load audio files from filename") from error
+        raise ValueError(
+            "ffmpeg was not found but is required to load audio files from filename"
+        ) from error
     out_bytes = output_stream[0]
     audio = np.frombuffer(out_bytes, np.float32)
     if audio.shape[0] == 0:
@@ -55,7 +59,9 @@ def ffmpeg_microphone(
     elif format_for_conversion == "f32le":
         size_of_sample = 4
     else:
-        raise ValueError(f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`")
+        raise ValueError(
+            f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`"
+        )
 
     system = platform.system()
     if system == "Linux":
@@ -136,7 +142,9 @@ def ffmpeg_microphone_live(
     else:
         chunk_s = chunk_length_s
 
-    microphone = ffmpeg_microphone(sampling_rate, chunk_s, format_for_conversion=format_for_conversion)
+    microphone = ffmpeg_microphone(
+        sampling_rate, chunk_s, format_for_conversion=format_for_conversion
+    )
     if format_for_conversion == "s16le":
         dtype = np.int16
         size_of_sample = 2
@@ -144,7 +152,9 @@ def ffmpeg_microphone_live(
         dtype = np.float32
         size_of_sample = 4
     else:
-        raise ValueError(f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`")
+        raise ValueError(
+            f"Unhandled format `{format_for_conversion}`. Please use `s16le` or `f32le`"
+        )
 
     if stride_length_s is None:
         stride_length_s = chunk_length_s / 6
@@ -154,7 +164,9 @@ def ffmpeg_microphone_live(
 
     stride_left = int(round(sampling_rate * stride_length_s[0])) * size_of_sample
     stride_right = int(round(sampling_rate * stride_length_s[1])) * size_of_sample
-    for item in chunk_bytes_iter(microphone, chunk_len, stride=(stride_left, stride_right), stream=True):
+    for item in chunk_bytes_iter(
+        microphone, chunk_len, stride=(stride_left, stride_right), stream=True
+    ):
         # Put everything back in numpy scale
         item["raw"] = np.frombuffer(item["raw"], dtype=dtype)
         item["stride"] = (
@@ -165,7 +177,9 @@ def ffmpeg_microphone_live(
         yield item
 
 
-def chunk_bytes_iter(iterator, chunk_len: int, stride: Tuple[int, int], stream: bool = False):
+def chunk_bytes_iter(
+    iterator, chunk_len: int, stride: Tuple[int, int], stream: bool = False
+):
     """
     Reads raw bytes from an iterator and does chunks of length `chunk_len`. Optionally adds `stride` to each chunks to
     get overlaps. `stream` is used to return partial results even if a full `chunk_len` is not yet available.
@@ -206,11 +220,15 @@ def _ffmpeg_stream(ffmpeg_command, buflen: int):
     """
     bufsize = 2**24  # 16Mo
     try:
-        with subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, bufsize=bufsize) as ffmpeg_process:
+        with subprocess.Popen(
+            ffmpeg_command, stdout=subprocess.PIPE, bufsize=bufsize
+        ) as ffmpeg_process:
             while True:
                 raw = ffmpeg_process.stdout.read(buflen)
                 if raw == b"":
                     break
                 yield raw
     except FileNotFoundError as error:
-        raise ValueError("ffmpeg was not found but is required to stream audio files from filename") from error
+        raise ValueError(
+            "ffmpeg was not found but is required to stream audio files from filename"
+        ) from error

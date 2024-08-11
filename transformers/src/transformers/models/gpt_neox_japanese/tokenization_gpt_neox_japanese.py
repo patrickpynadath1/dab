@@ -57,7 +57,10 @@ def load_vocab_and_emoji(vocab_file, emoji_file):
     ids_to_tokens = collections.OrderedDict()
     with open(vocab_file, "r", encoding="utf-8") as f:
         token = f.readlines()
-    token = [[t.rstrip("\n")] if (t == "," or "," not in t) else t.rstrip("\n").split(",") for t in token]
+    token = [
+        [t.rstrip("\n")] if (t == "," or "," not in t) else t.rstrip("\n").split(",")
+        for t in token
+    ]
     for idx, b in enumerate(token):
         ids_to_tokens[idx] = b
         raw_vocab[",".join(b)] = idx
@@ -129,7 +132,7 @@ class GPTNeoXJapaneseTokenizer(PreTrainedTokenizer):
         bos_token="<|startoftext|>",
         eos_token="<|endoftext|>",
         do_clean_text=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             unk_token=unk_token,
@@ -150,7 +153,9 @@ class GPTNeoXJapaneseTokenizer(PreTrainedTokenizer):
                 " pretrained model use `tokenizer = GPTNeoXJapaneseokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`"
             )
         self.do_clean_text = do_clean_text
-        self.vocab, self.raw_vocab, self.ids_to_tokens, self.emoji = load_vocab_and_emoji(vocab_file, emoji_file)
+        self.vocab, self.raw_vocab, self.ids_to_tokens, self.emoji = (
+            load_vocab_and_emoji(vocab_file, emoji_file)
+        )
         self.subword_tokenizer = SubWordJapaneseTokenizer(
             vocab=self.vocab, ids_to_tokens=self.ids_to_tokens, emoji=self.emoji
         )
@@ -183,27 +188,39 @@ class GPTNeoXJapaneseTokenizer(PreTrainedTokenizer):
         """This corresponds to DialoGPT variants of models."""
         input_ids = []
         for is_user, text in conversation.iter_texts():
-            input_ids.extend(self.encode(text, add_special_tokens=False) + [self.eos_token_id])
+            input_ids.extend(
+                self.encode(text, add_special_tokens=False) + [self.eos_token_id]
+            )
 
         if len(input_ids) > self.model_max_length:
             input_ids = input_ids[-self.model_max_length :]
         return input_ids
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
-                save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+                save_directory,
+                (filename_prefix + "-" if filename_prefix else "")
+                + VOCAB_FILES_NAMES["vocab_file"],
             )
             emoji_file = os.path.join(
-                save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["emoji_file"]
+                save_directory,
+                (filename_prefix + "-" if filename_prefix else "")
+                + VOCAB_FILES_NAMES["emoji_file"],
             )
         else:
             vocab_file = (
-                (filename_prefix + "-" if filename_prefix else "") + save_directory + VOCAB_FILES_NAMES["vocab_file"]
+                (filename_prefix + "-" if filename_prefix else "")
+                + save_directory
+                + VOCAB_FILES_NAMES["vocab_file"]
             )
             emoji_file = (
-                (filename_prefix + "-" if filename_prefix else "") + save_directory + VOCAB_FILES_NAMES["emoji_file"]
+                (filename_prefix + "-" if filename_prefix else "")
+                + save_directory
+                + VOCAB_FILES_NAMES["emoji_file"]
             )
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token_index, token in self.ids_to_tokens.items():
@@ -249,9 +266,15 @@ class SubWordJapaneseTokenizer(object):
         self.ids_to_tokens = ids_to_tokens  # same as bpe
         self.emoji = emoji
         self.maxlen = np.max([len(w) for w in self.vocab.keys()])
-        self.content_repatter1 = re.compile(r"(https?|ftp)(:\/\/[-_\.!~*\'()a-zA-Z0-9;\/?:\@&=\+$,%#]+)")
-        self.content_repatter2 = re.compile(r"[A-Za-z0-9\._+]*@[\-_0-9A-Za-z]+(\.[A-Za-z]+)*")
-        self.content_repatter3 = re.compile(r"[\(]{0,1}[0-9]{2,4}[\)\-\(]{0,1}[0-9]{2,4}[\)\-]{0,1}[0-9]{3,4}")
+        self.content_repatter1 = re.compile(
+            r"(https?|ftp)(:\/\/[-_\.!~*\'()a-zA-Z0-9;\/?:\@&=\+$,%#]+)"
+        )
+        self.content_repatter2 = re.compile(
+            r"[A-Za-z0-9\._+]*@[\-_0-9A-Za-z]+(\.[A-Za-z]+)*"
+        )
+        self.content_repatter3 = re.compile(
+            r"[\(]{0,1}[0-9]{2,4}[\)\-\(]{0,1}[0-9]{2,4}[\)\-]{0,1}[0-9]{3,4}"
+        )
         self.content_repatter4 = re.compile(
             r"([12]\d{3}[/\-年])*(0?[1-9]|1[0-2])[/\-月]((0?[1-9]|[12][0-9]|3[01])日?)*(\d{1,2}|:|\d{1,2}時|\d{1,2}分|\(日\)|\(月\)|\(火\)|\(水\)|\(木\)|\(金\)|\(土\)|㈰|㈪|㈫|㈬|㈭|㈮|㈯)*"
         )

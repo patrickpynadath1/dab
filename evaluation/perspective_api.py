@@ -16,23 +16,25 @@ import os
 
 # from utils.constants import PERSPECTIVE_API_ATTRIBUTES, PERSPECTIVE_API_KEY
 # from utils.utils import batchify, load_cache
-PERSPECTIVE_API_KEY="AIzaSyBrt7heMQ2suJxtsqCCSA5bXkjhFgBRb0w"
+PERSPECTIVE_API_KEY = "AIzaSyBrt7heMQ2suJxtsqCCSA5bXkjhFgBRb0w"
 PERSPECTIVE_API_ATTRIBUTES = (
-    'TOXICITY',
-    'SEVERE_TOXICITY',
-    'IDENTITY_ATTACK',
-    'INSULT',
-    'THREAT',
-    'PROFANITY',
-    'SEXUALLY_EXPLICIT',
-    'FLIRTATION'
+    "TOXICITY",
+    "SEVERE_TOXICITY",
+    "IDENTITY_ATTACK",
+    "INSULT",
+    "THREAT",
+    "PROFANITY",
+    "SEXUALLY_EXPLICIT",
+    "FLIRTATION",
 )
 PERSPECTIVE_API_ATTRIBUTES_LOWER = tuple(a.lower() for a in PERSPECTIVE_API_ATTRIBUTES)
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def ensure_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
+
 
 def batchify(data: Iterable[T], batch_size: int) -> Iterable[List[T]]:
     assert batch_size > 0
@@ -60,14 +62,15 @@ def load_jsonl(file: Union[str, Path]) -> Iterable[Any]:
 def load_cache(file: Path):
     if file.exists():
         with file.open() as f:
-            for line in tqdm(f, desc=f'Loading cache from {file}'):
+            for line in tqdm(f, desc=f"Loading cache from {file}"):
                 yield json.loads(line)
+
 
 def unpack_scores(response_json: dict) -> Optional[Tuple[dict, dict]]:
     if not response_json:
         return None
 
-    attribute_scores = response_json['attributeScores'].items()
+    attribute_scores = response_json["attributeScores"].items()
 
     summary_scores = {}
     span_scores = {}
@@ -75,14 +78,16 @@ def unpack_scores(response_json: dict) -> Optional[Tuple[dict, dict]]:
         attribute = attribute.lower()
 
         # Save summary score
-        assert scores['summaryScore']['type'] == 'PROBABILITY'
-        summary_scores[attribute] = scores['summaryScore']['value']
+        assert scores["summaryScore"]["type"] == "PROBABILITY"
+        summary_scores[attribute] = scores["summaryScore"]["value"]
 
         # Save span scores
-        for span_score_dict in scores['spanScores']:
-            assert span_score_dict['score']['type'] == 'PROBABILITY'
-            span = (span_score_dict['begin'], span_score_dict['end'])
-            span_scores.setdefault(span, {})[attribute] = span_score_dict['score']['value']
+        for span_score_dict in scores["spanScores"]:
+            assert span_score_dict["score"]["type"] == "PROBABILITY"
+            span = (span_score_dict["begin"], span_score_dict["end"])
+            span_scores.setdefault(span, {})[attribute] = span_score_dict["score"][
+                "value"
+            ]
 
     return summary_scores, span_scores
 
@@ -94,7 +99,9 @@ class PerspectiveAPI:
         self.rate_limit = rate_limit
         self.next_uid = 0
 
-    def request(self, texts: Union[str, List[str]]) -> List[Tuple[Optional[Dict[str, Any]], Optional[HttpError]]]:
+    def request(
+        self, texts: Union[str, List[str]]
+    ) -> List[Tuple[Optional[Dict[str, Any]], Optional[HttpError]]]:
         if isinstance(texts, str):
             texts = [texts]
 
@@ -103,12 +110,14 @@ class PerspectiveAPI:
         time_since_last_request = time.time() - self.last_request_time
         time.sleep(10)
         # if time_since_last_request < 1:
-            # print(time_since_last_request)
-            # time.sleep(2.0 - time_since_last_request)
+        # print(time_since_last_request)
+        # time.sleep(2.0 - time_since_last_request)
         self.last_request_time = time.time()
 
         # Keys guaranteed in insertion order (Python 3.7+)
-        responses = {str(uid): None for uid in range(self.next_uid, self.next_uid + len(texts))}
+        responses = {
+            str(uid): None for uid in range(self.next_uid, self.next_uid + len(texts))
+        }
         self.next_uid += len(texts)
 
         def response_callback(request_id, response, exception):
@@ -118,27 +127,35 @@ class PerspectiveAPI:
         # Make API request
         batch_request = self.service.new_batch_http_request()
         for uid, text in zip(responses.keys(), texts):
-            batch_request.add(self._make_request(text, self.service), callback=response_callback, request_id=uid)
+            batch_request.add(
+                self._make_request(text, self.service),
+                callback=response_callback,
+                request_id=uid,
+            )
         batch_request.execute()
 
         return list(responses.values())
 
-    def request_bulk(self,
-                     corpus: Union[Iterable[str], Iterable[Tuple[str, str]]],
-                     output_file: Union[str, Path],
-                     pbar: tqdm = None):
+    def request_bulk(
+        self,
+        corpus: Union[Iterable[str], Iterable[Tuple[str, str]]],
+        output_file: Union[str, Path],
+        pbar: tqdm = None,
+    ):
         # Check for output file
         output_file = Path(output_file)
 
         # Set up progress bar
         if not pbar:
-            total = len(corpus) if isinstance(corpus, collections.abc.Sequence) else None
+            total = (
+                len(corpus) if isinstance(corpus, collections.abc.Sequence) else None
+            )
             pbar = tqdm(total=total, dynamic_ncols=True)
-        pbar.set_description(f'Perspective API')
+        pbar.set_description(f"Perspective API")
 
         i = 0
         num_failures = 0
-        with output_file.open('w') as f:
+        with output_file.open("w") as f:
             for batch in batchify(corpus, self.rate_limit):
                 request_ids = None
                 if isinstance(batch[0], tuple):
@@ -146,14 +163,14 @@ class PerspectiveAPI:
 
                 for j, (response, exception) in enumerate(self.request(batch)):
                     response_dict = {
-                        'request_id': request_ids[j] if request_ids else i,
-                        'response': response,
-                        'error': str(exception) if exception else None
+                        "request_id": request_ids[j] if request_ids else i,
+                        "response": response,
+                        "error": str(exception) if exception else None,
                     }
 
                     # Save response
                     f.write(json.dumps(response_dict))
-                    f.write('\n')
+                    f.write("\n")
                     f.flush()
                     os.fsync(f.fileno())
                     if exception:
@@ -168,22 +185,28 @@ class PerspectiveAPI:
     def _make_service(api_key: str):
         # Generate API client object dynamically based on service name and version
         # return discovery.build('commentanalyzer', 'v1alpha1', developerKey=api_key)
-        client = discovery.build("commentanalyzer", "v1alpha1", developerKey=api_key, discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1", static_discovery=False)
+        client = discovery.build(
+            "commentanalyzer",
+            "v1alpha1",
+            developerKey=api_key,
+            discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+            static_discovery=False,
+        )
         return client
 
     @staticmethod
     def _make_request(text: str, service):
         analyze_request = {
-            'comment': {'text': text},
-            'requestedAttributes': {attr: {} for attr in PERSPECTIVE_API_ATTRIBUTES},
-            'spanAnnotations': True,
+            "comment": {"text": text},
+            "requestedAttributes": {attr: {} for attr in PERSPECTIVE_API_ATTRIBUTES},
+            "spanAnnotations": True,
             "languages": ["en"],
         }
         return service.comments().analyze(body=analyze_request)
 
 
 class PerspectiveWorker:
-    SENTINEL = 'STOP'
+    SENTINEL = "STOP"
 
     def __init__(self, out_file: Path, total: int, rate_limit: int):
         if not rate_limit:
@@ -195,13 +218,15 @@ class PerspectiveWorker:
         self.requests_handled = set()
         for response in load_cache(out_file):
             print(response)
-            self.requests_handled.add(response['request_id'])
+            self.requests_handled.add(response["request_id"])
         total -= len(self.requests_handled)
 
         # Setup worker thread
         self.task_queue = mp.Queue()
-        self.process = mp.Process(target=self.perspective_worker,
-                                  args=(self.task_queue, out_file, total, rate_limit))
+        self.process = mp.Process(
+            target=self.perspective_worker,
+            args=(self.task_queue, out_file, total, rate_limit),
+        )
         self.process.start()
 
     def __call__(self, request_id: str, text: str):
@@ -220,7 +245,9 @@ class PerspectiveWorker:
         self.process.join()
 
     @classmethod
-    def perspective_worker(cls, queue: mp.Queue, responses_file: Path, total: int, rate_limit: int):
+    def perspective_worker(
+        cls, queue: mp.Queue, responses_file: Path, total: int, rate_limit: int
+    ):
         queue_iter = iter(queue.get, cls.SENTINEL)
         api = PerspectiveAPI(rate_limit=rate_limit)
         with tqdm(total=total, dynamic_ncols=True, position=1) as pbar:
@@ -231,7 +258,7 @@ def test_perspective_api():
     api = PerspectiveAPI()
 
     text_success = "Testing"
-    text_error = 'x' * (20480 + 1)
+    text_error = "x" * (20480 + 1)
 
     score_1, error_1 = api.request(text_success)[0]
     assert score_1 and not error_1

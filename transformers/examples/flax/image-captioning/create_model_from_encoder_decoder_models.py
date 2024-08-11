@@ -57,10 +57,16 @@ class ModelArguments:
         },
     )
     encoder_config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained encoder config name or path if not the same as encoder_model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained encoder config name or path if not the same as encoder_model_name"
+        },
     )
     decoder_config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained decoder config name or path if not the same as decoder_model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained decoder config name or path if not the same as decoder_model_name"
+        },
     )
 
 
@@ -75,14 +81,18 @@ def main():
         encoder_config = AutoConfig.from_pretrained(model_args.encoder_config_name)
     # Use pretrained encoder model's config
     else:
-        encoder_config = AutoConfig.from_pretrained(model_args.encoder_model_name_or_path)
+        encoder_config = AutoConfig.from_pretrained(
+            model_args.encoder_model_name_or_path
+        )
 
     # Use explicit specified decoder config
     if model_args.decoder_config_name:
         decoder_config = AutoConfig.from_pretrained(model_args.decoder_config_name)
     # Use pretrained decoder model's config
     else:
-        decoder_config = AutoConfig.from_pretrained(model_args.decoder_model_name_or_path)
+        decoder_config = AutoConfig.from_pretrained(
+            model_args.decoder_model_name_or_path
+        )
 
     # necessary for `from_encoder_decoder_pretrained` when `decoder_config` is passed
     decoder_config.is_decoder = True
@@ -108,7 +118,9 @@ def main():
     model.config.decoder_start_token_id = decoder_start_token_id
     model.config.pad_token_id = pad_token_id
 
-    feature_extractor = AutoFeatureExtractor.from_pretrained(model_args.encoder_model_name_or_path)
+    feature_extractor = AutoFeatureExtractor.from_pretrained(
+        model_args.encoder_model_name_or_path
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(model_args.decoder_model_name_or_path)
     tokenizer.pad_token = tokenizer.convert_ids_to_tokens(model.config.pad_token_id)

@@ -46,7 +46,9 @@ class OwlViTProcessorTest(unittest.TestCase):
         self.special_tokens_map = {"unk_token": "<unk>"}
 
         self.vocab_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["vocab_file"])
-        self.merges_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["merges_file"])
+        self.merges_file = os.path.join(
+            self.tmpdirname, VOCAB_FILES_NAMES["merges_file"]
+        )
         with open(self.vocab_file, "w", encoding="utf-8") as fp:
             fp.write(json.dumps(vocab_tokens) + "\n")
         with open(self.merges_file, "w", encoding="utf-8") as fp:
@@ -61,7 +63,9 @@ class OwlViTProcessorTest(unittest.TestCase):
             "image_mean": [0.48145466, 0.4578275, 0.40821073],
             "image_std": [0.26862954, 0.26130258, 0.27577711],
         }
-        self.feature_extractor_file = os.path.join(self.tmpdirname, FEATURE_EXTRACTOR_NAME)
+        self.feature_extractor_file = os.path.join(
+            self.tmpdirname, FEATURE_EXTRACTOR_NAME
+        )
         with open(self.feature_extractor_file, "w", encoding="utf-8") as fp:
             json.dump(feature_extractor_map, fp)
 
@@ -69,7 +73,9 @@ class OwlViTProcessorTest(unittest.TestCase):
         return CLIPTokenizer.from_pretrained(self.tmpdirname, pad_token="!", **kwargs)
 
     def get_rust_tokenizer(self, **kwargs):
-        return CLIPTokenizerFast.from_pretrained(self.tmpdirname, pad_token="!", **kwargs)
+        return CLIPTokenizerFast.from_pretrained(
+            self.tmpdirname, pad_token="!", **kwargs
+        )
 
     def get_feature_extractor(self, **kwargs):
         return OwlViTFeatureExtractor.from_pretrained(self.tmpdirname, **kwargs)
@@ -93,27 +99,46 @@ class OwlViTProcessorTest(unittest.TestCase):
         tokenizer_fast = self.get_rust_tokenizer()
         feature_extractor = self.get_feature_extractor()
 
-        processor_slow = OwlViTProcessor(tokenizer=tokenizer_slow, feature_extractor=feature_extractor)
+        processor_slow = OwlViTProcessor(
+            tokenizer=tokenizer_slow, feature_extractor=feature_extractor
+        )
         processor_slow.save_pretrained(self.tmpdirname)
-        processor_slow = OwlViTProcessor.from_pretrained(self.tmpdirname, use_fast=False)
+        processor_slow = OwlViTProcessor.from_pretrained(
+            self.tmpdirname, use_fast=False
+        )
 
-        processor_fast = OwlViTProcessor(tokenizer=tokenizer_fast, feature_extractor=feature_extractor)
+        processor_fast = OwlViTProcessor(
+            tokenizer=tokenizer_fast, feature_extractor=feature_extractor
+        )
         processor_fast.save_pretrained(self.tmpdirname)
         processor_fast = OwlViTProcessor.from_pretrained(self.tmpdirname)
 
-        self.assertEqual(processor_slow.tokenizer.get_vocab(), tokenizer_slow.get_vocab())
-        self.assertEqual(processor_fast.tokenizer.get_vocab(), tokenizer_fast.get_vocab())
+        self.assertEqual(
+            processor_slow.tokenizer.get_vocab(), tokenizer_slow.get_vocab()
+        )
+        self.assertEqual(
+            processor_fast.tokenizer.get_vocab(), tokenizer_fast.get_vocab()
+        )
         self.assertEqual(tokenizer_slow.get_vocab(), tokenizer_fast.get_vocab())
         self.assertIsInstance(processor_slow.tokenizer, CLIPTokenizer)
         self.assertIsInstance(processor_fast.tokenizer, CLIPTokenizerFast)
 
-        self.assertEqual(processor_slow.feature_extractor.to_json_string(), feature_extractor.to_json_string())
-        self.assertEqual(processor_fast.feature_extractor.to_json_string(), feature_extractor.to_json_string())
+        self.assertEqual(
+            processor_slow.feature_extractor.to_json_string(),
+            feature_extractor.to_json_string(),
+        )
+        self.assertEqual(
+            processor_fast.feature_extractor.to_json_string(),
+            feature_extractor.to_json_string(),
+        )
         self.assertIsInstance(processor_slow.feature_extractor, OwlViTFeatureExtractor)
         self.assertIsInstance(processor_fast.feature_extractor, OwlViTFeatureExtractor)
 
     def test_save_load_pretrained_additional_features(self):
-        processor = OwlViTProcessor(tokenizer=self.get_tokenizer(), feature_extractor=self.get_feature_extractor())
+        processor = OwlViTProcessor(
+            tokenizer=self.get_tokenizer(),
+            feature_extractor=self.get_feature_extractor(),
+        )
         processor.save_pretrained(self.tmpdirname)
 
         tokenizer_add_kwargs = self.get_tokenizer(bos_token="(BOS)", eos_token="(EOS)")
@@ -123,17 +148,24 @@ class OwlViTProcessorTest(unittest.TestCase):
             self.tmpdirname, bos_token="(BOS)", eos_token="(EOS)", do_normalize=False
         )
 
-        self.assertEqual(processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab())
+        self.assertEqual(
+            processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab()
+        )
         self.assertIsInstance(processor.tokenizer, CLIPTokenizerFast)
 
-        self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor_add_kwargs.to_json_string())
+        self.assertEqual(
+            processor.feature_extractor.to_json_string(),
+            feature_extractor_add_kwargs.to_json_string(),
+        )
         self.assertIsInstance(processor.feature_extractor, OwlViTFeatureExtractor)
 
     def test_feature_extractor(self):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = OwlViTProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = OwlViTProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         image_input = self.prepare_image_inputs()
 
@@ -141,13 +173,17 @@ class OwlViTProcessorTest(unittest.TestCase):
         input_processor = processor(images=image_input, return_tensors="np")
 
         for key in input_feat_extract.keys():
-            self.assertAlmostEqual(input_feat_extract[key].sum(), input_processor[key].sum(), delta=1e-2)
+            self.assertAlmostEqual(
+                input_feat_extract[key].sum(), input_processor[key].sum(), delta=1e-2
+            )
 
     def test_tokenizer(self):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = OwlViTProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = OwlViTProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         input_str = "lower newer"
 
@@ -156,20 +192,26 @@ class OwlViTProcessorTest(unittest.TestCase):
         encoded_tok = tokenizer(input_str, return_tensors="np")
 
         for key in encoded_tok.keys():
-            self.assertListEqual(encoded_tok[key][0].tolist(), encoded_processor[key][0].tolist())
+            self.assertListEqual(
+                encoded_tok[key][0].tolist(), encoded_processor[key][0].tolist()
+            )
 
     def test_processor(self):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = OwlViTProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = OwlViTProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         input_str = "lower newer"
         image_input = self.prepare_image_inputs()
 
         inputs = processor(text=input_str, images=image_input)
 
-        self.assertListEqual(list(inputs.keys()), ["input_ids", "attention_mask", "pixel_values"])
+        self.assertListEqual(
+            list(inputs.keys()), ["input_ids", "attention_mask", "pixel_values"]
+        )
 
         # test if it raises when no input is passed
         with pytest.raises(ValueError):
@@ -202,7 +244,9 @@ class OwlViTProcessorTest(unittest.TestCase):
         num_max_text_queries = max([len(texts) for texts in input_texts])
 
         self.assertListEqual(list(inputs.keys()), ["input_ids", "attention_mask"])
-        self.assertEqual(inputs["input_ids"].shape, (batch_size * num_max_text_queries, seq_length))
+        self.assertEqual(
+            inputs["input_ids"].shape, (batch_size * num_max_text_queries, seq_length)
+        )
 
         # test if it raises when no input is passed
         with pytest.raises(ValueError):
@@ -231,7 +275,9 @@ class OwlViTProcessorTest(unittest.TestCase):
         feature_extractor = self.get_feature_extractor()
         tokenizer = self.get_tokenizer()
 
-        processor = OwlViTProcessor(tokenizer=tokenizer, feature_extractor=feature_extractor)
+        processor = OwlViTProcessor(
+            tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         predicted_ids = [[1, 4, 5, 8, 1, 0, 8], [3, 4, 3, 1, 1, 8, 9]]
 

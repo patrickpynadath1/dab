@@ -121,14 +121,20 @@ class T5Tokenizer(PreTrainedTokenizer):
         extra_ids=100,
         additional_special_tokens=None,
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # Add extra_ids to the special token list
         if extra_ids > 0 and additional_special_tokens is None:
             additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
         elif extra_ids > 0 and additional_special_tokens is not None:
             # Check that we have the right number of extra_id special tokens
-            extra_tokens = len(set(filter(lambda x: bool("extra_id" in str(x)), additional_special_tokens)))
+            extra_tokens = len(
+                set(
+                    filter(
+                        lambda x: bool("extra_id" in str(x)), additional_special_tokens
+                    )
+                )
+            )
             if extra_tokens != extra_ids:
                 raise ValueError(
                     f"Both extra_ids ({extra_ids}) and additional_special_tokens ({additional_special_tokens}) are"
@@ -155,10 +161,17 @@ class T5Tokenizer(PreTrainedTokenizer):
         self.sp_model.Load(vocab_file)
 
     @staticmethod
-    def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
+    def _eventually_correct_t5_max_length(
+        pretrained_model_name_or_path, max_model_length, init_max_model_length
+    ):
         if pretrained_model_name_or_path in T5Tokenizer.max_model_input_sizes:
-            deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]
-            if init_max_model_length is not None and init_max_model_length != max_model_length:
+            deprecated_max_model_length = T5Tokenizer.max_model_input_sizes[
+                pretrained_model_name_or_path
+            ]
+            if (
+                init_max_model_length is not None
+                and init_max_model_length != max_model_length
+            ):
                 return init_max_model_length
             elif init_max_model_length is None:
                 warnings.warn(
@@ -186,7 +199,10 @@ class T5Tokenizer(PreTrainedTokenizer):
         return vocab
 
     def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
@@ -205,7 +221,9 @@ class T5Tokenizer(PreTrainedTokenizer):
         """
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
+                token_ids_0=token_ids_0,
+                token_ids_1=token_ids_1,
+                already_has_special_tokens=True,
             )
 
         # normal case: some special tokens
@@ -314,22 +332,30 @@ class T5Tokenizer(PreTrainedTokenizer):
         for token in tokens:
             # make sure that special tokens are not decoded using sentencepiece model
             if token in self.all_special_tokens:
-                out_string += self.sp_model.decode_pieces(current_sub_tokens) + token + " "
+                out_string += (
+                    self.sp_model.decode_pieces(current_sub_tokens) + token + " "
+                )
                 current_sub_tokens = []
             else:
                 current_sub_tokens.append(token)
         out_string += self.sp_model.decode_pieces(current_sub_tokens)
         return out_string.strip()
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
         out_vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["vocab_file"],
         )
 
-        if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file) and os.path.isfile(self.vocab_file):
+        if os.path.abspath(self.vocab_file) != os.path.abspath(
+            out_vocab_file
+        ) and os.path.isfile(self.vocab_file):
             copyfile(self.vocab_file, out_vocab_file)
         elif not os.path.isfile(self.vocab_file):
             with open(out_vocab_file, "wb") as fi:

@@ -18,11 +18,19 @@
 
 from typing import TYPE_CHECKING
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_tf_available, is_torch_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_tf_available,
+    is_torch_available,
+)
 
 
 _import_structure = {
-    "configuration_transfo_xl": ["TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP", "TransfoXLConfig"],
+    "configuration_transfo_xl": [
+        "TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "TransfoXLConfig",
+    ],
     "tokenization_transfo_xl": ["TransfoXLCorpus", "TransfoXLTokenizer"],
 }
 
@@ -60,7 +68,10 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_transfo_xl import TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP, TransfoXLConfig
+    from .configuration_transfo_xl import (
+        TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        TransfoXLConfig,
+    )
     from .tokenization_transfo_xl import TransfoXLCorpus, TransfoXLTokenizer
 
     try:
@@ -98,4 +109,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

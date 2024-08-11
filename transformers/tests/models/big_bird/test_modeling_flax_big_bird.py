@@ -19,7 +19,11 @@ import numpy as np
 from transformers import BigBirdConfig, is_flax_available
 from transformers.testing_utils import require_flax, slow
 
-from ...test_modeling_flax_common import FlaxModelTesterMixin, ids_tensor, random_attention_mask
+from ...test_modeling_flax_common import (
+    FlaxModelTesterMixin,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_flax_available():
@@ -101,7 +105,9 @@ class FlaxBigBirdModelTester(unittest.TestCase):
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         config = BigBirdConfig(
             vocab_size=self.vocab_size,
@@ -128,7 +134,11 @@ class FlaxBigBirdModelTester(unittest.TestCase):
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         config, input_ids, token_type_ids, attention_mask = config_and_inputs
-        inputs_dict = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": attention_mask}
+        inputs_dict = {
+            "input_ids": input_ids,
+            "token_type_ids": token_type_ids,
+            "attention_mask": attention_mask,
+        }
         return config, inputs_dict
 
 
@@ -199,7 +209,9 @@ class FlaxBigBirdModelTest(FlaxModelTesterMixin, unittest.TestCase):
 
                 @jax.jit
                 def model_jitted(input_ids, attention_mask=None, **kwargs):
-                    return model(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
+                    return model(
+                        input_ids=input_ids, attention_mask=attention_mask, **kwargs
+                    )
 
                 with self.subTest("JIT Enabled"):
                     jitted_outputs = model_jitted(**prepared_inputs_dict).to_tuple()
@@ -214,10 +226,20 @@ class FlaxBigBirdModelTest(FlaxModelTesterMixin, unittest.TestCase):
                     self.assertEqual(jitted_output.shape, output.shape)
 
     # overwrite from common in order to skip the check on `attentions`
-    def check_pt_flax_outputs(self, fx_outputs, pt_outputs, model_class, tol=1e-5, name="outputs", attributes=None):
+    def check_pt_flax_outputs(
+        self,
+        fx_outputs,
+        pt_outputs,
+        model_class,
+        tol=1e-5,
+        name="outputs",
+        attributes=None,
+    ):
         # `bigbird_block_sparse_attention` in `FlaxBigBird` returns `attention_probs = None`, while in PyTorch version,
         # an effort was done to return `attention_probs` (yet to be verified).
         if name.startswith("outputs.attentions"):
             return
         else:
-            super().check_pt_flax_outputs(fx_outputs, pt_outputs, model_class, tol, name, attributes)
+            super().check_pt_flax_outputs(
+                fx_outputs, pt_outputs, model_class, tol, name, attributes
+            )

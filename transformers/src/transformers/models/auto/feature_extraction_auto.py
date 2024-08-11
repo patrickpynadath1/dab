@@ -82,7 +82,9 @@ FEATURE_EXTRACTOR_MAPPING_NAMES = OrderedDict(
     ]
 )
 
-FEATURE_EXTRACTOR_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, FEATURE_EXTRACTOR_MAPPING_NAMES)
+FEATURE_EXTRACTOR_MAPPING = _LazyAutoMapping(
+    CONFIG_MAPPING_NAMES, FEATURE_EXTRACTOR_MAPPING_NAMES
+)
 
 
 def feature_extractor_class_from_name(class_name: str):
@@ -291,7 +293,9 @@ class AutoFeatureExtractor:
         trust_remote_code = kwargs.pop("trust_remote_code", False)
         kwargs["_from_auto"] = True
 
-        config_dict, _ = FeatureExtractionMixin.get_feature_extractor_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, _ = FeatureExtractionMixin.get_feature_extractor_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
         feature_extractor_class = config_dict.get("feature_extractor_type", None)
         feature_extractor_auto_map = None
         if "AutoFeatureExtractor" in config_dict.get("auto_map", {}):
@@ -300,10 +304,15 @@ class AutoFeatureExtractor:
         # If we don't find the feature extractor class in the feature extractor config, let's try the model config.
         if feature_extractor_class is None and feature_extractor_auto_map is None:
             if not isinstance(config, PretrainedConfig):
-                config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
+                config = AutoConfig.from_pretrained(
+                    pretrained_model_name_or_path, **kwargs
+                )
             # It could be in `config.feature_extractor_type``
             feature_extractor_class = getattr(config, "feature_extractor_type", None)
-            if hasattr(config, "auto_map") and "AutoFeatureExtractor" in config.auto_map:
+            if (
+                hasattr(config, "auto_map")
+                and "AutoFeatureExtractor" in config.auto_map
+            ):
                 feature_extractor_auto_map = config.auto_map["AutoFeatureExtractor"]
 
         if feature_extractor_class is not None:
@@ -323,10 +332,15 @@ class AutoFeatureExtractor:
 
                 module_file, class_name = feature_extractor_auto_map.split(".")
                 feature_extractor_class = get_class_from_dynamic_module(
-                    pretrained_model_name_or_path, module_file + ".py", class_name, **kwargs
+                    pretrained_model_name_or_path,
+                    module_file + ".py",
+                    class_name,
+                    **kwargs,
                 )
             else:
-                feature_extractor_class = feature_extractor_class_from_name(feature_extractor_class)
+                feature_extractor_class = feature_extractor_class_from_name(
+                    feature_extractor_class
+                )
 
             return feature_extractor_class.from_dict(config_dict, **kwargs)
         # Last try: we use the FEATURE_EXTRACTOR_MAPPING.

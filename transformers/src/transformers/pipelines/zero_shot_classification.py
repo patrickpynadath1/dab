@@ -23,7 +23,9 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
 
     def __call__(self, sequences, labels, hypothesis_template):
         if len(labels) == 0 or len(sequences) == 0:
-            raise ValueError("You must include at least one label and at least one sequence.")
+            raise ValueError(
+                "You must include at least one label and at least one sequence."
+            )
         if hypothesis_template.format(labels[0]) == hypothesis_template:
             raise ValueError(
                 (
@@ -37,7 +39,9 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
 
         sequence_pairs = []
         for sequence in sequences:
-            sequence_pairs.extend([[sequence, hypothesis_template.format(label)] for label in labels])
+            sequence_pairs.extend(
+                [[sequence, hypothesis_template.format(label)] for label in labels]
+            )
 
         return sequence_pairs, sequences
 
@@ -60,7 +64,9 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
     of available models on [huggingface.co/models](https://huggingface.co/models?search=nli).
     """
 
-    def __init__(self, args_parser=ZeroShotClassificationArgumentHandler(), *args, **kwargs):
+    def __init__(
+        self, args_parser=ZeroShotClassificationArgumentHandler(), *args, **kwargs
+    ):
         self._args_parser = args_parser
         super().__init__(*args, **kwargs)
         if self.entailment_id == -1:
@@ -77,7 +83,12 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return -1
 
     def _parse_and_tokenize(
-        self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST, **kwargs
+        self,
+        sequence_pairs,
+        padding=True,
+        add_special_tokens=True,
+        truncation=TruncationStrategy.ONLY_FIRST,
+        **kwargs,
     ):
         """
         Parse arguments and tokenize only_first so that hypothesis (label) is not truncated
@@ -127,7 +138,9 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             )
         preprocess_params = {}
         if "candidate_labels" in kwargs:
-            preprocess_params["candidate_labels"] = self._args_parser._parse_labels(kwargs["candidate_labels"])
+            preprocess_params["candidate_labels"] = self._args_parser._parse_labels(
+                kwargs["candidate_labels"]
+            )
         if "hypothesis_template" in kwargs:
             preprocess_params["hypothesis_template"] = kwargs["hypothesis_template"]
 
@@ -181,10 +194,16 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
 
         return super().__call__(sequences, **kwargs)
 
-    def preprocess(self, inputs, candidate_labels=None, hypothesis_template="This example is {}."):
-        sequence_pairs, sequences = self._args_parser(inputs, candidate_labels, hypothesis_template)
+    def preprocess(
+        self, inputs, candidate_labels=None, hypothesis_template="This example is {}."
+    ):
+        sequence_pairs, sequences = self._args_parser(
+            inputs, candidate_labels, hypothesis_template
+        )
 
-        for i, (candidate_label, sequence_pair) in enumerate(zip(candidate_labels, sequence_pairs)):
+        for i, (candidate_label, sequence_pair) in enumerate(
+            zip(candidate_labels, sequence_pairs)
+        ):
             model_input = self._parse_and_tokenize([sequence_pair])
 
             yield {
@@ -221,13 +240,19 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
             # softmax over the entailment vs. contradiction dim for each label independently
             entailment_id = self.entailment_id
             contradiction_id = -1 if entailment_id == 0 else 0
-            entail_contr_logits = reshaped_outputs[..., [contradiction_id, entailment_id]]
-            scores = np.exp(entail_contr_logits) / np.exp(entail_contr_logits).sum(-1, keepdims=True)
+            entail_contr_logits = reshaped_outputs[
+                ..., [contradiction_id, entailment_id]
+            ]
+            scores = np.exp(entail_contr_logits) / np.exp(entail_contr_logits).sum(
+                -1, keepdims=True
+            )
             scores = scores[..., 1]
         else:
             # softmax the "entailment" logits over all candidate labels
             entail_logits = reshaped_outputs[..., self.entailment_id]
-            scores = np.exp(entail_logits) / np.exp(entail_logits).sum(-1, keepdims=True)
+            scores = np.exp(entail_logits) / np.exp(entail_logits).sum(
+                -1, keepdims=True
+            )
 
         top_inds = list(reversed(scores[0].argsort()))
         return {

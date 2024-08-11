@@ -45,7 +45,11 @@ from transformers import (
     default_data_collator,
     get_scheduler,
 )
-from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
+from transformers.utils import (
+    check_min_version,
+    get_full_repo_name,
+    send_example_telemetry,
+)
 from transformers.utils.versions import require_version
 
 
@@ -54,7 +58,10 @@ check_min_version("4.23.0.dev0")
 
 logger = get_logger(__name__)
 
-require_version("datasets>=2.0.0", "To fix: pip install -r examples/pytorch/semantic-segmentation/requirements.txt")
+require_version(
+    "datasets>=2.0.0",
+    "To fix: pip install -r examples/pytorch/semantic-segmentation/requirements.txt",
+)
 
 
 def pad_if_smaller(img, size, fill=0):
@@ -91,7 +98,9 @@ class Resize:
 
     def __call__(self, image, target):
         image = functional.resize(image, self.size)
-        target = functional.resize(target, self.size, interpolation=transforms.InterpolationMode.NEAREST)
+        target = functional.resize(
+            target, self.size, interpolation=transforms.InterpolationMode.NEAREST
+        )
         return image, target
 
 
@@ -105,7 +114,9 @@ class RandomResize:
     def __call__(self, image, target):
         size = random.randint(self.min_size, self.max_size)
         image = functional.resize(image, size)
-        target = functional.resize(target, size, interpolation=transforms.InterpolationMode.NEAREST)
+        target = functional.resize(
+            target, size, interpolation=transforms.InterpolationMode.NEAREST
+        )
         return image, target
 
 
@@ -173,7 +184,9 @@ class ReduceLabels:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Finetune a transformers model on a text classification task")
+    parser = argparse.ArgumentParser(
+        description="Finetune a transformers model on a text classification task"
+    )
     parser.add_argument(
         "--model_name_or_path",
         type=str,
@@ -243,7 +256,12 @@ def parse_args():
         default=1e-8,
         help="Epsilon for AdamW optimizer",
     )
-    parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=3,
+        help="Total number of training epochs to perform.",
+    )
     parser.add_argument(
         "--max_train_steps",
         type=int,
@@ -261,18 +279,40 @@ def parse_args():
         type=SchedulerType,
         default="polynomial",
         help="The scheduler type to use.",
-        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
+        choices=[
+            "linear",
+            "cosine",
+            "cosine_with_restarts",
+            "polynomial",
+            "constant",
+            "constant_with_warmup",
+        ],
     )
     parser.add_argument(
-        "--num_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler."
+        "--num_warmup_steps",
+        type=int,
+        default=0,
+        help="Number of steps for the warmup in the lr scheduler.",
     )
-    parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
-    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
-    parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument(
-        "--hub_model_id", type=str, help="The name of the repository to keep in sync with the local `output_dir`."
+        "--output_dir", type=str, default=None, help="Where to store the final model."
     )
-    parser.add_argument("--hub_token", type=str, help="The token to use to push to the Model Hub.")
+    parser.add_argument(
+        "--seed", type=int, default=None, help="A seed for reproducible training."
+    )
+    parser.add_argument(
+        "--push_to_hub",
+        action="store_true",
+        help="Whether or not to push the model to the Hub.",
+    )
+    parser.add_argument(
+        "--hub_model_id",
+        type=str,
+        help="The name of the repository to keep in sync with the local `output_dir`.",
+    )
+    parser.add_argument(
+        "--hub_token", type=str, help="The token to use to push to the Model Hub."
+    )
     parser.add_argument(
         "--checkpointing_steps",
         type=str,
@@ -332,7 +372,10 @@ def main():
         accelerator_log_kwargs["log_with"] = args.report_to
         accelerator_log_kwargs["logging_dir"] = args.output_dir
 
-    accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps, **accelerator_log_kwargs)
+    accelerator = Accelerator(
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        **accelerator_log_kwargs,
+    )
 
     logger.info(accelerator.state, main_process_only=False)
     if accelerator.is_local_main_process:
@@ -351,7 +394,9 @@ def main():
     if accelerator.is_main_process:
         if args.push_to_hub:
             if args.hub_model_id is None:
-                repo_name = get_full_repo_name(Path(args.output_dir).name, token=args.hub_token)
+                repo_name = get_full_repo_name(
+                    Path(args.output_dir).name, token=args.hub_token
+                )
             else:
                 repo_name = args.hub_model_id
             repo = Repository(args.output_dir, clone_from=repo_name)
@@ -378,7 +423,9 @@ def main():
         dataset = dataset.rename_columns({"annotation": "label"})
 
     # If we don't have a validation split, split off a percentage of train as validation.
-    args.train_val_split = None if "validation" in dataset.keys() else args.train_val_split
+    args.train_val_split = (
+        None if "validation" in dataset.keys() else args.train_val_split
+    )
     if isinstance(args.train_val_split, float) and args.train_val_split > 0.0:
         split = dataset["train"].train_test_split(args.train_val_split)
         dataset["train"] = split["train"]
@@ -397,9 +444,13 @@ def main():
     label2id = {v: k for k, v in id2label.items()}
 
     # Load pretrained model and feature extractor
-    config = AutoConfig.from_pretrained(args.model_name_or_path, id2label=id2label, label2id=label2id)
+    config = AutoConfig.from_pretrained(
+        args.model_name_or_path, id2label=id2label, label2id=label2id
+    )
     feature_extractor = AutoFeatureExtractor.from_pretrained(args.model_name_or_path)
-    model = AutoModelForSemanticSegmentation.from_pretrained(args.model_name_or_path, config=config)
+    model = AutoModelForSemanticSegmentation.from_pretrained(
+        args.model_name_or_path, config=config
+    )
 
     # Preprocessing the datasets
     # Define torchvision transforms to be applied to each image + target.
@@ -412,7 +463,9 @@ def main():
             RandomHorizontalFlip(flip_prob=0.5),
             PILToTensor(),
             ConvertImageDtype(torch.float),
-            Normalize(mean=feature_extractor.image_mean, std=feature_extractor.image_std),
+            Normalize(
+                mean=feature_extractor.image_mean, std=feature_extractor.image_std
+            ),
         ]
     )
     # Define torchvision transform to be applied to each image.
@@ -423,7 +476,9 @@ def main():
             Resize(size=(feature_extractor.size, feature_extractor.size)),
             PILToTensor(),
             ConvertImageDtype(torch.float),
-            Normalize(mean=feature_extractor.image_mean, std=feature_extractor.image_std),
+            Normalize(
+                mean=feature_extractor.image_mean, std=feature_extractor.image_std
+            ),
         ]
     )
 
@@ -460,10 +515,15 @@ def main():
         eval_dataset = dataset["validation"].with_transform(preprocess_val)
 
     train_dataloader = DataLoader(
-        train_dataset, shuffle=True, collate_fn=default_data_collator, batch_size=args.per_device_train_batch_size
+        train_dataset,
+        shuffle=True,
+        collate_fn=default_data_collator,
+        batch_size=args.per_device_train_batch_size,
     )
     eval_dataloader = DataLoader(
-        eval_dataset, collate_fn=default_data_collator, batch_size=args.per_device_eval_batch_size
+        eval_dataset,
+        collate_fn=default_data_collator,
+        batch_size=args.per_device_eval_batch_size,
     )
 
     # Optimizer
@@ -481,7 +541,9 @@ def main():
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if args.max_train_steps is None:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
         overrode_max_train_steps = True
@@ -494,12 +556,16 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
+        accelerator.prepare(
+            model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+        )
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if overrode_max_train_steps:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
     # Afterwards we recalculate our number of training epochs
@@ -513,21 +579,33 @@ def main():
     if args.with_tracking:
         experiment_config = vars(args)
         # TensorBoard cannot log Enums, need the raw value
-        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+        experiment_config["lr_scheduler_type"] = experiment_config[
+            "lr_scheduler_type"
+        ].value
         accelerator.init_trackers("semantic_segmentation_no_trainer", experiment_config)
 
     # Train!
-    total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+    total_batch_size = (
+        args.per_device_train_batch_size
+        * accelerator.num_processes
+        * args.gradient_accumulation_steps
+    )
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(train_dataset)}")
     logger.info(f"  Num Epochs = {args.num_train_epochs}")
-    logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
-    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+    logger.info(
+        f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
+    )
+    logger.info(
+        f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
+    )
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(
+        range(args.max_train_steps), disable=not accelerator.is_local_main_process
+    )
     completed_steps = 0
     starting_epoch = 0
 
@@ -541,7 +619,9 @@ def main():
             # Get the most recent checkpoint
             dirs = [f.name for f in os.scandir(os.getcwd()) if f.is_dir()]
             dirs.sort(key=os.path.getctime)
-            path = dirs[-1]  # Sorts folders by date modified, most recent checkpoint is the last
+            path = dirs[
+                -1
+            ]  # Sorts folders by date modified, most recent checkpoint is the last
         # Extract `epoch_{i}` or `step_{i}`
         training_difference = os.path.splitext(path)[0]
 
@@ -608,16 +688,23 @@ def main():
 
         logger.info("***** Running evaluation *****")
         model.eval()
-        for step, batch in enumerate(tqdm(eval_dataloader, disable=not accelerator.is_local_main_process)):
+        for step, batch in enumerate(
+            tqdm(eval_dataloader, disable=not accelerator.is_local_main_process)
+        ):
             with torch.no_grad():
                 outputs = model(**batch)
 
             upsampled_logits = torch.nn.functional.interpolate(
-                outputs.logits, size=batch["labels"].shape[-2:], mode="bilinear", align_corners=False
+                outputs.logits,
+                size=batch["labels"].shape[-2:],
+                mode="bilinear",
+                align_corners=False,
             )
             predictions = upsampled_logits.argmax(dim=1)
 
-            predictions, references = accelerator.gather_for_metrics((predictions, batch["labels"]))
+            predictions, references = accelerator.gather_for_metrics(
+                (predictions, batch["labels"])
+            )
 
             metric.add_batch(
                 predictions=predictions,
@@ -648,12 +735,16 @@ def main():
             accelerator.wait_for_everyone()
             unwrapped_model = accelerator.unwrap_model(model)
             unwrapped_model.save_pretrained(
-                args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
+                args.output_dir,
+                is_main_process=accelerator.is_main_process,
+                save_function=accelerator.save,
             )
             if accelerator.is_main_process:
                 feature_extractor.save_pretrained(args.output_dir)
                 repo.push_to_hub(
-                    commit_message=f"Training in progress epoch {epoch}", blocking=False, auto_lfs_prune=True
+                    commit_message=f"Training in progress epoch {epoch}",
+                    blocking=False,
+                    auto_lfs_prune=True,
                 )
 
         if args.checkpointing_steps == "epoch":
@@ -669,7 +760,9 @@ def main():
         accelerator.wait_for_everyone()
         unwrapped_model = accelerator.unwrap_model(model)
         unwrapped_model.save_pretrained(
-            args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
+            args.output_dir,
+            is_main_process=accelerator.is_main_process,
+            save_function=accelerator.save,
         )
         if accelerator.is_main_process:
             feature_extractor.save_pretrained(args.output_dir)
@@ -677,7 +770,9 @@ def main():
                 repo.push_to_hub(commit_message="End of training", auto_lfs_prune=True)
 
             with open(os.path.join(args.output_dir, "all_results.json"), "w") as f:
-                json.dump({"eval_overall_accuracy": eval_metrics["overall_accuracy"]}, f)
+                json.dump(
+                    {"eval_overall_accuracy": eval_metrics["overall_accuracy"]}, f
+                )
 
 
 if __name__ == "__main__":

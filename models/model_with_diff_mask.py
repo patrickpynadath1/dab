@@ -179,7 +179,7 @@ class GPTPromptTuningWithMaskModelMixin:
         use_full_prompt=False,
         senti_label=None,
         diff_mask=None,
-        **kwargs
+        **kwargs,
     ):
         # TODO: initialize the differentiable mask
         if senti_label is not None:
@@ -254,7 +254,7 @@ class GPTPromptTuningWithMaskModelMixin:
                     return_last_score=True,
                     full_prompt=self.full_prompts,
                     sent_labels=senti_label,
-                    diff_mask = diff_mask,
+                    diff_mask=diff_mask,
                     use_hidden_states_biases=True,
                     return_logit=True,
                     seq_len=self.seq_len,
@@ -277,7 +277,7 @@ class GPTPromptTuningWithMaskModelMixin:
                     inference=True,
                     return_last_score=True,
                     sent_labels=senti_label,
-                    diff_mask = diff_mask,
+                    diff_mask=diff_mask,
                     use_hidden_states_biases=True,
                     return_logit=True,
                     seq_len=self.seq_len,

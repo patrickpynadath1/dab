@@ -23,7 +23,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision, slow
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -133,24 +136,39 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -165,24 +183,39 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
         self.assertEqual(
             encoded_images.shape,
@@ -198,24 +231,39 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
         self.assertEqual(
             encoded_images.shape,
@@ -230,18 +278,28 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
     def test_equivalence_padding(self):
         # Initialize feature_extractors
         feature_extractor_1 = self.feature_extraction_class(**self.feat_extract_dict)
-        feature_extractor_2 = self.feature_extraction_class(do_resize=False, do_normalize=False)
+        feature_extractor_2 = self.feature_extraction_class(
+            do_resize=False, do_normalize=False
+        )
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test whether the method "pad" and calling the feature extractor return the same tensors
-        encoded_images_with_method = feature_extractor_1.pad(image_inputs, return_tensors="pt")
+        encoded_images_with_method = feature_extractor_1.pad(
+            image_inputs, return_tensors="pt"
+        )
         encoded_images = feature_extractor_2(image_inputs, return_tensors="pt")
 
         self.assertTrue(
-            torch.allclose(encoded_images_with_method["pixel_values"], encoded_images["pixel_values"], atol=1e-4)
+            torch.allclose(
+                encoded_images_with_method["pixel_values"],
+                encoded_images["pixel_values"],
+                atol=1e-4,
+            )
         )
 
     @slow
@@ -255,35 +313,55 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
 
         # encode them
         feature_extractor = YolosFeatureExtractor.from_pretrained("hustvl/yolos-small")
-        encoding = feature_extractor(images=image, annotations=target, return_tensors="pt")
+        encoding = feature_extractor(
+            images=image, annotations=target, return_tensors="pt"
+        )
 
         # verify pixel values
         expected_shape = torch.Size([1, 3, 800, 1066])
         self.assertEqual(encoding["pixel_values"].shape, expected_shape)
 
         expected_slice = torch.tensor([0.2796, 0.3138, 0.3481])
-        self.assertTrue(torch.allclose(encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4
+            )
+        )
 
         # verify area
-        expected_area = torch.tensor([5887.9600, 11250.2061, 489353.8438, 837122.7500, 147967.5156, 165732.3438])
+        expected_area = torch.tensor(
+            [5887.9600, 11250.2061, 489353.8438, 837122.7500, 147967.5156, 165732.3438]
+        )
         self.assertTrue(torch.allclose(encoding["labels"][0]["area"], expected_area))
         # verify boxes
         expected_boxes_shape = torch.Size([6, 4])
         self.assertEqual(encoding["labels"][0]["boxes"].shape, expected_boxes_shape)
         expected_boxes_slice = torch.tensor([0.5503, 0.2765, 0.0604, 0.2215])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(
+                encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3
+            )
+        )
         # verify image_id
         expected_image_id = torch.tensor([39769])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["image_id"], expected_image_id))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["image_id"], expected_image_id)
+        )
         # verify is_crowd
         expected_is_crowd = torch.tensor([0, 0, 0, 0, 0, 0])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd)
+        )
         # verify class_labels
         expected_class_labels = torch.tensor([75, 75, 63, 65, 17, 17])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["class_labels"], expected_class_labels))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["class_labels"], expected_class_labels)
+        )
         # verify orig_size
         expected_orig_size = torch.tensor([480, 640])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["orig_size"], expected_orig_size))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["orig_size"], expected_orig_size)
+        )
         # verify size
         expected_size = torch.tensor([800, 1066])
         self.assertTrue(torch.allclose(encoding["labels"][0]["size"], expected_size))
@@ -292,47 +370,75 @@ class YolosFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
     def test_call_pytorch_with_coco_panoptic_annotations(self):
         # prepare image, target and masks_path
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        with open("./tests/fixtures/tests_samples/COCO/coco_panoptic_annotations.txt", "r") as f:
+        with open(
+            "./tests/fixtures/tests_samples/COCO/coco_panoptic_annotations.txt", "r"
+        ) as f:
             target = json.loads(f.read())
 
-        target = {"file_name": "000000039769.png", "image_id": 39769, "segments_info": target}
+        target = {
+            "file_name": "000000039769.png",
+            "image_id": 39769,
+            "segments_info": target,
+        }
 
         masks_path = pathlib.Path("./tests/fixtures/tests_samples/COCO/coco_panoptic")
 
         # encode them
         feature_extractor = YolosFeatureExtractor(format="coco_panoptic")
-        encoding = feature_extractor(images=image, annotations=target, masks_path=masks_path, return_tensors="pt")
+        encoding = feature_extractor(
+            images=image, annotations=target, masks_path=masks_path, return_tensors="pt"
+        )
 
         # verify pixel values
         expected_shape = torch.Size([1, 3, 800, 1066])
         self.assertEqual(encoding["pixel_values"].shape, expected_shape)
 
         expected_slice = torch.tensor([0.2796, 0.3138, 0.3481])
-        self.assertTrue(torch.allclose(encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                encoding["pixel_values"][0, 0, 0, :3], expected_slice, atol=1e-4
+            )
+        )
 
         # verify area
-        expected_area = torch.tensor([147979.6875, 165527.0469, 484638.5938, 11292.9375, 5879.6562, 7634.1147])
+        expected_area = torch.tensor(
+            [147979.6875, 165527.0469, 484638.5938, 11292.9375, 5879.6562, 7634.1147]
+        )
         self.assertTrue(torch.allclose(encoding["labels"][0]["area"], expected_area))
         # verify boxes
         expected_boxes_shape = torch.Size([6, 4])
         self.assertEqual(encoding["labels"][0]["boxes"].shape, expected_boxes_shape)
         expected_boxes_slice = torch.tensor([0.2625, 0.5437, 0.4688, 0.8625])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(
+                encoding["labels"][0]["boxes"][0], expected_boxes_slice, atol=1e-3
+            )
+        )
         # verify image_id
         expected_image_id = torch.tensor([39769])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["image_id"], expected_image_id))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["image_id"], expected_image_id)
+        )
         # verify is_crowd
         expected_is_crowd = torch.tensor([0, 0, 0, 0, 0, 0])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["iscrowd"], expected_is_crowd)
+        )
         # verify class_labels
         expected_class_labels = torch.tensor([17, 17, 63, 75, 75, 93])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["class_labels"], expected_class_labels))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["class_labels"], expected_class_labels)
+        )
         # verify masks
         expected_masks_sum = 822338
-        self.assertEqual(encoding["labels"][0]["masks"].sum().item(), expected_masks_sum)
+        self.assertEqual(
+            encoding["labels"][0]["masks"].sum().item(), expected_masks_sum
+        )
         # verify orig_size
         expected_orig_size = torch.tensor([480, 640])
-        self.assertTrue(torch.allclose(encoding["labels"][0]["orig_size"], expected_orig_size))
+        self.assertTrue(
+            torch.allclose(encoding["labels"][0]["orig_size"], expected_orig_size)
+        )
         # verify size
         expected_size = torch.tensor([800, 1066])
         self.assertTrue(torch.allclose(encoding["labels"][0]["size"], expected_size))

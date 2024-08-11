@@ -32,7 +32,9 @@ if is_tf_available():
     import tensorflow as tf
 
     from transformers import TFResNetForImageClassification, TFResNetModel
-    from transformers.models.resnet.modeling_tf_resnet import TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.resnet.modeling_tf_resnet import (
+        TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -72,7 +74,9 @@ class TFResNetModelTester:
         self.num_stages = len(hidden_sizes)
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
@@ -99,7 +103,12 @@ class TFResNetModelTester:
         # expected last hidden states: B, C, H // 32, W // 32
         self.parent.assertEqual(
             result.last_hidden_state.shape,
-            (self.batch_size, self.hidden_sizes[-1], self.image_size // 32, self.image_size // 32),
+            (
+                self.batch_size,
+                self.hidden_sizes[-1],
+                self.image_size // 32,
+                self.image_size // 32,
+            ),
         )
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
@@ -122,7 +131,9 @@ class TFResNetModelTest(TFModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (TFResNetModel, TFResNetForImageClassification) if is_tf_available() else ()
+    all_model_classes = (
+        (TFResNetModel, TFResNetForImageClassification) if is_tf_available() else ()
+    )
 
     test_pruning = False
     test_resize_embeddings = False
@@ -132,7 +143,9 @@ class TFResNetModelTest(TFModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = TFResNetModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=ResNetConfig, has_text_modality=False)
+        self.config_tester = ConfigTester(
+            self, config_class=ResNetConfig, has_text_modality=False
+        )
 
     def test_config(self):
         self.create_and_test_config_common_properties()
@@ -179,7 +192,11 @@ class TFResNetModelTest(TFModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
-            hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
+            hidden_states = (
+                outputs.encoder_hidden_states
+                if config.is_encoder_decoder
+                else outputs.hidden_states
+            )
 
             expected_num_stages = self.model_tester.num_stages
             self.assertEqual(len(hidden_states), expected_num_stages + 1)
@@ -227,14 +244,18 @@ class TFResNetModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
         return (
-            AutoFeatureExtractor.from_pretrained(TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST[0])
+            AutoFeatureExtractor.from_pretrained(
+                TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+            )
             if is_vision_available()
             else None
         )
 
     @slow
     def test_inference_image_classification_head(self):
-        model = TFResNetForImageClassification.from_pretrained(TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST[0])
+        model = TFResNetForImageClassification.from_pretrained(
+            TF_RESNET_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+        )
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -249,4 +270,6 @@ class TFResNetModelIntegrationTest(unittest.TestCase):
 
         expected_slice = tf.constant([-11.1069, -9.7877, -8.3777])
 
-        self.assertTrue(np.allclose(outputs.logits[0, :3].numpy(), expected_slice, atol=1e-4))
+        self.assertTrue(
+            np.allclose(outputs.logits[0, :3].numpy(), expected_slice, atol=1e-4)
+        )

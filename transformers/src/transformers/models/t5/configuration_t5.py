@@ -75,9 +75,14 @@ class T5Config(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models).
     """
+
     model_type = "t5"
     keys_to_ignore_at_inference = ["past_key_values"]
-    attribute_map = {"hidden_size": "d_model", "num_attention_heads": "num_heads", "num_hidden_layers": "num_layers"}
+    attribute_map = {
+        "hidden_size": "d_model",
+        "num_attention_heads": "num_heads",
+        "num_hidden_layers": "num_layers",
+    }
 
     def __init__(
         self,
@@ -98,7 +103,7 @@ class T5Config(PretrainedConfig):
         use_cache=True,
         pad_token_id=0,
         eos_token_id=1,
-        **kwargs
+        **kwargs,
     ):
         self.vocab_size = vocab_size
         self.d_model = d_model
@@ -150,10 +155,16 @@ class T5OnnxConfig(OnnxSeq2SeqConfigWithPast):
         if self.use_past:
             common_inputs["attention_mask"][1] = "past_encoder_sequence + sequence"
             common_inputs["decoder_input_ids"] = {0: "batch"}
-            common_inputs["decoder_attention_mask"] = {0: "batch", 1: "past_decoder_sequence + sequence"}
+            common_inputs["decoder_attention_mask"] = {
+                0: "batch",
+                1: "past_decoder_sequence + sequence",
+            }
         else:
             common_inputs["decoder_input_ids"] = {0: "batch", 1: "decoder_sequence"}
-            common_inputs["decoder_attention_mask"] = {0: "batch", 1: "decoder_sequence"}
+            common_inputs["decoder_attention_mask"] = {
+                0: "batch",
+                1: "decoder_sequence",
+            }
 
         if self.use_past:
             self.fill_with_past_key_values_(common_inputs, direction="inputs")

@@ -20,11 +20,27 @@ import math
 import unittest
 
 from transformers import VanConfig
-from transformers.testing_utils import require_scipy, require_torch, require_vision, slow, torch_device
-from transformers.utils import cached_property, is_scipy_available, is_torch_available, is_vision_available
+from transformers.testing_utils import (
+    require_scipy,
+    require_torch,
+    require_vision,
+    slow,
+    torch_device,
+)
+from transformers.utils import (
+    cached_property,
+    is_scipy_available,
+    is_torch_available,
+    is_vision_available,
+)
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    _config_zero_init,
+    floats_tensor,
+    ids_tensor,
+)
 
 
 if is_scipy_available():
@@ -70,7 +86,9 @@ class VanModelTester:
         self.type_sequence_label_size = num_labels
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
@@ -97,7 +115,12 @@ class VanModelTester:
         # expected last hidden states: B, C, H // 32, W // 32
         self.parent.assertEqual(
             result.last_hidden_state.shape,
-            (self.batch_size, self.hidden_sizes[-1], self.image_size // 32, self.image_size // 32),
+            (
+                self.batch_size,
+                self.hidden_sizes[-1],
+                self.image_size // 32,
+                self.image_size // 32,
+            ),
         )
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
@@ -121,7 +144,9 @@ class VanModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (VanModel, VanForImageClassification) if is_torch_available() else ()
+    all_model_classes = (
+        (VanModel, VanForImageClassification) if is_torch_available() else ()
+    )
 
     test_pruning = False
     test_resize_embeddings = False
@@ -130,7 +155,9 @@ class VanModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = VanModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=VanConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=VanConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.create_and_test_config_common_properties()
@@ -190,7 +217,11 @@ class VanModelTest(ModelTesterMixin, unittest.TestCase):
                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                     )
                 elif isinstance(module, nn.Conv2d):
-                    fan_out = module.kernel_size[0] * module.kernel_size[1] * module.out_channels
+                    fan_out = (
+                        module.kernel_size[0]
+                        * module.kernel_size[1]
+                        * module.out_channels
+                    )
                     fan_out //= module.groups
                     std = math.sqrt(2.0 / fan_out)
                     # divide by std -> mean = 0, std = 1
@@ -207,7 +238,11 @@ class VanModelTest(ModelTesterMixin, unittest.TestCase):
             with torch.no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
-            hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
+            hidden_states = (
+                outputs.encoder_hidden_states
+                if config.is_encoder_decoder
+                else outputs.hidden_states
+            )
 
             expected_num_stages = len(self.model_tester.hidden_sizes)
             # van has no embeddings
@@ -253,11 +288,15 @@ def prepare_img():
 class VanModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return AutoFeatureExtractor.from_pretrained(VAN_PRETRAINED_MODEL_ARCHIVE_LIST[0])
+        return AutoFeatureExtractor.from_pretrained(
+            VAN_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+        )
 
     @slow
     def test_inference_image_classification_head(self):
-        model = VanForImageClassification.from_pretrained(VAN_PRETRAINED_MODEL_ARCHIVE_LIST[0]).to(torch_device)
+        model = VanForImageClassification.from_pretrained(
+            VAN_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -273,4 +312,6 @@ class VanModelIntegrationTest(unittest.TestCase):
 
         expected_slice = torch.tensor([0.1029, -0.0904, -0.6365]).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4)
+        )

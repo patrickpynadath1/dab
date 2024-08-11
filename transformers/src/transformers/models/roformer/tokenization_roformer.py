@@ -116,6 +116,7 @@ class RoFormerTokenizer(PreTrainedTokenizer):
     >>> tokenizer.tokenize("今天天气非常好。")
     # ['今', '天', '天', '气', '非常', '好', '。']
     ```"""
+
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -134,7 +135,7 @@ class RoFormerTokenizer(PreTrainedTokenizer):
         mask_token="[MASK]",
         tokenize_chinese_chars=True,
         strip_accents=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             do_lower_case=do_lower_case,
@@ -156,7 +157,9 @@ class RoFormerTokenizer(PreTrainedTokenizer):
                 " model use `tokenizer = AutoTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`"
             )
         self.vocab = load_vocab(vocab_file)
-        self.ids_to_tokens = collections.OrderedDict([(ids, tok) for tok, ids in self.vocab.items()])
+        self.ids_to_tokens = collections.OrderedDict(
+            [(ids, tok) for tok, ids in self.vocab.items()]
+        )
         self.do_basic_tokenize = do_basic_tokenize
         if do_basic_tokenize:
             self.basic_tokenizer = BasicTokenizer(
@@ -165,7 +168,9 @@ class RoFormerTokenizer(PreTrainedTokenizer):
                 tokenize_chinese_chars=tokenize_chinese_chars,
                 strip_accents=strip_accents,
             )
-        self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab, unk_token=self.unk_token)
+        self.wordpiece_tokenizer = WordpieceTokenizer(
+            vocab=self.vocab, unk_token=self.unk_token
+        )
         try:
             import rjieba
         except ImportError:
@@ -209,7 +214,9 @@ class RoFormerTokenizer(PreTrainedTokenizer):
                     split_tokens.extend(char_list)
         else:
             if self.do_basic_tokenize:
-                for token in self.basic_tokenizer.tokenize(text, never_split=self.all_special_tokens):
+                for token in self.basic_tokenizer.tokenize(
+                    text, never_split=self.all_special_tokens
+                ):
                     # If the token is part of the never_split set
                     if token in self.basic_tokenizer.never_split:
                         split_tokens.append(token)
@@ -258,7 +265,10 @@ class RoFormerTokenizer(PreTrainedTokenizer):
         return cls + token_ids_0 + sep + token_ids_1 + sep
 
     def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
@@ -278,7 +288,9 @@ class RoFormerTokenizer(PreTrainedTokenizer):
 
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
+                token_ids_0=token_ids_0,
+                token_ids_1=token_ids_1,
+                already_has_special_tokens=True,
             )
 
         if token_ids_1 is not None:
@@ -314,14 +326,20 @@ class RoFormerTokenizer(PreTrainedTokenizer):
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
-                save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+                save_directory,
+                (filename_prefix + "-" if filename_prefix else "")
+                + VOCAB_FILES_NAMES["vocab_file"],
             )
         else:
-            vocab_file = (filename_prefix + "-" if filename_prefix else "") + save_directory
+            vocab_file = (
+                filename_prefix + "-" if filename_prefix else ""
+            ) + save_directory
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:

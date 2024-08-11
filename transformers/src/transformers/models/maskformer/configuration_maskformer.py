@@ -95,6 +95,7 @@ class MaskFormerConfig(PretrainedConfig):
     ```
 
     """
+
     model_type = "maskformer"
     attribute_map = {"hidden_size": "mask_feature_size"}
     backbones_supported = ["swin"]
@@ -135,7 +136,9 @@ class MaskFormerConfig(PretrainedConfig):
                     f"Backbone {backbone_model_type} not supported, please use one of"
                     f" {','.join(self.backbones_supported)}"
                 )
-            backbone_config = AutoConfig.for_model(backbone_model_type, **backbone_config)
+            backbone_config = AutoConfig.for_model(
+                backbone_model_type, **backbone_config
+            )
 
         if decoder_config is None:
             # fall back to https://huggingface.co/facebook/detr-resnet-50
@@ -171,7 +174,10 @@ class MaskFormerConfig(PretrainedConfig):
 
     @classmethod
     def from_backbone_and_decoder_configs(
-        cls, backbone_config: PretrainedConfig, decoder_config: PretrainedConfig, **kwargs
+        cls,
+        backbone_config: PretrainedConfig,
+        decoder_config: PretrainedConfig,
+        **kwargs,
     ):
         """Instantiate a [`MaskFormerConfig`] (or a derived class) from a pre-trained backbone model configuration and DETR model
         configuration.

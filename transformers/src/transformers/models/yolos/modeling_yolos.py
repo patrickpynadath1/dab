@@ -46,7 +46,9 @@ if is_scipy_available():
     from scipy.optimize import linear_sum_assignment
 
 if is_vision_available():
-    from transformers.models.detr.feature_extraction_detr import center_to_corners_format
+    from transformers.models.detr.feature_extraction_detr import (
+        center_to_corners_format,
+    )
 
 
 logger = logging.get_logger(__name__)
@@ -121,11 +123,15 @@ class YolosEmbeddings(nn.Module):
         super().__init__()
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, config.hidden_size))
-        self.detection_tokens = nn.Parameter(torch.zeros(1, config.num_detection_tokens, config.hidden_size))
+        self.detection_tokens = nn.Parameter(
+            torch.zeros(1, config.num_detection_tokens, config.hidden_size)
+        )
         self.patch_embeddings = YolosPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.position_embeddings = nn.Parameter(
-            torch.zeros(1, num_patches + config.num_detection_tokens + 1, config.hidden_size)
+            torch.zeros(
+                1, num_patches + config.num_detection_tokens + 1, config.hidden_size
+            )
         )
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -145,7 +151,9 @@ class YolosEmbeddings(nn.Module):
 
         # add positional encoding to each token
         # this might require interpolation of the existing position embeddings
-        position_embeddings = self.interpolation(self.position_embeddings, (height, width))
+        position_embeddings = self.interpolation(
+            self.position_embeddings, (height, width)
+        )
 
         embeddings = embeddings + position_embeddings
 
@@ -171,15 +179,25 @@ class InterpolateInitialPositionEmbeddings(nn.Module):
             self.config.image_size[0] // self.config.patch_size,
             self.config.image_size[1] // self.config.patch_size,
         )
-        patch_pos_embed = patch_pos_embed.view(batch_size, hidden_size, patch_height, patch_width)
+        patch_pos_embed = patch_pos_embed.view(
+            batch_size, hidden_size, patch_height, patch_width
+        )
 
         height, width = img_size
-        new_patch_heigth, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
+        new_patch_heigth, new_patch_width = (
+            height // self.config.patch_size,
+            width // self.config.patch_size,
+        )
         patch_pos_embed = nn.functional.interpolate(
-            patch_pos_embed, size=(new_patch_heigth, new_patch_width), mode="bicubic", align_corners=False
+            patch_pos_embed,
+            size=(new_patch_heigth, new_patch_width),
+            mode="bicubic",
+            align_corners=False,
         )
         patch_pos_embed = patch_pos_embed.flatten(2).transpose(1, 2)
-        scale_pos_embed = torch.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), dim=1)
+        scale_pos_embed = torch.cat(
+            (cls_pos_embed, patch_pos_embed, det_pos_embed), dim=1
+        )
         return scale_pos_embed
 
 
@@ -200,11 +218,19 @@ class InterpolateMidPositionEmbeddings(nn.Module):
             self.config.image_size[0] // self.config.patch_size,
             self.config.image_size[1] // self.config.patch_size,
         )
-        patch_pos_embed = patch_pos_embed.view(depth * batch_size, hidden_size, patch_height, patch_width)
+        patch_pos_embed = patch_pos_embed.view(
+            depth * batch_size, hidden_size, patch_height, patch_width
+        )
         height, width = img_size
-        new_patch_height, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
+        new_patch_height, new_patch_width = (
+            height // self.config.patch_size,
+            width // self.config.patch_size,
+        )
         patch_pos_embed = nn.functional.interpolate(
-            patch_pos_embed, size=(new_patch_height, new_patch_width), mode="bicubic", align_corners=False
+            patch_pos_embed,
+            size=(new_patch_height, new_patch_width),
+            mode="bicubic",
+            align_corners=False,
         )
         patch_pos_embed = (
             patch_pos_embed.flatten(2)
@@ -212,7 +238,9 @@ class InterpolateMidPositionEmbeddings(nn.Module):
             .contiguous()
             .view(depth, batch_size, new_patch_height * new_patch_width, hidden_size)
         )
-        scale_pos_embed = torch.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), dim=2)
+        scale_pos_embed = torch.cat(
+            (cls_pos_embed, patch_pos_embed, det_pos_embed), dim=2
+        )
         return scale_pos_embed
 
 
@@ -228,15 +256,27 @@ class YolosPatchEmbeddings(nn.Module):
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
 
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size
+        )
 
     def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -253,7 +293,9 @@ class YolosPatchEmbeddings(nn.Module):
 class YolosSelfAttention(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size {config.hidden_size,} is not a multiple of the number of attention "
                 f"heads {config.num_attention_heads}."
@@ -263,19 +305,31 @@ class YolosSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.query = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
+        self.key = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
+        self.value = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self, hidden_states, head_mask: Optional[torch.Tensor] = None, output_attentions: bool = False
+        self,
+        hidden_states,
+        head_mask: Optional[torch.Tensor] = None,
+        output_attentions: bool = False,
     ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
 
@@ -305,7 +359,9 @@ class YolosSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
 
         return outputs
 
@@ -322,7 +378,9 @@ class YolosSelfOutput(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
 
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -342,7 +400,10 @@ class YolosAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.attention.num_attention_heads, self.attention.attention_head_size, self.pruned_heads
+            heads,
+            self.attention.num_attention_heads,
+            self.attention.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
@@ -352,8 +413,12 @@ class YolosAttention(nn.Module):
         self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
-        self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
-        self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
+        self.attention.num_attention_heads = self.attention.num_attention_heads - len(
+            heads
+        )
+        self.attention.all_head_size = (
+            self.attention.attention_head_size * self.attention.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
@@ -366,7 +431,9 @@ class YolosAttention(nn.Module):
 
         attention_output = self.output(self_outputs[0], hidden_states)
 
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
@@ -395,7 +462,9 @@ class YolosOutput(nn.Module):
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -415,8 +484,12 @@ class YolosLayer(nn.Module):
         self.attention = YolosAttention(config)
         self.intermediate = YolosIntermediate(config)
         self.output = YolosOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
+        self.layernorm_after = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
 
     def forward(
         self,
@@ -425,12 +498,16 @@ class YolosLayer(nn.Module):
         output_attentions: bool = False,
     ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
         self_attention_outputs = self.attention(
-            self.layernorm_before(hidden_states),  # in Yolos, layernorm is applied before self-attention
+            self.layernorm_before(
+                hidden_states
+            ),  # in Yolos, layernorm is applied before self-attention
             head_mask,
             output_attentions=output_attentions,
         )
         attention_output = self_attention_outputs[0]
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         # first residual connection
         hidden_states = attention_output + hidden_states
@@ -451,11 +528,15 @@ class YolosEncoder(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.ModuleList([YolosLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList(
+            [YolosLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
         seq_length = (
-            1 + (config.image_size[0] * config.image_size[1] // config.patch_size**2) + config.num_detection_tokens
+            1
+            + (config.image_size[0] * config.image_size[1] // config.patch_size**2)
+            + config.num_detection_tokens
         )
         self.mid_position_embeddings = (
             nn.Parameter(
@@ -470,7 +551,11 @@ class YolosEncoder(nn.Module):
             else None
         )
 
-        self.interpolation = InterpolateMidPositionEmbeddings(config) if config.use_mid_position_embeddings else None
+        self.interpolation = (
+            InterpolateMidPositionEmbeddings(config)
+            if config.use_mid_position_embeddings
+            else None
+        )
 
     def forward(
         self,
@@ -486,7 +571,9 @@ class YolosEncoder(nn.Module):
         all_self_attentions = () if output_attentions else None
 
         if self.config.use_mid_position_embeddings:
-            interpolated_mid_position_embeddings = self.interpolation(self.mid_position_embeddings, (height, width))
+            interpolated_mid_position_embeddings = self.interpolation(
+                self.mid_position_embeddings, (height, width)
+            )
 
         for i, layer_module in enumerate(self.layer):
             if output_hidden_states:
@@ -508,13 +595,17 @@ class YolosEncoder(nn.Module):
                     layer_head_mask,
                 )
             else:
-                layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions)
+                layer_outputs = layer_module(
+                    hidden_states, layer_head_mask, output_attentions
+                )
 
             hidden_states = layer_outputs[0]
 
             if self.config.use_mid_position_embeddings:
                 if i < (self.config.num_hidden_layers - 1):
-                    hidden_states = hidden_states + interpolated_mid_position_embeddings[i]
+                    hidden_states = (
+                        hidden_states + interpolated_mid_position_embeddings[i]
+                    )
 
             if output_attentions:
                 all_self_attentions = all_self_attentions + (layer_outputs[1],)
@@ -523,7 +614,11 @@ class YolosEncoder(nn.Module):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return BaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
@@ -554,7 +649,9 @@ class YolosPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def _set_gradient_checkpointing(self, module: YolosEncoder, value: bool = False) -> None:
+    def _set_gradient_checkpointing(
+        self, module: YolosEncoder, value: bool = False
+    ) -> None:
         if isinstance(module, YolosEncoder):
             module.gradient_checkpointing = value
 
@@ -642,11 +739,19 @@ class YolosModel(YolosPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -671,10 +776,16 @@ class YolosModel(YolosPreTrainedModel):
         )
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(sequence_output) if self.pooler is not None else None
+        )
 
         if not return_dict:
-            head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
+            head_outputs = (
+                (sequence_output, pooled_output)
+                if pooled_output is not None
+                else (sequence_output,)
+            )
             return head_outputs + encoder_outputs[1:]
 
         return BaseModelOutputWithPooling(
@@ -716,10 +827,16 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         # Object detection heads
         # We add one for the "no object" class
         self.class_labels_classifier = YolosMLPPredictionHead(
-            input_dim=config.hidden_size, hidden_dim=config.hidden_size, output_dim=config.num_labels + 1, num_layers=3
+            input_dim=config.hidden_size,
+            hidden_dim=config.hidden_size,
+            output_dim=config.num_labels + 1,
+            num_layers=3,
         )
         self.bbox_predictor = YolosMLPPredictionHead(
-            input_dim=config.hidden_size, hidden_dim=config.hidden_size, output_dim=4, num_layers=3
+            input_dim=config.hidden_size,
+            hidden_dim=config.hidden_size,
+            output_dim=4,
+            num_layers=3,
         )
 
         # Initialize weights and apply final processing
@@ -731,10 +848,15 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         # this is a workaround to make torchscript happy, as torchscript
         # doesn't support dictionary with non-homogeneous values, such
         # as a dict having both a Tensor and a list.
-        return [{"logits": a, "pred_boxes": b} for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+        return [
+            {"logits": a, "pred_boxes": b}
+            for a, b in zip(outputs_class[:-1], outputs_coord[:-1])
+        ]
 
     @add_start_docstrings_to_model_forward(YOLOS_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=YolosObjectDetectionOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=YolosObjectDetectionOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         pixel_values: torch.FloatTensor,
@@ -773,7 +895,9 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         >>> logits = outputs.logits
         >>> bboxes = outputs.pred_boxes
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # First, sent images through YOLOS base model to obtain hidden states
         outputs = self.vit(
@@ -796,7 +920,9 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         if labels is not None:
             # First: create the matcher
             matcher = YolosHungarianMatcher(
-                class_cost=self.config.class_cost, bbox_cost=self.config.bbox_cost, giou_cost=self.config.giou_cost
+                class_cost=self.config.class_cost,
+                bbox_cost=self.config.bbox_cost,
+                giou_cost=self.config.giou_cost,
             )
             # Second: create the criterion
             losses = ["labels", "boxes", "cardinality"]
@@ -812,7 +938,9 @@ class YolosForObjectDetection(YolosPreTrainedModel):
             outputs_loss["logits"] = logits
             outputs_loss["pred_boxes"] = pred_boxes
             if self.config.auxiliary_loss:
-                intermediate = outputs.intermediate_hidden_states if return_dict else outputs[4]
+                intermediate = (
+                    outputs.intermediate_hidden_states if return_dict else outputs[4]
+                )
                 outputs_class = self.class_labels_classifier(intermediate)
                 outputs_coord = self.bbox_predictor(intermediate).sigmoid()
                 auxiliary_outputs = self._set_aux_loss(outputs_class, outputs_coord)
@@ -825,9 +953,15 @@ class YolosForObjectDetection(YolosPreTrainedModel):
             if self.config.auxiliary_loss:
                 aux_weight_dict = {}
                 for i in range(self.config.decoder_layers - 1):
-                    aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
+                    aux_weight_dict.update(
+                        {k + f"_{i}": v for k, v in weight_dict.items()}
+                    )
                 weight_dict.update(aux_weight_dict)
-            loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+            loss = sum(
+                loss_dict[k] * weight_dict[k]
+                for k in loss_dict.keys()
+                if k in weight_dict
+            )
 
         if not return_dict:
             if auxiliary_outputs is not None:
@@ -869,7 +1003,9 @@ def dice_loss(inputs, targets, num_boxes):
 
 
 # Copied from transformers.models.detr.modeling_detr.sigmoid_focal_loss
-def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: float = 2):
+def sigmoid_focal_loss(
+    inputs, targets, num_boxes, alpha: float = 0.25, gamma: float = 2
+):
     """
     Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
 
@@ -888,7 +1024,9 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = nn.functional.binary_cross_entropy_with_logits(
+        inputs, targets, reduction="none"
+    )
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -947,13 +1085,20 @@ class YolosLoss(nn.Module):
         src_logits = outputs["logits"]
 
         idx = self._get_src_permutation_idx(indices)
-        target_classes_o = torch.cat([t["class_labels"][J] for t, (_, J) in zip(targets, indices)])
+        target_classes_o = torch.cat(
+            [t["class_labels"][J] for t, (_, J) in zip(targets, indices)]
+        )
         target_classes = torch.full(
-            src_logits.shape[:2], self.num_classes, dtype=torch.int64, device=src_logits.device
+            src_logits.shape[:2],
+            self.num_classes,
+            dtype=torch.int64,
+            device=src_logits.device,
         )
         target_classes[idx] = target_classes_o
 
-        loss_ce = nn.functional.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
+        loss_ce = nn.functional.cross_entropy(
+            src_logits.transpose(1, 2), target_classes, self.empty_weight
+        )
         losses = {"loss_ce": loss_ce}
 
         return losses
@@ -967,7 +1112,9 @@ class YolosLoss(nn.Module):
         """
         logits = outputs["logits"]
         device = logits.device
-        target_lengths = torch.as_tensor([len(v["class_labels"]) for v in targets], device=device)
+        target_lengths = torch.as_tensor(
+            [len(v["class_labels"]) for v in targets], device=device
+        )
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (logits.argmax(-1) != logits.shape[-1] - 1).sum(1)
         card_err = nn.functional.l1_loss(card_pred.float(), target_lengths.float())
@@ -985,7 +1132,9 @@ class YolosLoss(nn.Module):
             raise KeyError("No predicted boxes found in outputs")
         idx = self._get_src_permutation_idx(indices)
         src_boxes = outputs["pred_boxes"][idx]
-        target_boxes = torch.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
+        target_boxes = torch.cat(
+            [t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0
+        )
 
         loss_bbox = nn.functional.l1_loss(src_boxes, target_boxes, reduction="none")
 
@@ -993,7 +1142,10 @@ class YolosLoss(nn.Module):
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
 
         loss_giou = 1 - torch.diag(
-            generalized_box_iou(center_to_corners_format(src_boxes), center_to_corners_format(target_boxes))
+            generalized_box_iou(
+                center_to_corners_format(src_boxes),
+                center_to_corners_format(target_boxes),
+            )
         )
         losses["loss_giou"] = loss_giou.sum() / num_boxes
         return losses
@@ -1019,7 +1171,10 @@ class YolosLoss(nn.Module):
 
         # upsample predictions to the target size
         src_masks = nn.functional.interpolate(
-            src_masks[:, None], size=target_masks.shape[-2:], mode="bilinear", align_corners=False
+            src_masks[:, None],
+            size=target_masks.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
         )
         src_masks = src_masks[:, 0].flatten(1)
 
@@ -1033,13 +1188,17 @@ class YolosLoss(nn.Module):
 
     def _get_src_permutation_idx(self, indices):
         # permute predictions following indices
-        batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        batch_idx = torch.cat(
+            [torch.full_like(src, i) for i, (src, _) in enumerate(indices)]
+        )
         src_idx = torch.cat([src for (src, _) in indices])
         return batch_idx, src_idx
 
     def _get_tgt_permutation_idx(self, indices):
         # permute targets following indices
-        batch_idx = torch.cat([torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
+        batch_idx = torch.cat(
+            [torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)]
+        )
         tgt_idx = torch.cat([tgt for (_, tgt) in indices])
         return batch_idx, tgt_idx
 
@@ -1065,14 +1224,18 @@ class YolosLoss(nn.Module):
                 List of dicts, such that len(targets) == batch_size. The expected keys in each dict depends on the
                 losses applied, see each loss' doc.
         """
-        outputs_without_aux = {k: v for k, v in outputs.items() if k != "auxiliary_outputs"}
+        outputs_without_aux = {
+            k: v for k, v in outputs.items() if k != "auxiliary_outputs"
+        }
 
         # Retrieve the matching between the outputs of the last layer and the targets
         indices = self.matcher(outputs_without_aux, targets)
 
         # Compute the average number of target boxes across all nodes, for normalization purposes
         num_boxes = sum(len(t["class_labels"]) for t in targets)
-        num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
+        num_boxes = torch.as_tensor(
+            [num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device
+        )
         # (Niels): comment out function below, distributed training to be added
         # if is_dist_avail_and_initialized():
         #     torch.distributed.all_reduce(num_boxes)
@@ -1092,7 +1255,9 @@ class YolosLoss(nn.Module):
                     if loss == "masks":
                         # Intermediate masks losses are too costly to compute, we ignore them.
                         continue
-                    l_dict = self.get_loss(loss, auxiliary_outputs, targets, indices, num_boxes)
+                    l_dict = self.get_loss(
+                        loss, auxiliary_outputs, targets, indices, num_boxes
+                    )
                     l_dict = {k + f"_{i}": v for k, v in l_dict.items()}
                     losses.update(l_dict)
 
@@ -1113,7 +1278,9 @@ class YolosMLPPredictionHead(nn.Module):
         super().__init__()
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
-        self.layers = nn.ModuleList(nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim]))
+        self.layers = nn.ModuleList(
+            nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])
+        )
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
@@ -1139,7 +1306,9 @@ class YolosHungarianMatcher(nn.Module):
             The relative weight of the giou loss of the bounding box in the matching cost.
     """
 
-    def __init__(self, class_cost: float = 1, bbox_cost: float = 1, giou_cost: float = 1):
+    def __init__(
+        self, class_cost: float = 1, bbox_cost: float = 1, giou_cost: float = 1
+    ):
         super().__init__()
         requires_backends(self, ["scipy"])
 
@@ -1173,7 +1342,9 @@ class YolosHungarianMatcher(nn.Module):
         batch_size, num_queries = outputs["logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch
-        out_prob = outputs["logits"].flatten(0, 1).softmax(-1)  # [batch_size * num_queries, num_classes]
+        out_prob = (
+            outputs["logits"].flatten(0, 1).softmax(-1)
+        )  # [batch_size * num_queries, num_classes]
         out_bbox = outputs["pred_boxes"].flatten(0, 1)  # [batch_size * num_queries, 4]
 
         # Also concat the target labels and boxes
@@ -1189,15 +1360,30 @@ class YolosHungarianMatcher(nn.Module):
         bbox_cost = torch.cdist(out_bbox, target_bbox, p=1)
 
         # Compute the giou cost between boxes
-        giou_cost = -generalized_box_iou(center_to_corners_format(out_bbox), center_to_corners_format(target_bbox))
+        giou_cost = -generalized_box_iou(
+            center_to_corners_format(out_bbox), center_to_corners_format(target_bbox)
+        )
 
         # Final cost matrix
-        cost_matrix = self.bbox_cost * bbox_cost + self.class_cost * class_cost + self.giou_cost * giou_cost
+        cost_matrix = (
+            self.bbox_cost * bbox_cost
+            + self.class_cost * class_cost
+            + self.giou_cost * giou_cost
+        )
         cost_matrix = cost_matrix.view(batch_size, num_queries, -1).cpu()
 
         sizes = [len(v["boxes"]) for v in targets]
-        indices = [linear_sum_assignment(c[i]) for i, c in enumerate(cost_matrix.split(sizes, -1))]
-        return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices]
+        indices = [
+            linear_sum_assignment(c[i])
+            for i, c in enumerate(cost_matrix.split(sizes, -1))
+        ]
+        return [
+            (
+                torch.as_tensor(i, dtype=torch.int64),
+                torch.as_tensor(j, dtype=torch.int64),
+            )
+            for i, j in indices
+        ]
 
 
 # Copied from transformers.models.detr.modeling_detr._upcast
@@ -1254,9 +1440,13 @@ def generalized_box_iou(boxes1, boxes2):
     # degenerate boxes gives inf / nan results
     # so do an early check
     if not (boxes1[:, 2:] >= boxes1[:, :2]).all():
-        raise ValueError(f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
+        raise ValueError(
+            f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}"
+        )
     if not (boxes2[:, 2:] >= boxes2[:, :2]).all():
-        raise ValueError(f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
+        raise ValueError(
+            f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}"
+        )
     iou, union = box_iou(boxes1, boxes2)
 
     top_left = torch.min(boxes1[:, None, :2], boxes2[:, :2])

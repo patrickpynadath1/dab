@@ -68,7 +68,9 @@ class TensorFlowBenchmarkArguments(BenchmarkArguments):
         default=0,
         metadata={"help": "CPU / GPU device index. Defaults to 0."},
     )
-    eager_mode: bool = field(default=False, metadata={"help": "Benchmark models in eager model."})
+    eager_mode: bool = field(
+        default=False, metadata={"help": "Benchmark models in eager model."}
+    )
     use_xla: bool = field(
         default=False,
         metadata={
@@ -83,7 +85,9 @@ class TensorFlowBenchmarkArguments(BenchmarkArguments):
         if self.tpu:
             try:
                 if self.tpu_name:
-                    tpu = tf.distribute.cluster_resolver.TPUClusterResolver(self.tpu_name)
+                    tpu = tf.distribute.cluster_resolver.TPUClusterResolver(
+                        self.tpu_name
+                    )
                 else:
                     tpu = tf.distribute.cluster_resolver.TPUClusterResolver()
             except ValueError:
@@ -92,7 +96,11 @@ class TensorFlowBenchmarkArguments(BenchmarkArguments):
 
     @cached_property
     @tf_required
-    def _setup_strategy(self) -> Tuple["tf.distribute.Strategy", "tf.distribute.cluster_resolver.TPUClusterResolver"]:
+    def _setup_strategy(
+        self,
+    ) -> Tuple[
+        "tf.distribute.Strategy", "tf.distribute.cluster_resolver.TPUClusterResolver"
+    ]:
         if self.is_tpu:
             tf.config.experimental_connect_to_cluster(self._setup_tpu)
             tf.tpu.experimental.initialize_tpu_system(self._setup_tpu)
@@ -103,10 +111,14 @@ class TensorFlowBenchmarkArguments(BenchmarkArguments):
             if self.is_gpu:
                 # TODO: Currently only single GPU is supported
                 tf.config.set_visible_devices(self.gpu_list[self.device_idx], "GPU")
-                strategy = tf.distribute.OneDeviceStrategy(device=f"/gpu:{self.device_idx}")
+                strategy = tf.distribute.OneDeviceStrategy(
+                    device=f"/gpu:{self.device_idx}"
+                )
             else:
                 tf.config.set_visible_devices([], "GPU")  # disable GPU
-                strategy = tf.distribute.OneDeviceStrategy(device=f"/cpu:{self.device_idx}")
+                strategy = tf.distribute.OneDeviceStrategy(
+                    device=f"/cpu:{self.device_idx}"
+                )
 
         return strategy
 

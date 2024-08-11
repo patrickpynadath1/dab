@@ -107,7 +107,9 @@ CTRL_TINY = "hf-internal-testing/tiny-random-ctrl"
 TRANSFO_XL_TINY = "hf-internal-testing/tiny-random-transfo-xl"  # same as ctrl
 
 # other issues with tiny models
-IBERT_TINY = "hf-internal-testing/tiny-random-ibert"  # multiple issues with either mlm/qa/clas
+IBERT_TINY = (
+    "hf-internal-testing/tiny-random-ibert"  # multiple issues with either mlm/qa/clas
+)
 REFORMER_TINY = "hf-internal-testing/tiny-random-reformer"  # multiple issues with either mlm/qa/clas
 
 # *** Lacking official examples to test with ***
@@ -361,7 +363,9 @@ class TestDeepSpeedModelZoo(TestCasePlus):
         # keep for quick debug
         # print(" ".join([f"\nPYTHONPATH={self.src_dir_str}"] +cmd)); die
         subprocess.check_call(cmd, shell=True)
-        assert os.path.exists(recovered_model_path), f"{recovered_model_path} was not found"
+        assert os.path.exists(
+            recovered_model_path
+        ), f"{recovered_model_path} was not found"
 
         # possibly could also test that the resulting saved model is usable but given that we use
         # random models we won't know if it's any good

@@ -92,9 +92,13 @@ class TestAddNewModelLike(unittest.TestCase):
             self.assertEqual(f.read(), expected_result)
 
     def test_re_class_func(self):
-        self.assertEqual(_re_class_func.search("def my_function(x, y):").groups()[0], "my_function")
+        self.assertEqual(
+            _re_class_func.search("def my_function(x, y):").groups()[0], "my_function"
+        )
         self.assertEqual(_re_class_func.search("class MyClass:").groups()[0], "MyClass")
-        self.assertEqual(_re_class_func.search("class MyClass(SuperClass):").groups()[0], "MyClass")
+        self.assertEqual(
+            _re_class_func.search("class MyClass(SuperClass):").groups()[0], "MyClass"
+        )
 
     def test_model_patterns_defaults(self):
         model_patterns = ModelPatterns("GPT-New new", "huggingface/gpt-new-base")
@@ -148,19 +152,44 @@ class SomeClass:
 }"""
         line = '    "gpt2": "GPT2Config",'
 
-        self.assertEqual(add_content_to_text(test_text, line, add_before="bert"), expected)
-        self.assertEqual(add_content_to_text(test_text, line, add_before="bert", exact_match=True), test_text)
         self.assertEqual(
-            add_content_to_text(test_text, line, add_before='    "bert": "BertConfig",', exact_match=True), expected
+            add_content_to_text(test_text, line, add_before="bert"), expected
         )
-        self.assertEqual(add_content_to_text(test_text, line, add_before=re.compile('^\s*"bert":')), expected)
+        self.assertEqual(
+            add_content_to_text(test_text, line, add_before="bert", exact_match=True),
+            test_text,
+        )
+        self.assertEqual(
+            add_content_to_text(
+                test_text,
+                line,
+                add_before='    "bert": "BertConfig",',
+                exact_match=True,
+            ),
+            expected,
+        )
+        self.assertEqual(
+            add_content_to_text(test_text, line, add_before=re.compile('^\s*"bert":')),
+            expected,
+        )
 
-        self.assertEqual(add_content_to_text(test_text, line, add_after="gpt"), expected)
-        self.assertEqual(add_content_to_text(test_text, line, add_after="gpt", exact_match=True), test_text)
         self.assertEqual(
-            add_content_to_text(test_text, line, add_after='    "gpt": "GPTConfig",', exact_match=True), expected
+            add_content_to_text(test_text, line, add_after="gpt"), expected
         )
-        self.assertEqual(add_content_to_text(test_text, line, add_after=re.compile('^\s*"gpt":')), expected)
+        self.assertEqual(
+            add_content_to_text(test_text, line, add_after="gpt", exact_match=True),
+            test_text,
+        )
+        self.assertEqual(
+            add_content_to_text(
+                test_text, line, add_after='    "gpt": "GPTConfig",', exact_match=True
+            ),
+            expected,
+        )
+        self.assertEqual(
+            add_content_to_text(test_text, line, add_after=re.compile('^\s*"gpt":')),
+            expected,
+        )
 
     def test_add_content_to_file(self):
         test_text = """all_configs = {
@@ -189,7 +218,12 @@ class SomeClass:
             self.check_result(file_name, test_text)
 
             self.init_file(file_name, test_text)
-            add_content_to_file(file_name, line, add_before='    "bert": "BertConfig",', exact_match=True)
+            add_content_to_file(
+                file_name,
+                line,
+                add_before='    "bert": "BertConfig",',
+                exact_match=True,
+            )
             self.check_result(file_name, expected)
 
             self.init_file(file_name, test_text)
@@ -205,7 +239,9 @@ class SomeClass:
             self.check_result(file_name, test_text)
 
             self.init_file(file_name, test_text)
-            add_content_to_file(file_name, line, add_after='    "gpt": "GPTConfig",', exact_match=True)
+            add_content_to_file(
+                file_name, line, add_after='    "gpt": "GPTConfig",', exact_match=True
+            )
             self.check_result(file_name, expected)
 
             self.init_file(file_name, test_text)
@@ -213,13 +249,21 @@ class SomeClass:
             self.check_result(file_name, expected)
 
     def test_simplify_replacements(self):
-        self.assertEqual(simplify_replacements([("Bert", "NewBert")]), [("Bert", "NewBert")])
+        self.assertEqual(
+            simplify_replacements([("Bert", "NewBert")]), [("Bert", "NewBert")]
+        )
         self.assertEqual(
             simplify_replacements([("Bert", "NewBert"), ("bert", "new-bert")]),
             [("Bert", "NewBert"), ("bert", "new-bert")],
         )
         self.assertEqual(
-            simplify_replacements([("BertConfig", "NewBertConfig"), ("Bert", "NewBert"), ("bert", "new-bert")]),
+            simplify_replacements(
+                [
+                    ("BertConfig", "NewBertConfig"),
+                    ("Bert", "NewBert"),
+                    ("bert", "new-bert"),
+                ]
+            ),
             [("Bert", "NewBert"), ("bert", "new-bert")],
         )
 
@@ -257,7 +301,9 @@ BERT_CONSTANT = "value"
 NEW_BERT_CONSTANT = "value"
 '''
 
-        bert_converted, replacements = replace_model_patterns(bert_test, bert_model_patterns, new_bert_model_patterns)
+        bert_converted, replacements = replace_model_patterns(
+            bert_test, bert_model_patterns, new_bert_model_patterns
+        )
         self.assertEqual(bert_converted, bert_expected)
         # Replacements are empty here since bert as been replaced by bert_new in some instances and bert-new
         # in others.
@@ -266,12 +312,16 @@ NEW_BERT_CONSTANT = "value"
         # If we remove the model type, we will get replacements
         bert_test = bert_test.replace('    model_type = "bert"\n', "")
         bert_expected = bert_expected.replace('    model_type = "new-bert"\n', "")
-        bert_converted, replacements = replace_model_patterns(bert_test, bert_model_patterns, new_bert_model_patterns)
+        bert_converted, replacements = replace_model_patterns(
+            bert_test, bert_model_patterns, new_bert_model_patterns
+        )
         self.assertEqual(bert_converted, bert_expected)
         self.assertEqual(replacements, "BERT->NEW_BERT,Bert->NewBert,bert->new_bert")
 
         gpt_model_patterns = ModelPatterns("GPT2", "gpt2")
-        new_gpt_model_patterns = ModelPatterns("GPT-New new", "huggingface/gpt-new-base")
+        new_gpt_model_patterns = ModelPatterns(
+            "GPT-New new", "huggingface/gpt-new-base"
+        )
         gpt_test = '''class GPT2PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -302,15 +352,21 @@ GPT2_CONSTANT = "value"
 GPT_NEW_NEW_CONSTANT = "value"
 '''
 
-        gpt_converted, replacements = replace_model_patterns(gpt_test, gpt_model_patterns, new_gpt_model_patterns)
+        gpt_converted, replacements = replace_model_patterns(
+            gpt_test, gpt_model_patterns, new_gpt_model_patterns
+        )
         self.assertEqual(gpt_converted, gpt_expected)
         # Replacements are empty here since GPT2 as been replaced by GPTNewNew in some instances and GPT_NEW_NEW
         # in others.
         self.assertEqual(replacements, "")
 
-        roberta_model_patterns = ModelPatterns("RoBERTa", "roberta-base", model_camel_cased="Roberta")
+        roberta_model_patterns = ModelPatterns(
+            "RoBERTa", "roberta-base", model_camel_cased="Roberta"
+        )
         new_roberta_model_patterns = ModelPatterns(
-            "RoBERTa-New", "huggingface/roberta-new-base", model_camel_cased="RobertaNew"
+            "RoBERTa-New",
+            "huggingface/roberta-new-base",
+            model_camel_cased="RobertaNew",
         )
         roberta_test = '''# Copied from transformers.models.bert.BertModel with Bert->Roberta
 class RobertaModel(RobertaPreTrainedModel):
@@ -331,7 +387,9 @@ class RobertaNewModel(RobertaNewPreTrainedModel):
 
     def test_get_module_from_file(self):
         self.assertEqual(
-            get_module_from_file("/git/transformers/src/transformers/models/bert/modeling_tf_bert.py"),
+            get_module_from_file(
+                "/git/transformers/src/transformers/models/bert/modeling_tf_bert.py"
+            ),
             "transformers.models.bert.modeling_tf_bert",
         )
         self.assertEqual(
@@ -387,7 +445,12 @@ NEW_BERT_CONSTANT = "value"
             self.check_result(dest_file_name, bert_expected_with_copied_from)
 
             self.init_file(file_name, bert_test)
-            duplicate_module(file_name, bert_model_patterns, new_bert_model_patterns, add_copied_from=False)
+            duplicate_module(
+                file_name,
+                bert_model_patterns,
+                new_bert_model_patterns,
+                add_copied_from=False,
+            )
             self.check_result(dest_file_name, bert_expected)
 
     def test_duplicate_module_with_copied_from(self):
@@ -435,18 +498,37 @@ NEW_BERT_CONSTANT = "value"
             self.check_result(dest_file_name, bert_expected)
 
             self.init_file(file_name, bert_test)
-            duplicate_module(file_name, bert_model_patterns, new_bert_model_patterns, add_copied_from=False)
+            duplicate_module(
+                file_name,
+                bert_model_patterns,
+                new_bert_model_patterns,
+                add_copied_from=False,
+            )
             self.check_result(dest_file_name, bert_expected)
 
     def test_filter_framework_files(self):
-        files = ["modeling_tf_bert.py", "modeling_bert.py", "modeling_flax_bert.py", "configuration_bert.py"]
+        files = [
+            "modeling_tf_bert.py",
+            "modeling_bert.py",
+            "modeling_flax_bert.py",
+            "configuration_bert.py",
+        ]
         self.assertEqual(filter_framework_files(files), files)
-        self.assertEqual(set(filter_framework_files(files, ["pt", "tf", "flax"])), set(files))
-
-        self.assertEqual(set(filter_framework_files(files, ["pt"])), {"modeling_bert.py", "configuration_bert.py"})
-        self.assertEqual(set(filter_framework_files(files, ["tf"])), {"modeling_tf_bert.py", "configuration_bert.py"})
         self.assertEqual(
-            set(filter_framework_files(files, ["flax"])), {"modeling_flax_bert.py", "configuration_bert.py"}
+            set(filter_framework_files(files, ["pt", "tf", "flax"])), set(files)
+        )
+
+        self.assertEqual(
+            set(filter_framework_files(files, ["pt"])),
+            {"modeling_bert.py", "configuration_bert.py"},
+        )
+        self.assertEqual(
+            set(filter_framework_files(files, ["tf"])),
+            {"modeling_tf_bert.py", "configuration_bert.py"},
+        )
+        self.assertEqual(
+            set(filter_framework_files(files, ["flax"])),
+            {"modeling_flax_bert.py", "configuration_bert.py"},
         )
 
         self.assertEqual(
@@ -469,12 +551,16 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(bert_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/bert.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]
+        }
         self.assertEqual(model_files, BERT_MODEL_FILES)
 
         self.assertEqual(bert_files["module_name"], "bert")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]
+        }
         bert_test_files = {
             "tests/test_tokenization_bert.py",
             "tests/test_modeling_bert.py",
@@ -488,12 +574,16 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(vit_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/vit.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]
+        }
         self.assertEqual(model_files, VIT_MODEL_FILES)
 
         self.assertEqual(vit_files["module_name"], "vit")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]
+        }
         vit_test_files = {
             "tests/test_feature_extraction_vit.py",
             "tests/test_modeling_vit.py",
@@ -507,12 +597,16 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(wav2vec2_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/wav2vec2.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]
+        }
         self.assertEqual(model_files, WAV2VEC2_MODEL_FILES)
 
         self.assertEqual(wav2vec2_files["module_name"], "wav2vec2")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]
+        }
         wav2vec2_test_files = {
             "tests/test_feature_extraction_wav2vec2.py",
             "tests/test_modeling_wav2vec2.py",
@@ -530,7 +624,9 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(bert_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/bert.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]
+        }
         bert_model_files = BERT_MODEL_FILES - {
             "src/transformers/models/bert/modeling_tf_bert.py",
             "src/transformers/models/bert/modeling_flax_bert.py",
@@ -539,7 +635,9 @@ NEW_BERT_CONSTANT = "value"
 
         self.assertEqual(bert_files["module_name"], "bert")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]
+        }
         bert_test_files = {
             "tests/test_tokenization_bert.py",
             "tests/test_modeling_bert.py",
@@ -551,7 +649,9 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(vit_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/vit.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]
+        }
         vit_model_files = VIT_MODEL_FILES - {
             "src/transformers/models/vit/modeling_tf_vit.py",
             "src/transformers/models/vit/modeling_flax_vit.py",
@@ -560,7 +660,9 @@ NEW_BERT_CONSTANT = "value"
 
         self.assertEqual(vit_files["module_name"], "vit")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]
+        }
         vit_test_files = {
             "tests/test_feature_extraction_vit.py",
             "tests/test_modeling_vit.py",
@@ -572,7 +674,9 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(wav2vec2_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/wav2vec2.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]
+        }
         wav2vec2_model_files = WAV2VEC2_MODEL_FILES - {
             "src/transformers/models/wav2vec2/modeling_tf_wav2vec2.py",
             "src/transformers/models/wav2vec2/modeling_flax_wav2vec2.py",
@@ -581,7 +685,9 @@ NEW_BERT_CONSTANT = "value"
 
         self.assertEqual(wav2vec2_files["module_name"], "wav2vec2")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]
+        }
         wav2vec2_test_files = {
             "tests/test_feature_extraction_wav2vec2.py",
             "tests/test_modeling_wav2vec2.py",
@@ -597,13 +703,19 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(bert_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/bert.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]}
-        bert_model_files = BERT_MODEL_FILES - {"src/transformers/models/bert/modeling_bert.py"}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["model_files"]
+        }
+        bert_model_files = BERT_MODEL_FILES - {
+            "src/transformers/models/bert/modeling_bert.py"
+        }
         self.assertEqual(model_files, bert_model_files)
 
         self.assertEqual(bert_files["module_name"], "bert")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in bert_files["test_files"]
+        }
         bert_test_files = {
             "tests/test_tokenization_bert.py",
             "tests/test_modeling_tf_bert.py",
@@ -616,13 +728,19 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(vit_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/vit.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]}
-        vit_model_files = VIT_MODEL_FILES - {"src/transformers/models/vit/modeling_vit.py"}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["model_files"]
+        }
+        vit_model_files = VIT_MODEL_FILES - {
+            "src/transformers/models/vit/modeling_vit.py"
+        }
         self.assertEqual(model_files, vit_model_files)
 
         self.assertEqual(vit_files["module_name"], "vit")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in vit_files["test_files"]
+        }
         vit_test_files = {
             "tests/test_feature_extraction_vit.py",
             "tests/test_modeling_tf_vit.py",
@@ -635,13 +753,19 @@ NEW_BERT_CONSTANT = "value"
         doc_file = str(Path(wav2vec2_files["doc_file"]).relative_to(REPO_PATH))
         self.assertEqual(doc_file, "docs/source/model_doc/wav2vec2.mdx")
 
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]}
-        wav2vec2_model_files = WAV2VEC2_MODEL_FILES - {"src/transformers/models/wav2vec2/modeling_wav2vec2.py"}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["model_files"]
+        }
+        wav2vec2_model_files = WAV2VEC2_MODEL_FILES - {
+            "src/transformers/models/wav2vec2/modeling_wav2vec2.py"
+        }
         self.assertEqual(model_files, wav2vec2_model_files)
 
         self.assertEqual(wav2vec2_files["module_name"], "wav2vec2")
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in wav2vec2_files["test_files"]
+        }
         wav2vec2_test_files = {
             "tests/test_feature_extraction_wav2vec2.py",
             "tests/test_modeling_tf_wav2vec2.py",
@@ -658,18 +782,33 @@ NEW_BERT_CONSTANT = "value"
     def test_retrieve_model_classes(self):
         gpt_classes = {k: set(v) for k, v in retrieve_model_classes("gpt2").items()}
         expected_gpt_classes = {
-            "pt": {"GPT2ForTokenClassification", "GPT2Model", "GPT2LMHeadModel", "GPT2ForSequenceClassification"},
-            "tf": {"TFGPT2Model", "TFGPT2ForSequenceClassification", "TFGPT2LMHeadModel"},
+            "pt": {
+                "GPT2ForTokenClassification",
+                "GPT2Model",
+                "GPT2LMHeadModel",
+                "GPT2ForSequenceClassification",
+            },
+            "tf": {
+                "TFGPT2Model",
+                "TFGPT2ForSequenceClassification",
+                "TFGPT2LMHeadModel",
+            },
             "flax": {"FlaxGPT2Model", "FlaxGPT2LMHeadModel"},
         }
         self.assertEqual(gpt_classes, expected_gpt_classes)
 
         del expected_gpt_classes["flax"]
-        gpt_classes = {k: set(v) for k, v in retrieve_model_classes("gpt2", frameworks=["pt", "tf"]).items()}
+        gpt_classes = {
+            k: set(v)
+            for k, v in retrieve_model_classes("gpt2", frameworks=["pt", "tf"]).items()
+        }
         self.assertEqual(gpt_classes, expected_gpt_classes)
 
         del expected_gpt_classes["pt"]
-        gpt_classes = {k: set(v) for k, v in retrieve_model_classes("gpt2", frameworks=["tf"]).items()}
+        gpt_classes = {
+            k: set(v)
+            for k, v in retrieve_model_classes("gpt2", frameworks=["tf"]).items()
+        }
         self.assertEqual(gpt_classes, expected_gpt_classes)
 
     def test_retrieve_info_for_model_with_bert(self):
@@ -696,10 +835,14 @@ NEW_BERT_CONSTANT = "value"
         self.assertEqual(model_classes, expected_model_classes)
 
         all_bert_files = bert_info["model_files"]
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["model_files"]
+        }
         self.assertEqual(model_files, BERT_MODEL_FILES)
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["test_files"]
+        }
         bert_test_files = {
             "tests/test_tokenization_bert.py",
             "tests/test_modeling_bert.py",
@@ -738,18 +881,27 @@ NEW_BERT_CONSTANT = "value"
             "BertForPreTraining",
             "BertLMHeadModel",
         ]
-        expected_model_classes = {"pt": set(bert_classes), "tf": {f"TF{m}" for m in bert_classes}}
+        expected_model_classes = {
+            "pt": set(bert_classes),
+            "tf": {f"TF{m}" for m in bert_classes},
+        }
 
         self.assertEqual(set(bert_info["frameworks"]), {"pt", "tf"})
         model_classes = {k: set(v) for k, v in bert_info["model_classes"].items()}
         self.assertEqual(model_classes, expected_model_classes)
 
         all_bert_files = bert_info["model_files"]
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["model_files"]}
-        bert_model_files = BERT_MODEL_FILES - {"src/transformers/models/bert/modeling_flax_bert.py"}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["model_files"]
+        }
+        bert_model_files = BERT_MODEL_FILES - {
+            "src/transformers/models/bert/modeling_flax_bert.py"
+        }
         self.assertEqual(model_files, bert_model_files)
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_bert_files["test_files"]
+        }
         bert_test_files = {
             "tests/test_tokenization_bert.py",
             "tests/test_modeling_bert.py",
@@ -788,10 +940,14 @@ NEW_BERT_CONSTANT = "value"
         self.assertEqual(model_classes, expected_model_classes)
 
         all_vit_files = vit_info["model_files"]
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_vit_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_vit_files["model_files"]
+        }
         self.assertEqual(model_files, VIT_MODEL_FILES)
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_vit_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH)) for f in all_vit_files["test_files"]
+        }
         vit_test_files = {
             "tests/test_feature_extraction_vit.py",
             "tests/test_modeling_vit.py",
@@ -813,7 +969,9 @@ NEW_BERT_CONSTANT = "value"
         self.assertEqual(vit_model_patterns.model_camel_cased, "ViT")
         self.assertEqual(vit_model_patterns.model_upper_cased, "VIT")
         self.assertEqual(vit_model_patterns.config_class, "ViTConfig")
-        self.assertEqual(vit_model_patterns.feature_extractor_class, "ViTFeatureExtractor")
+        self.assertEqual(
+            vit_model_patterns.feature_extractor_class, "ViTFeatureExtractor"
+        )
         self.assertIsNone(vit_model_patterns.tokenizer_class)
         self.assertIsNone(vit_model_patterns.processor_class)
 
@@ -839,10 +997,16 @@ NEW_BERT_CONSTANT = "value"
         self.assertEqual(model_classes, expected_model_classes)
 
         all_wav2vec2_files = wav2vec2_info["model_files"]
-        model_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_wav2vec2_files["model_files"]}
+        model_files = {
+            str(Path(f).relative_to(REPO_PATH))
+            for f in all_wav2vec2_files["model_files"]
+        }
         self.assertEqual(model_files, WAV2VEC2_MODEL_FILES)
 
-        test_files = {str(Path(f).relative_to(REPO_PATH)) for f in all_wav2vec2_files["test_files"]}
+        test_files = {
+            str(Path(f).relative_to(REPO_PATH))
+            for f in all_wav2vec2_files["test_files"]
+        }
         wav2vec2_test_files = {
             "tests/test_feature_extraction_wav2vec2.py",
             "tests/test_modeling_wav2vec2.py",
@@ -860,15 +1024,21 @@ NEW_BERT_CONSTANT = "value"
 
         wav2vec2_model_patterns = wav2vec2_info["model_patterns"]
         self.assertEqual(wav2vec2_model_patterns.model_name, "Wav2Vec2")
-        self.assertEqual(wav2vec2_model_patterns.checkpoint, "facebook/wav2vec2-base-960h")
+        self.assertEqual(
+            wav2vec2_model_patterns.checkpoint, "facebook/wav2vec2-base-960h"
+        )
         self.assertEqual(wav2vec2_model_patterns.model_type, "wav2vec2")
         self.assertEqual(wav2vec2_model_patterns.model_lower_cased, "wav2vec2")
         self.assertEqual(wav2vec2_model_patterns.model_camel_cased, "Wav2Vec2")
         self.assertEqual(wav2vec2_model_patterns.model_upper_cased, "WAV_2_VEC_2")
         self.assertEqual(wav2vec2_model_patterns.config_class, "Wav2Vec2Config")
-        self.assertEqual(wav2vec2_model_patterns.feature_extractor_class, "Wav2Vec2FeatureExtractor")
+        self.assertEqual(
+            wav2vec2_model_patterns.feature_extractor_class, "Wav2Vec2FeatureExtractor"
+        )
         self.assertEqual(wav2vec2_model_patterns.processor_class, "Wav2Vec2Processor")
-        self.assertEqual(wav2vec2_model_patterns.tokenizer_class, "Wav2Vec2CTCTokenizer")
+        self.assertEqual(
+            wav2vec2_model_patterns.tokenizer_class, "Wav2Vec2CTCTokenizer"
+        )
 
     def test_clean_frameworks_in_init_with_gpt(self):
         test_init = """
@@ -1019,7 +1189,9 @@ else:
             self.check_result(file_name, init_pt_only)
 
             self.init_file(file_name, test_init)
-            clean_frameworks_in_init(file_name, frameworks=["pt"], keep_processing=False)
+            clean_frameworks_in_init(
+                file_name, frameworks=["pt"], keep_processing=False
+            )
             self.check_result(file_name, init_pt_only_no_tokenizer)
 
     def test_clean_frameworks_in_init_with_vit(self):
@@ -1167,7 +1339,9 @@ else:
             self.check_result(file_name, init_pt_only)
 
             self.init_file(file_name, test_init)
-            clean_frameworks_in_init(file_name, frameworks=["pt"], keep_processing=False)
+            clean_frameworks_in_init(
+                file_name, frameworks=["pt"], keep_processing=False
+            )
             self.check_result(file_name, init_pt_only_no_feature_extractor)
 
     def test_duplicate_doc_file(self):
@@ -1273,9 +1447,13 @@ The original code can be found [here](<INSERT LINK TO GITHUB REPO HERE>).
             doc_file = os.path.join(tmp_dir, "gpt2.mdx")
             new_doc_file = os.path.join(tmp_dir, "gpt-new-new.mdx")
 
-            gpt2_model_patterns = ModelPatterns("GPT2", "gpt2", tokenizer_class="GPT2Tokenizer")
+            gpt2_model_patterns = ModelPatterns(
+                "GPT2", "gpt2", tokenizer_class="GPT2Tokenizer"
+            )
             new_model_patterns = ModelPatterns(
-                "GPT-New New", "huggingface/gpt-new-new", tokenizer_class="GPTNewNewTokenizer"
+                "GPT-New New",
+                "huggingface/gpt-new-new",
+                tokenizer_class="GPTNewNewTokenizer",
             )
 
             self.init_file(doc_file, test_doc)
@@ -1298,7 +1476,9 @@ The original code can be found [here](<INSERT LINK TO GITHUB REPO HERE>).
                 "",
             )
             self.init_file(doc_file, test_doc)
-            duplicate_doc_file(doc_file, gpt2_model_patterns, new_model_patterns, frameworks=["pt"])
+            duplicate_doc_file(
+                doc_file, gpt2_model_patterns, new_model_patterns, frameworks=["pt"]
+            )
             self.check_result(new_doc_file, test_new_doc_pt_only)
 
             test_new_doc_no_tok = test_new_doc.replace(
@@ -1315,7 +1495,9 @@ The original code can be found [here](<INSERT LINK TO GITHUB REPO HERE>).
                 "",
             )
             new_model_patterns = ModelPatterns(
-                "GPT-New New", "huggingface/gpt-new-new", tokenizer_class="GPT2Tokenizer"
+                "GPT-New New",
+                "huggingface/gpt-new-new",
+                tokenizer_class="GPT2Tokenizer",
             )
             self.init_file(doc_file, test_doc)
             duplicate_doc_file(doc_file, gpt2_model_patterns, new_model_patterns)
@@ -1338,5 +1520,7 @@ The original code can be found [here](<INSERT LINK TO GITHUB REPO HERE>).
                 "",
             )
             self.init_file(doc_file, test_doc)
-            duplicate_doc_file(doc_file, gpt2_model_patterns, new_model_patterns, frameworks=["pt"])
+            duplicate_doc_file(
+                doc_file, gpt2_model_patterns, new_model_patterns, frameworks=["pt"]
+            )
             self.check_result(new_doc_file, test_new_doc_pt_only_no_tok)

@@ -23,7 +23,12 @@ from transformers.models.big_bird.tokenization_big_bird import BigBirdTokenizer
 from transformers.testing_utils import require_torch, slow, torch_device
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    floats_tensor,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_torch_available():
@@ -40,7 +45,9 @@ if is_torch_available():
         BigBirdForTokenClassification,
         BigBirdModel,
     )
-    from transformers.models.big_bird.modeling_big_bird import BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.big_bird.modeling_big_bird import (
+        BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 class BigBirdModelTester:
@@ -114,19 +121,33 @@ class BigBirdModelTester:
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         sequence_labels = None
         token_labels = None
         choice_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
         config = self.get_config()
 
-        return config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        return (
+            config,
+            input_ids,
+            token_type_ids,
+            input_mask,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+        )
 
     def get_config(self):
         return BigBirdConfig(
@@ -162,8 +183,12 @@ class BigBirdModelTester:
         ) = self.prepare_config_and_inputs()
 
         config.is_decoder = True
-        encoder_hidden_states = floats_tensor([self.batch_size, self.seq_length, self.hidden_size])
-        encoder_attention_mask = ids_tensor([self.batch_size, self.seq_length], vocab_size=2)
+        encoder_hidden_states = floats_tensor(
+            [self.batch_size, self.seq_length, self.hidden_size]
+        )
+        encoder_attention_mask = ids_tensor(
+            [self.batch_size, self.seq_length], vocab_size=2
+        )
 
         return (
             config,
@@ -178,18 +203,37 @@ class BigBirdModelTester:
         )
 
     def create_and_check_model(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = BigBirdModel(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
+        result = model(
+            input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
+        )
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_pretraining(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = BigBirdForPreTraining(config=config)
         model.to(torch_device)
@@ -201,8 +245,13 @@ class BigBirdModelTester:
             labels=token_labels,
             next_sentence_label=sequence_labels,
         )
-        self.parent.assertEqual(result.prediction_logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
-        self.parent.assertEqual(result.seq_relationship_logits.shape, (self.batch_size, config.num_labels))
+        self.parent.assertEqual(
+            result.prediction_logits.shape,
+            (self.batch_size, self.seq_length, self.vocab_size),
+        )
+        self.parent.assertEqual(
+            result.seq_relationship_logits.shape, (self.batch_size, config.num_labels)
+        )
 
     def create_and_check_model_as_decoder(
         self,
@@ -233,8 +282,13 @@ class BigBirdModelTester:
             token_type_ids=token_type_ids,
             encoder_hidden_states=encoder_hidden_states,
         )
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        result = model(
+            input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
+        )
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_causal_lm(
         self,
@@ -251,17 +305,38 @@ class BigBirdModelTester:
         model = BigBirdForCausalLM(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        result = model(
+            input_ids,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+            labels=token_labels,
+        )
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
 
     def create_and_check_for_masked_lm(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = BigBirdForMaskedLM(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        result = model(
+            input_ids,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+            labels=token_labels,
+        )
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
 
     def create_and_check_decoder_model_past_large_inputs(
         self,
@@ -317,16 +392,27 @@ class BigBirdModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -3:, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
     def create_and_check_for_question_answering(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = BigBirdForQuestionAnswering(config=config)
         model.to(torch_device)
@@ -338,46 +424,91 @@ class BigBirdModelTester:
             start_positions=sequence_labels,
             end_positions=sequence_labels,
         )
-        self.parent.assertEqual(result.start_logits.shape, (self.batch_size, self.seq_length))
-        self.parent.assertEqual(result.end_logits.shape, (self.batch_size, self.seq_length))
+        self.parent.assertEqual(
+            result.start_logits.shape, (self.batch_size, self.seq_length)
+        )
+        self.parent.assertEqual(
+            result.end_logits.shape, (self.batch_size, self.seq_length)
+        )
 
     def create_and_check_for_sequence_classification(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_labels = self.num_labels
         model = BigBirdForSequenceClassification(config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
+        result = model(
+            input_ids,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+            labels=sequence_labels,
+        )
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_token_classification(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_labels = self.num_labels
         model = BigBirdForTokenClassification(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
+        result = model(
+            input_ids,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+            labels=token_labels,
+        )
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.num_labels)
+        )
 
     def create_and_check_for_multiple_choice(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_choices = self.num_choices
         model = BigBirdForMultipleChoice(config=config)
         model.to(torch_device)
         model.eval()
-        multiple_choice_inputs_ids = input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_input_mask = input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        multiple_choice_inputs_ids = (
+            input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        )
+        multiple_choice_token_type_ids = (
+            token_type_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        )
+        multiple_choice_input_mask = (
+            input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        )
         result = model(
             multiple_choice_inputs_ids,
             attention_mask=multiple_choice_input_mask,
             token_type_ids=multiple_choice_token_type_ids,
             labels=choice_labels,
         )
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_choices))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_choices)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -390,7 +521,11 @@ class BigBirdModelTester:
             token_labels,
             choice_labels,
         ) = config_and_inputs
-        inputs_dict = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": input_mask}
+        inputs_dict = {
+            "input_ids": input_ids,
+            "token_type_ids": token_type_ids,
+            "attention_mask": input_mask,
+        }
         return config, inputs_dict
 
     def create_and_check_for_auto_padding(
@@ -407,7 +542,10 @@ class BigBirdModelTester:
         model.to(torch_device)
         model.eval()
         result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_change_to_full_attn(
         self,
@@ -423,7 +561,10 @@ class BigBirdModelTester:
         model.to(torch_device)
         model.eval()
         result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
         # the config should not be changed
         self.parent.assertTrue(model.config.attention_type == "block_sparse")
 
@@ -457,12 +598,16 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
 
     # special case for ForPreTraining model
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels
+        )
 
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = torch.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=torch.long, device=torch_device
+                    (self.model_tester.batch_size, self.model_tester.seq_length),
+                    dtype=torch.long,
+                    device=torch_device,
                 )
                 inputs_dict["next_sentence_label"] = torch.zeros(
                     self.model_tester.batch_size, dtype=torch.long, device=torch_device
@@ -471,7 +616,9 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = BigBirdModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=BigBirdConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=BigBirdConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -494,7 +641,9 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_decoder_model_past_with_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_decoder()
-        self.model_tester.create_and_check_decoder_model_past_large_inputs(*config_and_inputs)
+        self.model_tester.create_and_check_decoder_model_past_large_inputs(
+            *config_and_inputs
+        )
 
     def test_for_question_answering(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -502,7 +651,9 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_for_sequence_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
+        self.model_tester.create_and_check_for_sequence_classification(
+            *config_and_inputs
+        )
 
     def test_for_token_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -577,11 +728,15 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         model = BigBirdModel(config).eval().to(torch_device)
 
         with torch.no_grad():
-            hidden_states = model(input_ids, attention_mask=attention_mask).last_hidden_state
+            hidden_states = model(
+                input_ids, attention_mask=attention_mask
+            ).last_hidden_state
             self.assertTrue(
                 torch.allclose(
                     hidden_states[0, 0, :5],
-                    torch.tensor([1.4825, 0.0774, 0.8226, -0.2962, -0.9593], device=torch_device),
+                    torch.tensor(
+                        [1.4825, 0.0774, 0.8226, -0.2962, -0.9593], device=torch_device
+                    ),
                     atol=1e-3,
                 )
             )
@@ -597,13 +752,23 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester.create_and_check_for_change_to_full_attn(*config_and_inputs)
 
     # overwrite from common in order to skip the check on `attentions`
-    def check_pt_flax_outputs(self, fx_outputs, pt_outputs, model_class, tol=1e-5, name="outputs", attributes=None):
+    def check_pt_flax_outputs(
+        self,
+        fx_outputs,
+        pt_outputs,
+        model_class,
+        tol=1e-5,
+        name="outputs",
+        attributes=None,
+    ):
         # `bigbird_block_sparse_attention` in `FlaxBigBird` returns `attention_probs = None`, while in PyTorch version,
         # an effort was done to return `attention_probs` (yet to be verified).
         if name.startswith("outputs.attentions"):
             return
         else:
-            super().check_pt_flax_outputs(fx_outputs, pt_outputs, model_class, tol, name, attributes)
+            super().check_pt_flax_outputs(
+                fx_outputs, pt_outputs, model_class, tol, name, attributes
+            )
 
 
 @require_torch
@@ -623,10 +788,14 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         return ids
 
     def test_inference_block_sparse_pretraining(self):
-        model = BigBirdForPreTraining.from_pretrained("google/bigbird-roberta-base", attention_type="block_sparse")
+        model = BigBirdForPreTraining.from_pretrained(
+            "google/bigbird-roberta-base", attention_type="block_sparse"
+        )
         model.to(torch_device)
 
-        input_ids = torch.tensor([[20920, 232, 328, 1437] * 1024], dtype=torch.long, device=torch_device)
+        input_ids = torch.tensor(
+            [[20920, 232, 328, 1437] * 1024], dtype=torch.long, device=torch_device
+        )
         outputs = model(input_ids)
         prediction_logits = outputs.prediction_logits
         seq_relationship_logits = outputs.seq_relationship_logits
@@ -644,17 +813,31 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             device=torch_device,
         )
         self.assertTrue(
-            torch.allclose(prediction_logits[0, 128:132, 128:132], expected_prediction_logits_slice, atol=1e-4)
+            torch.allclose(
+                prediction_logits[0, 128:132, 128:132],
+                expected_prediction_logits_slice,
+                atol=1e-4,
+            )
         )
 
-        expected_seq_relationship_logits = torch.tensor([[58.8196, 56.3629]], device=torch_device)
-        self.assertTrue(torch.allclose(seq_relationship_logits, expected_seq_relationship_logits, atol=1e-4))
+        expected_seq_relationship_logits = torch.tensor(
+            [[58.8196, 56.3629]], device=torch_device
+        )
+        self.assertTrue(
+            torch.allclose(
+                seq_relationship_logits, expected_seq_relationship_logits, atol=1e-4
+            )
+        )
 
     def test_inference_full_pretraining(self):
-        model = BigBirdForPreTraining.from_pretrained("google/bigbird-roberta-base", attention_type="original_full")
+        model = BigBirdForPreTraining.from_pretrained(
+            "google/bigbird-roberta-base", attention_type="original_full"
+        )
         model.to(torch_device)
 
-        input_ids = torch.tensor([[20920, 232, 328, 1437] * 512], dtype=torch.long, device=torch_device)
+        input_ids = torch.tensor(
+            [[20920, 232, 328, 1437] * 512], dtype=torch.long, device=torch_device
+        )
         outputs = model(input_ids)
         prediction_logits = outputs.prediction_logits
         seq_relationship_logits = outputs.seq_relationship_logits
@@ -672,11 +855,21 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             device=torch_device,
         )
         self.assertTrue(
-            torch.allclose(prediction_logits[0, 128:132, 128:132], expected_prediction_logits_slice, atol=1e-4)
+            torch.allclose(
+                prediction_logits[0, 128:132, 128:132],
+                expected_prediction_logits_slice,
+                atol=1e-4,
+            )
         )
 
-        expected_seq_relationship_logits = torch.tensor([[41.4503, 41.2406]], device=torch_device)
-        self.assertTrue(torch.allclose(seq_relationship_logits, expected_seq_relationship_logits, atol=1e-4))
+        expected_seq_relationship_logits = torch.tensor(
+            [[41.4503, 41.2406]], device=torch_device
+        )
+        self.assertTrue(
+            torch.allclose(
+                seq_relationship_logits, expected_seq_relationship_logits, atol=1e-4
+            )
+        )
 
     def test_block_sparse_attention_probs(self):
         """
@@ -687,7 +880,10 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             return
 
         model = BigBirdModel.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="block_sparse", num_random_blocks=3, block_size=16
+            "google/bigbird-roberta-base",
+            attention_type="block_sparse",
+            num_random_blocks=3,
+            block_size=16,
         )
         model.to(torch_device)
         model.eval()
@@ -698,12 +894,14 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         hidden_states = model.embeddings(input_ids)
 
         batch_size, seqlen, _ = hidden_states.size()
-        attn_mask = torch.ones(batch_size, seqlen, device=torch_device, dtype=torch.float)
+        attn_mask = torch.ones(
+            batch_size, seqlen, device=torch_device, dtype=torch.float
+        )
         to_seq_length = from_seq_length = seqlen
         from_block_size = to_block_size = config.block_size
 
-        blocked_mask, band_mask, from_mask, to_mask = model.create_masks_for_block_sparse_attn(
-            attn_mask, config.block_size
+        blocked_mask, band_mask, from_mask, to_mask = (
+            model.create_masks_for_block_sparse_attn(attn_mask, config.block_size)
         )
         from_blocked_mask = to_blocked_mask = blocked_mask
 
@@ -737,7 +935,9 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
                 output_attentions=True,
             )
 
-            context_layer = context_layer.contiguous().view(batch_size, from_seq_length, -1)
+            context_layer = context_layer.contiguous().view(
+                batch_size, from_seq_length, -1
+            )
             cl = torch.einsum("bhqk,bhkd->bhqd", attention_probs, value_layer)
             cl = cl.view(context_layer.size())
 
@@ -745,7 +945,10 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_block_sparse_context_layer(self):
         model = BigBirdModel.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="block_sparse", num_random_blocks=3, block_size=16
+            "google/bigbird-roberta-base",
+            attention_type="block_sparse",
+            num_random_blocks=3,
+            block_size=16,
         )
         model.to(torch_device)
         model.eval()
@@ -755,25 +958,179 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         dummy_hidden_states = model.embeddings(input_ids)
 
         attn_mask = torch.ones_like(input_ids, device=torch_device)
-        blocked_mask, band_mask, from_mask, to_mask = model.create_masks_for_block_sparse_attn(
-            attn_mask, config.block_size
+        blocked_mask, band_mask, from_mask, to_mask = (
+            model.create_masks_for_block_sparse_attn(attn_mask, config.block_size)
         )
         targeted_cl = torch.tensor(
             [
-                [0.1874, 1.5260, 0.2335, -0.0473, -0.0961, 1.8384, -0.0141, 0.1250, 0.0085, -0.0048],
-                [-0.0554, 0.0728, 0.1683, -0.1332, 0.1741, 0.1337, -0.2380, -0.1849, -0.0390, -0.0259],
-                [-0.0419, 0.0767, 0.1591, -0.1399, 0.1789, 0.1257, -0.2406, -0.1772, -0.0261, -0.0079],
-                [0.1860, 1.5172, 0.2326, -0.0473, -0.0953, 1.8291, -0.0147, 0.1245, 0.0082, -0.0046],
-                [0.1879, 1.5296, 0.2335, -0.0471, -0.0975, 1.8433, -0.0136, 0.1260, 0.0086, -0.0054],
-                [0.1854, 1.5147, 0.2334, -0.0480, -0.0956, 1.8250, -0.0149, 0.1222, 0.0082, -0.0060],
-                [0.1859, 1.5184, 0.2334, -0.0474, -0.0955, 1.8297, -0.0143, 0.1234, 0.0079, -0.0054],
-                [0.1885, 1.5336, 0.2335, -0.0467, -0.0979, 1.8481, -0.0130, 0.1269, 0.0085, -0.0049],
-                [0.1881, 1.5305, 0.2335, -0.0471, -0.0976, 1.8445, -0.0135, 0.1262, 0.0086, -0.0053],
-                [0.1852, 1.5148, 0.2333, -0.0480, -0.0949, 1.8254, -0.0151, 0.1225, 0.0079, -0.0055],
-                [0.1877, 1.5292, 0.2335, -0.0470, -0.0972, 1.8431, -0.0135, 0.1259, 0.0084, -0.0052],
-                [0.1874, 1.5261, 0.2334, -0.0472, -0.0968, 1.8393, -0.0140, 0.1251, 0.0084, -0.0052],
-                [0.1853, 1.5151, 0.2331, -0.0478, -0.0948, 1.8256, -0.0154, 0.1228, 0.0086, -0.0052],
-                [0.1867, 1.5233, 0.2334, -0.0475, -0.0965, 1.8361, -0.0139, 0.1247, 0.0084, -0.0054],
+                [
+                    0.1874,
+                    1.5260,
+                    0.2335,
+                    -0.0473,
+                    -0.0961,
+                    1.8384,
+                    -0.0141,
+                    0.1250,
+                    0.0085,
+                    -0.0048,
+                ],
+                [
+                    -0.0554,
+                    0.0728,
+                    0.1683,
+                    -0.1332,
+                    0.1741,
+                    0.1337,
+                    -0.2380,
+                    -0.1849,
+                    -0.0390,
+                    -0.0259,
+                ],
+                [
+                    -0.0419,
+                    0.0767,
+                    0.1591,
+                    -0.1399,
+                    0.1789,
+                    0.1257,
+                    -0.2406,
+                    -0.1772,
+                    -0.0261,
+                    -0.0079,
+                ],
+                [
+                    0.1860,
+                    1.5172,
+                    0.2326,
+                    -0.0473,
+                    -0.0953,
+                    1.8291,
+                    -0.0147,
+                    0.1245,
+                    0.0082,
+                    -0.0046,
+                ],
+                [
+                    0.1879,
+                    1.5296,
+                    0.2335,
+                    -0.0471,
+                    -0.0975,
+                    1.8433,
+                    -0.0136,
+                    0.1260,
+                    0.0086,
+                    -0.0054,
+                ],
+                [
+                    0.1854,
+                    1.5147,
+                    0.2334,
+                    -0.0480,
+                    -0.0956,
+                    1.8250,
+                    -0.0149,
+                    0.1222,
+                    0.0082,
+                    -0.0060,
+                ],
+                [
+                    0.1859,
+                    1.5184,
+                    0.2334,
+                    -0.0474,
+                    -0.0955,
+                    1.8297,
+                    -0.0143,
+                    0.1234,
+                    0.0079,
+                    -0.0054,
+                ],
+                [
+                    0.1885,
+                    1.5336,
+                    0.2335,
+                    -0.0467,
+                    -0.0979,
+                    1.8481,
+                    -0.0130,
+                    0.1269,
+                    0.0085,
+                    -0.0049,
+                ],
+                [
+                    0.1881,
+                    1.5305,
+                    0.2335,
+                    -0.0471,
+                    -0.0976,
+                    1.8445,
+                    -0.0135,
+                    0.1262,
+                    0.0086,
+                    -0.0053,
+                ],
+                [
+                    0.1852,
+                    1.5148,
+                    0.2333,
+                    -0.0480,
+                    -0.0949,
+                    1.8254,
+                    -0.0151,
+                    0.1225,
+                    0.0079,
+                    -0.0055,
+                ],
+                [
+                    0.1877,
+                    1.5292,
+                    0.2335,
+                    -0.0470,
+                    -0.0972,
+                    1.8431,
+                    -0.0135,
+                    0.1259,
+                    0.0084,
+                    -0.0052,
+                ],
+                [
+                    0.1874,
+                    1.5261,
+                    0.2334,
+                    -0.0472,
+                    -0.0968,
+                    1.8393,
+                    -0.0140,
+                    0.1251,
+                    0.0084,
+                    -0.0052,
+                ],
+                [
+                    0.1853,
+                    1.5151,
+                    0.2331,
+                    -0.0478,
+                    -0.0948,
+                    1.8256,
+                    -0.0154,
+                    0.1228,
+                    0.0086,
+                    -0.0052,
+                ],
+                [
+                    0.1867,
+                    1.5233,
+                    0.2334,
+                    -0.0475,
+                    -0.0965,
+                    1.8361,
+                    -0.0139,
+                    0.1247,
+                    0.0084,
+                    -0.0054,
+                ],
             ],
             device=torch_device,
         )
@@ -789,12 +1146,17 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         context_layer = context_layer[0]
 
         self.assertEqual(context_layer.shape, torch.Size((1, 128, 768)))
-        self.assertTrue(torch.allclose(context_layer[0, 64:78, 300:310], targeted_cl, atol=0.0001))
+        self.assertTrue(
+            torch.allclose(context_layer[0, 64:78, 300:310], targeted_cl, atol=0.0001)
+        )
 
     def test_tokenizer_inference(self):
         tokenizer = BigBirdTokenizer.from_pretrained("google/bigbird-roberta-base")
         model = BigBirdModel.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="block_sparse", num_random_blocks=3, block_size=16
+            "google/bigbird-roberta-base",
+            attention_type="block_sparse",
+            num_random_blocks=3,
+            block_size=16,
         )
         model.to(torch_device)
 
@@ -837,12 +1199,19 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             ],
             device=torch_device,
         )
-        self.assertTrue(torch.allclose(prediction[0, 52:64, 320:324], expected_prediction, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                prediction[0, 52:64, 320:324], expected_prediction, atol=1e-4
+            )
+        )
 
     def test_inference_question_answering(self):
         tokenizer = BigBirdTokenizer.from_pretrained("google/bigbird-base-trivia-itc")
         model = BigBirdForQuestionAnswering.from_pretrained(
-            "google/bigbird-base-trivia-itc", attention_type="block_sparse", block_size=16, num_random_blocks=3
+            "google/bigbird-base-trivia-itc",
+            attention_type="block_sparse",
+            block_size=16,
+            num_random_blocks=3,
         )
         model.to(torch_device)
 
@@ -888,12 +1257,21 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         )
         # fmt: on
 
-        self.assertTrue(torch.allclose(start_logits[:, 64:96], target_start_logits, atol=1e-4))
-        self.assertTrue(torch.allclose(end_logits[:, 64:96], target_end_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(start_logits[:, 64:96], target_start_logits, atol=1e-4)
+        )
+        self.assertTrue(
+            torch.allclose(end_logits[:, 64:96], target_end_logits, atol=1e-4)
+        )
 
         input_ids = inputs["input_ids"].tolist()
         answer = [
-            input_ids[i][torch.argmax(start_logits, dim=-1)[i] : torch.argmax(end_logits, dim=-1)[i] + 1]
+            input_ids[i][
+                torch.argmax(start_logits, dim=-1)[i] : torch.argmax(
+                    end_logits, dim=-1
+                )[i]
+                + 1
+            ]
             for i in range(len(input_ids))
         ]
         answer = tokenizer.batch_decode(answer)
@@ -905,7 +1283,9 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         model = BigBirdForMaskedLM.from_pretrained("google/bigbird-roberta-base")
         model.to(torch_device)
 
-        input_ids = tokenizer("The goal of life is [MASK] .", return_tensors="pt").input_ids.to(torch_device)
+        input_ids = tokenizer(
+            "The goal of life is [MASK] .", return_tensors="pt"
+        ).input_ids.to(torch_device)
         logits = model(input_ids).logits
 
         # [MASK] is token at 6th position
@@ -914,12 +1294,17 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_auto_padding(self):
         model = BigBirdModel.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="block_sparse", num_random_blocks=3, block_size=16
+            "google/bigbird-roberta-base",
+            attention_type="block_sparse",
+            num_random_blocks=3,
+            block_size=16,
         )
         model.to(torch_device)
         model.eval()
 
-        input_ids = torch.tensor([200 * [10] + 40 * [2] + [1]], device=torch_device, dtype=torch.long)
+        input_ids = torch.tensor(
+            [200 * [10] + 40 * [2] + [1]], device=torch_device, dtype=torch.long
+        )
         output = model(input_ids).to_tuple()[0]
 
         # fmt: off

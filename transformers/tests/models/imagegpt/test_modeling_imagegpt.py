@@ -106,9 +106,14 @@ class ImageGPTModelTester:
         return ImageGPTConfig.from_pretrained("imagegpt")
 
     def prepare_config_and_inputs(
-        self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
+        self,
+        gradient_checkpointing=False,
+        scale_attn_by_inverse_layer_idx=False,
+        reorder_and_upcast_attn=False,
     ):
-        pixel_values = ids_tensor([self.batch_size, self.seq_length], self.vocab_size - 1)
+        pixel_values = ids_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size - 1
+        )
 
         input_mask = None
         if self.use_input_mask:
@@ -116,18 +121,26 @@ class ImageGPTModelTester:
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         mc_token_ids = None
         if self.use_mc_token_ids:
-            mc_token_ids = ids_tensor([self.batch_size, self.num_choices], self.seq_length)
+            mc_token_ids = ids_tensor(
+                [self.batch_size, self.num_choices], self.seq_length
+            )
 
         sequence_labels = None
         token_labels = None
         choice_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
         config = self.get_config(
@@ -151,7 +164,10 @@ class ImageGPTModelTester:
         )
 
     def get_config(
-        self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
+        self,
+        gradient_checkpointing=False,
+        scale_attn_by_inverse_layer_idx=False,
+        reorder_and_upcast_attn=False,
     ):
         return ImageGPTConfig(
             vocab_size=self.vocab_size,
@@ -190,8 +206,12 @@ class ImageGPTModelTester:
             choice_labels,
         ) = self.prepare_config_and_inputs()
 
-        encoder_hidden_states = floats_tensor([self.batch_size, self.seq_length, self.hidden_size])
-        encoder_attention_mask = ids_tensor([self.batch_size, self.seq_length], vocab_size=2)
+        encoder_hidden_states = floats_tensor(
+            [self.batch_size, self.seq_length, self.hidden_size]
+        )
+        encoder_attention_mask = ids_tensor(
+            [self.batch_size, self.seq_length], vocab_size=2
+        )
 
         return (
             config,
@@ -206,7 +226,9 @@ class ImageGPTModelTester:
             encoder_attention_mask,
         )
 
-    def create_and_check_imagegpt_model(self, config, pixel_values, input_mask, head_mask, token_type_ids, *args):
+    def create_and_check_imagegpt_model(
+        self, config, pixel_values, input_mask, head_mask, token_type_ids, *args
+    ):
         model = ImageGPTModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -215,10 +237,15 @@ class ImageGPTModelTester:
         result = model(pixel_values, token_type_ids=token_type_ids)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
         self.parent.assertEqual(len(result.past_key_values), config.n_layer)
 
-    def create_and_check_lm_head_model(self, config, pixel_values, input_mask, head_mask, token_type_ids, *args):
+    def create_and_check_lm_head_model(
+        self, config, pixel_values, input_mask, head_mask, token_type_ids, *args
+    ):
         model = ImageGPTForCausalImageModeling(config)
         model.to(torch_device)
         model.eval()
@@ -227,16 +254,31 @@ class ImageGPTModelTester:
         result = model(pixel_values, token_type_ids=token_type_ids, labels=labels)
         self.parent.assertEqual(result.loss.shape, ())
         # ImageGPTForCausalImageModeling doens't have tied input- and output embeddings
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size - 1))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size - 1)
+        )
 
     def create_and_check_imagegpt_for_image_classification(
-        self, config, pixel_values, input_mask, head_mask, token_type_ids, mc_token_ids, sequence_labels, *args
+        self,
+        config,
+        pixel_values,
+        input_mask,
+        head_mask,
+        token_type_ids,
+        mc_token_ids,
+        sequence_labels,
+        *args
     ):
         config.num_labels = self.num_labels
         model = ImageGPTForImageClassification(config)
         model.to(torch_device)
         model.eval()
-        result = model(pixel_values, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
+        result = model(
+            pixel_values,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+            labels=sequence_labels,
+        )
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def prepare_config_and_inputs_for_common(self):
@@ -267,15 +309,21 @@ class ImageGPTModelTester:
 class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     all_model_classes = (
-        (ImageGPTForCausalImageModeling, ImageGPTForImageClassification, ImageGPTModel) if is_torch_available() else ()
+        (ImageGPTForCausalImageModeling, ImageGPTForImageClassification, ImageGPTModel)
+        if is_torch_available()
+        else ()
     )
-    all_generative_model_classes = (ImageGPTForCausalImageModeling,) if is_torch_available() else ()
+    all_generative_model_classes = (
+        (ImageGPTForCausalImageModeling,) if is_torch_available() else ()
+    )
     test_missing_keys = False
     input_name = "pixel_values"
 
     # as ImageGPTForImageClassification isn't included in any auto mapping, we add labels here
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels
+        )
 
         if return_labels:
             if model_class.__name__ == "ImageGPTForImageClassification":
@@ -290,7 +338,10 @@ class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
         expected_shape = (batch_size, config.vocab_size - 1)
         self.assertIsInstance(scores, tuple)
         self.assertEqual(len(scores), length)
-        self.assertListEqual([iter_scores.shape for iter_scores in scores], [expected_shape] * len(scores))
+        self.assertListEqual(
+            [iter_scores.shape for iter_scores in scores],
+            [expected_shape] * len(scores),
+        )
 
     def setUp(self):
         self.model_tester = ImageGPTModelTester(self)
@@ -309,7 +360,9 @@ class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
 
     def test_imagegpt_image_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_imagegpt_for_image_classification(*config_and_inputs)
+        self.model_tester.create_and_check_imagegpt_for_image_classification(
+            *config_and_inputs
+        )
 
     @slow
     def test_model_from_pretrained(self):
@@ -354,7 +407,9 @@ class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
             model_embed = model.resize_token_embeddings(model_vocab_size + 10)
             self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] + 10)
+            self.assertEqual(
+                model_embed.weight.shape[0], cloned_embeddings.shape[0] + 10
+            )
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -362,7 +417,9 @@ class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
             model_embed = model.resize_token_embeddings(model_vocab_size - 15)
             self.assertEqual(model.config.vocab_size, model_vocab_size - 15)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] - 15)
+            self.assertEqual(
+                model_embed.weight.shape[0], cloned_embeddings.shape[0] - 15
+            )
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
@@ -490,10 +547,14 @@ class ImageGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
                     non_persistent_buffers[key] = loaded_model_state_dict[key]
 
             loaded_model_state_dict = {
-                key: value for key, value in loaded_model_state_dict.items() if key not in non_persistent_buffers
+                key: value
+                for key, value in loaded_model_state_dict.items()
+                if key not in non_persistent_buffers
             }
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(
+                set(model_state_dict.keys()), set(loaded_model_state_dict.keys())
+            )
 
             model_buffers = list(model.buffers())
             for non_persistent_buffer in non_persistent_buffers.values():
@@ -527,11 +588,17 @@ def prepare_img():
 class ImageGPTModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return ImageGPTFeatureExtractor.from_pretrained("openai/imagegpt-small") if is_vision_available() else None
+        return (
+            ImageGPTFeatureExtractor.from_pretrained("openai/imagegpt-small")
+            if is_vision_available()
+            else None
+        )
 
     @slow
     def test_inference_causal_lm_head(self):
-        model = ImageGPTForCausalImageModeling.from_pretrained("openai/imagegpt-small").to(torch_device)
+        model = ImageGPTForCausalImageModeling.from_pretrained(
+            "openai/imagegpt-small"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -545,7 +612,13 @@ class ImageGPTModelIntegrationTest(unittest.TestCase):
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[2.3445, 2.6889, 2.7313], [1.0530, 1.2416, 0.5699], [0.2205, 0.7749, 0.3953]]
+            [
+                [2.3445, 2.6889, 2.7313],
+                [1.0530, 1.2416, 0.5699],
+                [0.2205, 0.7749, 0.3953],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_slice, atol=1e-4)
+        )

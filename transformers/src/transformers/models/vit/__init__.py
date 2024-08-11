@@ -27,7 +27,13 @@ from ...utils import (
 )
 
 
-_import_structure = {"configuration_vit": ["VIT_PRETRAINED_CONFIG_ARCHIVE_MAP", "ViTConfig", "ViTOnnxConfig"]}
+_import_structure = {
+    "configuration_vit": [
+        "VIT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "ViTConfig",
+        "ViTOnnxConfig",
+    ]
+}
 
 try:
     if not is_vision_available():
@@ -76,7 +82,11 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_vit import VIT_PRETRAINED_CONFIG_ARCHIVE_MAP, ViTConfig, ViTOnnxConfig
+    from .configuration_vit import (
+        VIT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        ViTConfig,
+        ViTOnnxConfig,
+    )
 
     try:
         if not is_vision_available():
@@ -106,7 +116,11 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_tf_vit import TFViTForImageClassification, TFViTModel, TFViTPreTrainedModel
+        from .modeling_tf_vit import (
+            TFViTForImageClassification,
+            TFViTModel,
+            TFViTPreTrainedModel,
+        )
 
     try:
         if not is_flax_available():
@@ -114,10 +128,16 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_flax_vit import FlaxViTForImageClassification, FlaxViTModel, FlaxViTPreTrainedModel
+        from .modeling_flax_vit import (
+            FlaxViTForImageClassification,
+            FlaxViTModel,
+            FlaxViTPreTrainedModel,
+        )
 
 
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

@@ -164,11 +164,15 @@ def get_last_checkpoint(folder):
     checkpoints = [
         path
         for path in content
-        if _re_checkpoint.search(path) is not None and os.path.isdir(os.path.join(folder, path))
+        if _re_checkpoint.search(path) is not None
+        and os.path.isdir(os.path.join(folder, path))
     ]
     if len(checkpoints) == 0:
         return
-    return os.path.join(folder, max(checkpoints, key=lambda x: int(_re_checkpoint.search(x).groups()[0])))
+    return os.path.join(
+        folder,
+        max(checkpoints, key=lambda x: int(_re_checkpoint.search(x).groups()[0])),
+    )
 
 
 class IntervalStrategy(ExplicitEnum):
@@ -224,7 +228,9 @@ def default_compute_objective(metrics: Dict[str, float]) -> float:
     loss = metrics.pop("eval_loss", None)
     _ = metrics.pop("epoch", None)
     # Remove speed metrics
-    speed_metrics = [m for m in metrics.keys() if m.endswith("_runtime") or m.endswith("_per_second")]
+    speed_metrics = [
+        m for m in metrics.keys() if m.endswith("_runtime") or m.endswith("_per_second")
+    ]
     for sm in speed_metrics:
         _ = metrics.pop(sm, None)
     return loss if len(metrics) == 0 else sum(metrics.values())
@@ -233,19 +239,25 @@ def default_compute_objective(metrics: Dict[str, float]) -> float:
 def default_hp_space_optuna(trial) -> Dict[str, float]:
     from .integrations import is_optuna_available
 
-    assert is_optuna_available(), "This function needs Optuna installed: `pip install optuna`"
+    assert (
+        is_optuna_available()
+    ), "This function needs Optuna installed: `pip install optuna`"
     return {
         "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True),
         "num_train_epochs": trial.suggest_int("num_train_epochs", 1, 5),
         "seed": trial.suggest_int("seed", 1, 40),
-        "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [4, 8, 16, 32, 64]),
+        "per_device_train_batch_size": trial.suggest_categorical(
+            "per_device_train_batch_size", [4, 8, 16, 32, 64]
+        ),
     }
 
 
 def default_hp_space_ray(trial) -> Dict[str, float]:
     from .integrations import is_ray_tune_available
 
-    assert is_ray_tune_available(), "This function needs ray installed: `pip install ray[tune]`"
+    assert (
+        is_ray_tune_available()
+    ), "This function needs ray installed: `pip install ray[tune]`"
     from ray import tune
 
     return {
@@ -258,7 +270,12 @@ def default_hp_space_ray(trial) -> Dict[str, float]:
 
 def default_hp_space_sigopt(trial):
     return [
-        {"bounds": {"min": 1e-6, "max": 1e-4}, "name": "learning_rate", "type": "double", "transformamtion": "log"},
+        {
+            "bounds": {"min": 1e-6, "max": 1e-4},
+            "name": "learning_rate",
+            "type": "double",
+            "transformamtion": "log",
+        },
         {"bounds": {"min": 1, "max": 6}, "name": "num_train_epochs", "type": "int"},
         {"bounds": {"min": 1, "max": 40}, "name": "seed", "type": "int"},
         {
@@ -539,7 +556,11 @@ class TrainerMemoryTracker:
             for t in ["alloc", "peaked"]:
                 if stage in self.cpu and t in self.cpu[stage]:
                     metrics[f"{stage}_mem_cpu_{t}_delta"] = self.cpu[stage][t]
-                if self.torch is not None and stage in self.gpu and t in self.gpu[stage]:
+                if (
+                    self.torch is not None
+                    and stage in self.gpu
+                    and t in self.gpu[stage]
+                ):
                     metrics[f"{stage}_mem_gpu_{t}_delta"] = self.gpu[stage][t]
             # if we need additional debug info, enable the following
             # for t in ["begin", "end"]:
@@ -595,7 +616,11 @@ def denumpify_detensorize(metrics):
         return type(metrics)({k: denumpify_detensorize(v) for k, v in metrics.items()})
     elif isinstance(metrics, np.generic):
         return metrics.item()
-    elif is_torch_available() and isinstance(metrics, torch.Tensor) and metrics.numel() == 1:
+    elif (
+        is_torch_available()
+        and isinstance(metrics, torch.Tensor)
+        and metrics.numel() == 1
+    ):
         return metrics.item()
     return metrics
 
@@ -619,7 +644,9 @@ class ShardedDDPOption(ExplicitEnum):
 
 
 def find_executable_batch_size(
-    function: callable = None, starting_batch_size: int = 128, auto_find_batch_size: bool = False
+    function: callable = None,
+    starting_batch_size: int = 128,
+    auto_find_batch_size: bool = False,
 ):
     """
     Args:
@@ -644,7 +671,9 @@ def find_executable_batch_size(
         requires_backends(find_executable_batch_size, "accelerate")
         import accelerate.memory_utils as mem_utils
 
-        return mem_utils.find_executable_batch_size(function=function, starting_batch_size=starting_batch_size)
+        return mem_utils.find_executable_batch_size(
+            function=function, starting_batch_size=starting_batch_size
+        )
 
     return functools.partial(function, batch_size=starting_batch_size)
 
@@ -681,7 +710,9 @@ class RemoveColumnsCollator:
         if not self.message_logged and self.logger and self.model_name:
             ignored_columns = list(set(feature.keys()) - set(self.signature_columns))
             if len(ignored_columns) > 0:
-                dset_description = "" if self.description is None else f"in the {self.description} set"
+                dset_description = (
+                    "" if self.description is None else f"in the {self.description} set"
+                )
                 self.logger.info(
                     f"The following columns {dset_description} don't have a corresponding argument in "
                     f"`{self.model_name}.forward` and have been ignored: {', '.join(ignored_columns)}."

@@ -105,7 +105,9 @@ class CpmTokenizer(XLNetTokenizer):
         self.translator = str.maketrans(" \n", "\u2582\u2583")
 
     def _tokenize(self, text, *args, **kwargs):
-        text = [x.translate(self.translator) for x in self.jieba.cut(text, cut_all=False)]
+        text = [
+            x.translate(self.translator) for x in self.jieba.cut(text, cut_all=False)
+        ]
         text = " ".join(text)
         return super()._tokenize(text, *args, **kwargs)
 

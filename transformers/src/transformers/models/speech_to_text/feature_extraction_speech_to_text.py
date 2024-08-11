@@ -68,9 +68,14 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
         do_ceptral_normalize=True,
         normalize_means=True,
         normalize_vars=True,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
+        super().__init__(
+            feature_size=feature_size,
+            sampling_rate=sampling_rate,
+            padding_value=padding_value,
+            **kwargs,
+        )
         self.num_mel_bins = num_mel_bins
         self.do_ceptral_normalize = do_ceptral_normalize
         self.normalize_means = normalize_means
@@ -87,7 +92,11 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
         """
         waveform = waveform * (2**15)  # Kaldi compliance: 16-bit signed integers
         waveform = torch.from_numpy(waveform).unsqueeze(0)
-        features = ta_kaldi.fbank(waveform, num_mel_bins=self.num_mel_bins, sample_frequency=self.sampling_rate)
+        features = ta_kaldi.fbank(
+            waveform,
+            num_mel_bins=self.num_mel_bins,
+            sample_frequency=self.sampling_rate,
+        )
         return features.numpy()
 
     @staticmethod
@@ -115,11 +124,19 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
         return x
 
     def normalize(
-        self, input_features: List[np.ndarray], attention_mask: Optional[np.ndarray] = None
+        self,
+        input_features: List[np.ndarray],
+        attention_mask: Optional[np.ndarray] = None,
     ) -> List[np.ndarray]:
-        lengths = attention_mask.sum(-1) if attention_mask is not None else [x.shape[0] for x in input_features]
+        lengths = (
+            attention_mask.sum(-1)
+            if attention_mask is not None
+            else [x.shape[0] for x in input_features]
+        )
         return [
-            self.utterance_cmvn(x, n, self.normalize_means, self.normalize_vars, self.padding_value)
+            self.utterance_cmvn(
+                x, n, self.normalize_means, self.normalize_vars, self.padding_value
+            )
             for x, n in zip(input_features, lengths)
         ]
 
@@ -133,7 +150,7 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
         return_tensors: Optional[Union[str, TensorType]] = None,
         sampling_rate: Optional[int] = None,
         return_attention_mask: Optional[bool] = None,
-        **kwargs
+        **kwargs,
     ) -> BatchFeature:
         """
         Main method to featurize and prepare for the model one or several sequence(s). sequences.
@@ -202,14 +219,19 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
 
         is_batched = bool(
             isinstance(raw_speech, (list, tuple))
-            and (isinstance(raw_speech[0], np.ndarray) or isinstance(raw_speech[0], (tuple, list)))
+            and (
+                isinstance(raw_speech[0], np.ndarray)
+                or isinstance(raw_speech[0], (tuple, list))
+            )
         )
 
         if is_batched:
             raw_speech = [np.asarray(speech, dtype=np.float32) for speech in raw_speech]
         elif not is_batched and not isinstance(raw_speech, np.ndarray):
             raw_speech = np.asarray(raw_speech, dtype=np.float32)
-        elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(np.float64):
+        elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(
+            np.float64
+        ):
             raw_speech = raw_speech.astype(np.float32)
 
         # always return batch
@@ -235,17 +257,22 @@ class Speech2TextFeatureExtractor(SequenceFeatureExtractor):
         # make sure list is in array format
         input_features = padded_inputs.get("input_features")
         if isinstance(input_features[0], list):
-            padded_inputs["input_features"] = [np.asarray(feature, dtype=np.float32) for feature in input_features]
+            padded_inputs["input_features"] = [
+                np.asarray(feature, dtype=np.float32) for feature in input_features
+            ]
 
         attention_mask = padded_inputs.get("attention_mask")
         if attention_mask is not None:
-            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.int32) for array in attention_mask]
+            padded_inputs["attention_mask"] = [
+                np.asarray(array, dtype=np.int32) for array in attention_mask
+            ]
 
         # Utterance-level cepstral mean and variance normalization
         if self.do_ceptral_normalize:
             attention_mask = (
                 np.array(attention_mask, dtype=np.int32)
-                if self._get_padding_strategies(padding, max_length=max_length) is not PaddingStrategy.DO_NOT_PAD
+                if self._get_padding_strategies(padding, max_length=max_length)
+                is not PaddingStrategy.DO_NOT_PAD
                 else None
             )
             padded_inputs["input_features"] = self.normalize(

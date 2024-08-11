@@ -27,7 +27,10 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_unispeech_sat": ["UNISPEECH_SAT_PRETRAINED_CONFIG_ARCHIVE_MAP", "UniSpeechSatConfig"],
+    "configuration_unispeech_sat": [
+        "UNISPEECH_SAT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "UniSpeechSatConfig",
+    ],
 }
 
 try:
@@ -48,7 +51,10 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_unispeech_sat import UNISPEECH_SAT_PRETRAINED_CONFIG_ARCHIVE_MAP, UniSpeechSatConfig
+    from .configuration_unispeech_sat import (
+        UNISPEECH_SAT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        UniSpeechSatConfig,
+    )
 
     try:
         if not is_torch_available():
@@ -70,4 +76,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

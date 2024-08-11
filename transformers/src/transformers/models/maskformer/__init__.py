@@ -17,10 +17,20 @@
 # limitations under the License.
 from typing import TYPE_CHECKING
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_torch_available, is_vision_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_torch_available,
+    is_vision_available,
+)
 
 
-_import_structure = {"configuration_maskformer": ["MASKFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP", "MaskFormerConfig"]}
+_import_structure = {
+    "configuration_maskformer": [
+        "MASKFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "MaskFormerConfig",
+    ]
+}
 
 try:
     if not is_vision_available():
@@ -45,7 +55,10 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_maskformer import MASKFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, MaskFormerConfig
+    from .configuration_maskformer import (
+        MASKFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        MaskFormerConfig,
+    )
 
     try:
         if not is_vision_available():
@@ -71,4 +84,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure
+    )

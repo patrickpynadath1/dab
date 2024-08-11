@@ -19,7 +19,13 @@ Processor class for ViLT.
 from typing import List, Optional, Union
 
 from ...processing_utils import ProcessorMixin
-from ...tokenization_utils_base import BatchEncoding, PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
+from ...tokenization_utils_base import (
+    BatchEncoding,
+    PaddingStrategy,
+    PreTokenizedInput,
+    TextInput,
+    TruncationStrategy,
+)
 from ...utils import TensorType
 
 
@@ -36,6 +42,7 @@ class ViltProcessor(ProcessorMixin):
         tokenizer (`BertTokenizerFast`):
             An instance of ['BertTokenizerFast`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "ViltFeatureExtractor"
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
@@ -46,7 +53,9 @@ class ViltProcessor(ProcessorMixin):
     def __call__(
         self,
         images,
-        text: Union[TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]] = None,
+        text: Union[
+            TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]
+        ] = None,
         add_special_tokens: bool = True,
         padding: Union[bool, str, PaddingStrategy] = False,
         truncation: Union[bool, str, TruncationStrategy] = False,
@@ -88,7 +97,9 @@ class ViltProcessor(ProcessorMixin):
             **kwargs,
         )
         # add pixel_values + pixel_mask
-        encoding_feature_extractor = self.feature_extractor(images, return_tensors=return_tensors)
+        encoding_feature_extractor = self.feature_extractor(
+            images, return_tensors=return_tensors
+        )
         encoding.update(encoding_feature_extractor)
 
         return encoding

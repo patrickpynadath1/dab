@@ -18,12 +18,22 @@ def get_artifacts_links(worflow_run_id):
     artifacts = {}
 
     try:
-        artifacts.update({artifact["name"]: artifact["archive_download_url"] for artifact in result["artifacts"]})
+        artifacts.update(
+            {
+                artifact["name"]: artifact["archive_download_url"]
+                for artifact in result["artifacts"]
+            }
+        )
         pages_to_iterate_over = math.ceil((result["total_count"] - 100) / 100)
 
         for i in range(pages_to_iterate_over):
             result = requests.get(url + f"&page={i + 2}").json()
-            artifacts.update({artifact["name"]: artifact["archive_download_url"] for artifact in result["artifacts"]})
+            artifacts.update(
+                {
+                    artifact["name"]: artifact["archive_download_url"]
+                    for artifact in result["artifacts"]
+                }
+            )
 
         return artifacts
     except Exception as e:
@@ -41,7 +51,9 @@ def download_artifact(artifact_name, artifact_url, output_dir, token):
     """
     # Get the redirect URL first
     cmd = f'curl -v -H "Accept: application/vnd.github+json" -H "Authorization: token {token}" {artifact_url}'
-    output = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = subprocess.run(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     o = output.stdout.decode("utf-8")
     lines = o.splitlines()
 
@@ -76,7 +88,9 @@ def get_errors_from_single_artifact(artifact_zip_path):
                                 except Exception:
                                     # skip un-related lines
                                     pass
-                            elif filename == "summary_short.txt" and line.startswith("FAILED "):
+                            elif filename == "summary_short.txt" and line.startswith(
+                                "FAILED "
+                            ):
                                 # `test` is the test method that failed
                                 test = line[len("FAILED ") :]
                                 failed_tests.append(test)
@@ -97,7 +111,11 @@ def get_all_errors(artifact_dir):
     errors = []
     failed_tests = []
 
-    paths = [os.path.join(artifact_dir, p) for p in os.listdir(artifact_dir) if p.endswith(".zip")]
+    paths = [
+        os.path.join(artifact_dir, p)
+        for p in os.listdir(artifact_dir)
+        if p.endswith(".zip")
+    ]
 
     for p in paths:
         _errors, _failed_tests = get_errors_from_single_artifact(p)
@@ -116,7 +134,10 @@ def reduce_by_error(logs, error_filter=None):
     r = {}
     for error, count in counts:
         if error_filter is None or error not in error_filter:
-            r[error] = {"count": count, "failed_tests": [(x[2], x[0]) for x in logs if x[1] == error]}
+            r[error] = {
+                "count": count,
+                "failed_tests": [(x[2], x[0]) for x in logs if x[1] == error],
+            }
 
     r = dict(sorted(r.items(), key=lambda item: item[1]["count"], reverse=True))
     return r
@@ -146,7 +167,11 @@ def reduce_by_model(logs, error_filter=None):
         # count by errors in `test`
         counter.update([x[1] for x in logs if x[2] == test])
         counts = counter.most_common()
-        error_counts = {error: count for error, count in counts if (error_filter is None or error not in error_filter)}
+        error_counts = {
+            error: count
+            for error, count in counts
+            if (error_filter is None or error not in error_filter)
+        }
         n_errors = sum(error_counts.values())
         if n_errors > 0:
             r[test] = {"count": n_errors, "errors": error_counts}
@@ -185,7 +210,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument(
-        "--workflow_run_id", default=None, type=str, required=True, help="A GitHub Actions workflow run id."
+        "--workflow_run_id",
+        default=None,
+        type=str,
+        required=True,
+        help="A GitHub Actions workflow run id.",
     )
     parser.add_argument(
         "--output_dir",
@@ -195,14 +224,20 @@ if __name__ == "__main__":
         help="Where to store the downloaded artifacts and other result files.",
     )
     parser.add_argument(
-        "--token", default=None, type=str, required=True, help="A token that has actions:read permission."
+        "--token",
+        default=None,
+        type=str,
+        required=True,
+        help="A token that has actions:read permission.",
     )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
 
     artifacts = get_artifacts_links(args.workflow_run_id)
-    with open(os.path.join(args.output_dir, "artifacts.json"), "w", encoding="UTF-8") as fp:
+    with open(
+        os.path.join(args.output_dir, "artifacts.json"), "w", encoding="UTF-8"
+    ) as fp:
         json.dump(artifacts, fp, ensure_ascii=False, indent=4)
 
     for idx, (name, url) in enumerate(artifacts.items()):
@@ -220,14 +255,21 @@ if __name__ == "__main__":
     for item in most_common:
         print(item)
 
-    with open(os.path.join(args.output_dir, "errors.json"), "w", encoding="UTF-8") as fp:
+    with open(
+        os.path.join(args.output_dir, "errors.json"), "w", encoding="UTF-8"
+    ) as fp:
         json.dump(errors, fp, ensure_ascii=False, indent=4)
 
-    with open(os.path.join(args.output_dir, "failed_tests.json"), "w", encoding="UTF-8") as fp:
+    with open(
+        os.path.join(args.output_dir, "failed_tests.json"), "w", encoding="UTF-8"
+    ) as fp:
         json.dump(failed_tests, fp, ensure_ascii=False, indent=4)
 
     # Produce tables for GitHub issue.
-    logs = [(error_line, error, failed_test) for (error_line, error), failed_test in zip(errors, failed_tests)]
+    logs = [
+        (error_line, error, failed_test)
+        for (error_line, error), failed_test in zip(errors, failed_tests)
+    ]
 
     reduced_by_error = reduce_by_error(logs)
     reduced_by_model = reduce_by_model(logs)
@@ -235,7 +277,11 @@ if __name__ == "__main__":
     s1 = make_github_table(reduced_by_error)
     s2 = make_github_table_per_model(reduced_by_model)
 
-    with open(os.path.join(args.output_dir, "reduced_by_error.txt"), "w", encoding="UTF-8") as fp:
+    with open(
+        os.path.join(args.output_dir, "reduced_by_error.txt"), "w", encoding="UTF-8"
+    ) as fp:
         fp.write(s1)
-    with open(os.path.join(args.output_dir, "reduced_by_model.txt"), "w", encoding="UTF-8") as fp:
+    with open(
+        os.path.join(args.output_dir, "reduced_by_model.txt"), "w", encoding="UTF-8"
+    ) as fp:
         fp.write(s2)

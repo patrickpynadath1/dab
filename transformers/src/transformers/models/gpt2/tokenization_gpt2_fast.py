@@ -32,7 +32,11 @@ if TYPE_CHECKING:
 
 logger = logging.get_logger(__name__)
 
-VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "tokenizer_file": "tokenizer.json"}
+VOCAB_FILES_NAMES = {
+    "vocab_file": "vocab.json",
+    "merges_file": "merges.txt",
+    "tokenizer_file": "tokenizer.json",
+}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
@@ -133,7 +137,7 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         bos_token="<|endoftext|>",
         eos_token="<|endoftext|>",
         add_prefix_space=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             vocab_file,
@@ -175,7 +179,9 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
 
         return super()._encode_plus(*args, **kwargs)
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 
@@ -183,7 +189,9 @@ class GPT2TokenizerFast(PreTrainedTokenizerFast):
         """This corresponds to DialoGPT variants of models."""
         input_ids = []
         for is_user, text in conversation.iter_texts():
-            input_ids.extend(self.encode(text, add_special_tokens=False) + [self.eos_token_id])
+            input_ids.extend(
+                self.encode(text, add_special_tokens=False) + [self.eos_token_id]
+            )
 
         if len(input_ids) > self.model_max_length:
             input_ids = input_ids[-self.model_max_length :]

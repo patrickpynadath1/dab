@@ -18,11 +18,20 @@
 
 from typing import TYPE_CHECKING
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_tf_available, is_torch_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_tf_available,
+    is_torch_available,
+)
 
 
 _import_structure = {
-    "configuration_flaubert": ["FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "FlaubertConfig", "FlaubertOnnxConfig"],
+    "configuration_flaubert": [
+        "FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "FlaubertConfig",
+        "FlaubertOnnxConfig",
+    ],
     "tokenization_flaubert": ["FlaubertTokenizer"],
 }
 
@@ -62,7 +71,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_flaubert import FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, FlaubertConfig, FlaubertOnnxConfig
+    from .configuration_flaubert import (
+        FLAUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        FlaubertConfig,
+        FlaubertOnnxConfig,
+    )
     from .tokenization_flaubert import FlaubertTokenizer
 
     try:
@@ -102,4 +115,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

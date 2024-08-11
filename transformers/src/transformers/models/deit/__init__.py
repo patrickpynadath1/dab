@@ -26,7 +26,13 @@ from ...utils import (
 )
 
 
-_import_structure = {"configuration_deit": ["DEIT_PRETRAINED_CONFIG_ARCHIVE_MAP", "DeiTConfig", "DeiTOnnxConfig"]}
+_import_structure = {
+    "configuration_deit": [
+        "DEIT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "DeiTConfig",
+        "DeiTOnnxConfig",
+    ]
+}
 
 try:
     if not is_vision_available():
@@ -68,7 +74,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_deit import DEIT_PRETRAINED_CONFIG_ARCHIVE_MAP, DeiTConfig, DeiTOnnxConfig
+    from .configuration_deit import (
+        DEIT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        DeiTConfig,
+        DeiTOnnxConfig,
+    )
 
     try:
         if not is_vision_available():
@@ -112,4 +122,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

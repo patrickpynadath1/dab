@@ -105,9 +105,13 @@ class PegasusXConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "pegasus_x"
     keys_to_ignore_at_inference = ["past_key_values"]
-    attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
+    attribute_map = {
+        "num_attention_heads": "encoder_attention_heads",
+        "hidden_size": "d_model",
+    }
 
     def __init__(
         self,
@@ -159,7 +163,9 @@ class PegasusXConfig(PretrainedConfig):
         self.classifier_dropout = classifier_dropout
         self.use_cache = use_cache
         self.num_hidden_layers = encoder_layers
-        self.scale_embedding = scale_embedding  # scale factor will be sqrt(d_model) if True
+        self.scale_embedding = (
+            scale_embedding  # scale factor will be sqrt(d_model) if True
+        )
 
         self.num_global_tokens = num_global_tokens
         self.block_size = block_size

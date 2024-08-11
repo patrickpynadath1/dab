@@ -50,7 +50,11 @@ from transformers import (
     default_data_collator,
     get_scheduler,
 )
-from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
+from transformers.utils import (
+    check_min_version,
+    get_full_repo_name,
+    send_example_telemetry,
+)
 from transformers.utils.versions import require_version
 from utils_qa import postprocess_qa_predictions_with_beam_search
 
@@ -58,12 +62,20 @@ from utils_qa import postprocess_qa_predictions_with_beam_search
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.23.0.dev0")
 
-require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/question-answering/requirements.txt")
+require_version(
+    "datasets>=1.8.0",
+    "To fix: pip install -r examples/pytorch/question-answering/requirements.txt",
+)
 
 logger = get_logger(__name__)
 
 
-def save_prefixed_metrics(results, output_dir, file_name: str = "all_results.json", metric_key_prefix: str = "eval"):
+def save_prefixed_metrics(
+    results,
+    output_dir,
+    file_name: str = "all_results.json",
+    metric_key_prefix: str = "eval",
+):
     """
     Save results while prefixing metric names.
 
@@ -87,7 +99,9 @@ def save_prefixed_metrics(results, output_dir, file_name: str = "all_results.jso
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Finetune a transformers model on a Question Answering task")
+    parser = argparse.ArgumentParser(
+        description="Finetune a transformers model on a Question Answering task"
+    )
     parser.add_argument(
         "--dataset_name",
         type=str,
@@ -101,17 +115,31 @@ def parse_args():
         help="The configuration name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
-        "--train_file", type=str, default=None, help="A csv or a json file containing the training data."
+        "--train_file",
+        type=str,
+        default=None,
+        help="A csv or a json file containing the training data.",
     )
     parser.add_argument(
-        "--preprocessing_num_workers", type=int, default=4, help="A csv or a json file containing the training data."
+        "--preprocessing_num_workers",
+        type=int,
+        default=4,
+        help="A csv or a json file containing the training data.",
     )
-    parser.add_argument("--do_predict", action="store_true", help="Eval the question answering model")
     parser.add_argument(
-        "--validation_file", type=str, default=None, help="A csv or a json file containing the validation data."
+        "--do_predict", action="store_true", help="Eval the question answering model"
     )
     parser.add_argument(
-        "--test_file", type=str, default=None, help="A csv or a json file containing the Prediction data."
+        "--validation_file",
+        type=str,
+        default=None,
+        help="A csv or a json file containing the validation data.",
+    )
+    parser.add_argument(
+        "--test_file",
+        type=str,
+        default=None,
+        help="A csv or a json file containing the Prediction data.",
     )
     parser.add_argument(
         "--max_seq_length",
@@ -151,8 +179,15 @@ def parse_args():
         default=5e-5,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
-    parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
+    parser.add_argument(
+        "--weight_decay", type=float, default=0.0, help="Weight decay to use."
+    )
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=3,
+        help="Total number of training epochs to perform.",
+    )
     parser.add_argument(
         "--max_train_steps",
         type=int,
@@ -170,13 +205,27 @@ def parse_args():
         type=SchedulerType,
         default="linear",
         help="The scheduler type to use.",
-        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
+        choices=[
+            "linear",
+            "cosine",
+            "cosine_with_restarts",
+            "polynomial",
+            "constant",
+            "constant_with_warmup",
+        ],
     )
     parser.add_argument(
-        "--num_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler."
+        "--num_warmup_steps",
+        type=int,
+        default=0,
+        help="Number of steps for the warmup in the lr scheduler.",
     )
-    parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
-    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
+    parser.add_argument(
+        "--output_dir", type=str, default=None, help="Where to store the final model."
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None, help="A seed for reproducible training."
+    )
     parser.add_argument(
         "--doc_stride",
         type=int,
@@ -232,7 +281,9 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--overwrite_cache", action="store_true", help="Overwrite the cached training and evaluation sets"
+        "--overwrite_cache",
+        action="store_true",
+        help="Overwrite the cached training and evaluation sets",
     )
     parser.add_argument(
         "--max_predict_samples",
@@ -240,11 +291,19 @@ def parse_args():
         default=None,
         help="For debugging purposes or quicker training, truncate the number of prediction examples to this",
     )
-    parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument(
-        "--hub_model_id", type=str, help="The name of the repository to keep in sync with the local `output_dir`."
+        "--push_to_hub",
+        action="store_true",
+        help="Whether or not to push the model to the Hub.",
     )
-    parser.add_argument("--hub_token", type=str, help="The token to use to push to the Model Hub.")
+    parser.add_argument(
+        "--hub_model_id",
+        type=str,
+        help="The name of the repository to keep in sync with the local `output_dir`.",
+    )
+    parser.add_argument(
+        "--hub_token", type=str, help="The token to use to push to the Model Hub."
+    )
     parser.add_argument(
         "--checkpointing_steps",
         type=str,
@@ -271,20 +330,33 @@ def parse_args():
         and args.validation_file is None
         and args.test_file is None
     ):
-        raise ValueError("Need either a dataset name or a training/validation/test file.")
+        raise ValueError(
+            "Need either a dataset name or a training/validation/test file."
+        )
     else:
         if args.train_file is not None:
             extension = args.train_file.split(".")[-1]
-            assert extension in ["csv", "json"], "`train_file` should be a csv or a json file."
+            assert extension in [
+                "csv",
+                "json",
+            ], "`train_file` should be a csv or a json file."
         if args.validation_file is not None:
             extension = args.validation_file.split(".")[-1]
-            assert extension in ["csv", "json"], "`validation_file` should be a csv or a json file."
+            assert extension in [
+                "csv",
+                "json",
+            ], "`validation_file` should be a csv or a json file."
         if args.test_file is not None:
             extension = args.test_file.split(".")[-1]
-            assert extension in ["csv", "json"], "`test_file` should be a csv or a json file."
+            assert extension in [
+                "csv",
+                "json",
+            ], "`test_file` should be a csv or a json file."
 
     if args.push_to_hub:
-        assert args.output_dir is not None, "Need an `output_dir` to create a repo when `--push_to_hub` is passed."
+        assert (
+            args.output_dir is not None
+        ), "Need an `output_dir` to create a repo when `--push_to_hub` is passed."
 
     return args
 
@@ -305,7 +377,10 @@ def main():
         accelerator_log_kwargs["log_with"] = args.report_to
         accelerator_log_kwargs["logging_dir"] = args.output_dir
 
-    accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps, **accelerator_log_kwargs)
+    accelerator = Accelerator(
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        **accelerator_log_kwargs,
+    )
 
     # Make one log on every process with the configuration for debugging.
     logging.basicConfig(
@@ -329,7 +404,9 @@ def main():
     if accelerator.is_main_process:
         if args.push_to_hub:
             if args.hub_model_id is None:
-                repo_name = get_full_repo_name(Path(args.output_dir).name, token=args.hub_token)
+                repo_name = get_full_repo_name(
+                    Path(args.output_dir).name, token=args.hub_token
+                )
             else:
                 repo_name = args.hub_model_id
             repo = Repository(args.output_dir, clone_from=repo_name)
@@ -376,7 +453,9 @@ def main():
     config = XLNetConfig.from_pretrained(args.model_name_or_path)
     tokenizer = XLNetTokenizerFast.from_pretrained(args.model_name_or_path)
     model = XLNetForQuestionAnswering.from_pretrained(
-        args.model_name_or_path, from_tf=bool(".ckpt" in args.model_name_or_path), config=config
+        args.model_name_or_path,
+        from_tf=bool(".ckpt" in args.model_name_or_path),
+        config=config,
     )
 
     # Preprocessing the datasets.
@@ -403,7 +482,9 @@ def main():
         # Some of the questions have lots of whitespace on the left, which is not useful and will make the
         # truncation of the context fail (the tokenized question will take a lots of space). So we remove that
         # left whitespace
-        examples[question_column_name] = [q.lstrip() for q in examples[question_column_name]]
+        examples[question_column_name] = [
+            q.lstrip() for q in examples[question_column_name]
+        ]
 
         # Tokenize our examples with truncation and maybe padding, but keep the overflows using a stride. This results
         # in one example possible giving several features when a context is long, each of those features having a
@@ -454,7 +535,12 @@ def main():
             # The cls token gets 1.0 too (for predictions of empty answers).
             tokenized_examples["p_mask"].append(
                 [
-                    0.0 if (not special_tokens[i][k] and s == context_idx) or k == cls_index else 1.0
+                    (
+                        0.0
+                        if (not special_tokens[i][k] and s == context_idx)
+                        or k == cls_index
+                        else 1.0
+                    )
                     for k, s in enumerate(sequence_ids)
                 ]
             )
@@ -482,14 +568,20 @@ def main():
                 while sequence_ids[token_end_index] != context_idx:
                     token_end_index -= 1
                 # Detect if the answer is out of the span (in which case this feature is labeled with the CLS index).
-                if not (offsets[token_start_index][0] <= start_char and offsets[token_end_index][1] >= end_char):
+                if not (
+                    offsets[token_start_index][0] <= start_char
+                    and offsets[token_end_index][1] >= end_char
+                ):
                     tokenized_examples["start_positions"].append(cls_index)
                     tokenized_examples["end_positions"].append(cls_index)
                     tokenized_examples["is_impossible"].append(1.0)
                 else:
                     # Otherwise move the token_start_index and token_end_index to the two ends of the answer.
                     # Note: we could go after the last offset if the answer is the last word (edge case).
-                    while token_start_index < len(offsets) and offsets[token_start_index][0] <= start_char:
+                    while (
+                        token_start_index < len(offsets)
+                        and offsets[token_start_index][0] <= start_char
+                    ):
                         token_start_index += 1
                     tokenized_examples["start_positions"].append(token_start_index - 1)
                     while offsets[token_end_index][1] >= end_char:
@@ -524,7 +616,9 @@ def main():
         # Some of the questions have lots of whitespace on the left, which is not useful and will make the
         # truncation of the context fail (the tokenized question will take a lots of space). So we remove that
         # left whitespace
-        examples[question_column_name] = [q.lstrip() for q in examples[question_column_name]]
+        examples[question_column_name] = [
+            q.lstrip() for q in examples[question_column_name]
+        ]
 
         # Tokenize our examples with truncation and maybe padding, but keep the overflows using a stride. This results
         # in one example possible giving several features when a context is long, each of those features having a
@@ -572,7 +666,12 @@ def main():
             # Build the p_mask: non special tokens and context gets 0.0, the others 1.0.
             tokenized_examples["p_mask"].append(
                 [
-                    0.0 if (not special_tokens[i][k] and s == context_idx) or k == cls_index else 1.0
+                    (
+                        0.0
+                        if (not special_tokens[i][k] and s == context_idx)
+                        or k == cls_index
+                        else 1.0
+                    )
                     for k, s in enumerate(sequence_ids)
                 ]
             )
@@ -630,7 +729,9 @@ def main():
             )
             if args.max_predict_samples is not None:
                 # During Feature creation dataset samples might increase, we will select required samples again
-                predict_dataset = predict_dataset.select(range(args.max_predict_samples))
+                predict_dataset = predict_dataset.select(
+                    range(args.max_predict_samples)
+                )
 
     # Log a few random samples from the training set:
     for index in random.sample(range(len(train_dataset)), 3):
@@ -645,21 +746,34 @@ def main():
         # Otherwise, `DataCollatorWithPadding` will apply dynamic padding for us (by padding to the maximum length of
         # the samples passed). When using mixed precision, we add `pad_to_multiple_of=8` to pad all tensors to multiple
         # of 8s, which will enable the use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta).
-        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
+        data_collator = DataCollatorWithPadding(
+            tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None)
+        )
 
     train_dataloader = DataLoader(
-        train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
+        train_dataset,
+        shuffle=True,
+        collate_fn=data_collator,
+        batch_size=args.per_device_train_batch_size,
     )
 
-    eval_dataset_for_model = eval_dataset.remove_columns(["example_id", "offset_mapping"])
+    eval_dataset_for_model = eval_dataset.remove_columns(
+        ["example_id", "offset_mapping"]
+    )
     eval_dataloader = DataLoader(
-        eval_dataset_for_model, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size
+        eval_dataset_for_model,
+        collate_fn=data_collator,
+        batch_size=args.per_device_eval_batch_size,
     )
 
     if args.do_predict:
-        predict_dataset_for_model = predict_dataset.remove_columns(["example_id", "offset_mapping"])
+        predict_dataset_for_model = predict_dataset.remove_columns(
+            ["example_id", "offset_mapping"]
+        )
         predict_dataloader = DataLoader(
-            predict_dataset_for_model, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size
+            predict_dataset_for_model,
+            collate_fn=data_collator,
+            batch_size=args.per_device_eval_batch_size,
         )
 
     # Post-processing:
@@ -680,13 +794,21 @@ def main():
         # Format the result to the format the metric expects.
         if args.version_2_with_negative:
             formatted_predictions = [
-                {"id": k, "prediction_text": v, "no_answer_probability": scores_diff_json[k]}
+                {
+                    "id": k,
+                    "prediction_text": v,
+                    "no_answer_probability": scores_diff_json[k],
+                }
                 for k, v in predictions.items()
             ]
         else:
-            formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]
+            formatted_predictions = [
+                {"id": k, "prediction_text": v} for k, v in predictions.items()
+            ]
 
-        references = [{"id": ex["id"], "answers": ex[answer_column_name]} for ex in examples]
+        references = [
+            {"id": ex["id"], "answers": ex[answer_column_name]} for ex in examples
+        ]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
     metric = evaluate.load("squad_v2" if args.version_2_with_negative else "squad")
@@ -727,11 +849,19 @@ def main():
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if not any(nd in n for nd in no_decay)
+            ],
             "weight_decay": args.weight_decay,
         },
         {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "params": [
+                p
+                for n, p in model.named_parameters()
+                if any(nd in n for nd in no_decay)
+            ],
             "weight_decay": 0.0,
         },
     ]
@@ -739,7 +869,9 @@ def main():
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if args.max_train_steps is None:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
         overrode_max_train_steps = True
@@ -752,12 +884,16 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+    model, optimizer, train_dataloader, eval_dataloader, lr_scheduler = (
+        accelerator.prepare(
+            model, optimizer, train_dataloader, eval_dataloader, lr_scheduler
+        )
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    num_update_steps_per_epoch = math.ceil(
+        len(train_dataloader) / args.gradient_accumulation_steps
+    )
     if overrode_max_train_steps:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
     # Afterwards we recalculate our number of training epochs
@@ -772,22 +908,34 @@ def main():
     if args.with_tracking:
         experiment_config = vars(args)
         # TensorBoard cannot log Enums, need the raw value
-        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
+        experiment_config["lr_scheduler_type"] = experiment_config[
+            "lr_scheduler_type"
+        ].value
         accelerator.init_trackers("qa_beam_search_no_trainer", experiment_config)
 
     # Train!
-    total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+    total_batch_size = (
+        args.per_device_train_batch_size
+        * accelerator.num_processes
+        * args.gradient_accumulation_steps
+    )
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(train_dataset)}")
     logger.info(f"  Num Epochs = {args.num_train_epochs}")
-    logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
-    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+    logger.info(
+        f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
+    )
+    logger.info(
+        f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
+    )
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(
+        range(args.max_train_steps), disable=not accelerator.is_local_main_process
+    )
     completed_steps = 0
     starting_epoch = 0
 
@@ -801,7 +949,9 @@ def main():
             # Get the most recent checkpoint
             dirs = [f.name for f in os.scandir(os.getcwd()) if f.is_dir()]
             dirs.sort(key=os.path.getctime)
-            path = dirs[-1]  # Sorts folders by date modified, most recent checkpoint is the last
+            path = dirs[
+                -1
+            ]  # Sorts folders by date modified, most recent checkpoint is the last
         # Extract `epoch_{i}` or `step_{i}`
         training_difference = os.path.splitext(path)[0]
 
@@ -853,12 +1003,16 @@ def main():
             accelerator.wait_for_everyone()
             unwrapped_model = accelerator.unwrap_model(model)
             unwrapped_model.save_pretrained(
-                args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
+                args.output_dir,
+                is_main_process=accelerator.is_main_process,
+                save_function=accelerator.save,
             )
             if accelerator.is_main_process:
                 tokenizer.save_pretrained(args.output_dir)
                 repo.push_to_hub(
-                    commit_message=f"Training in progress epoch {epoch}", blocking=False, auto_lfs_prune=True
+                    commit_message=f"Training in progress epoch {epoch}",
+                    blocking=False,
+                    auto_lfs_prune=True,
                 )
 
     # intialize all lists to collect the batches
@@ -879,26 +1033,58 @@ def main():
             end_top_index = outputs.end_top_index
             cls_logits = outputs.cls_logits
 
-            if not args.pad_to_max_length:  # necessary to pad predictions and labels for being gathered
-                start_top_log_probs = accelerator.pad_across_processes(start_top_log_probs, dim=1, pad_index=-100)
-                start_top_index = accelerator.pad_across_processes(start_top_index, dim=1, pad_index=-100)
-                end_top_log_probs = accelerator.pad_across_processes(end_top_log_probs, dim=1, pad_index=-100)
-                end_top_index = accelerator.pad_across_processes(end_top_index, dim=1, pad_index=-100)
-                cls_logits = accelerator.pad_across_processes(cls_logits, dim=1, pad_index=-100)
+            if (
+                not args.pad_to_max_length
+            ):  # necessary to pad predictions and labels for being gathered
+                start_top_log_probs = accelerator.pad_across_processes(
+                    start_top_log_probs, dim=1, pad_index=-100
+                )
+                start_top_index = accelerator.pad_across_processes(
+                    start_top_index, dim=1, pad_index=-100
+                )
+                end_top_log_probs = accelerator.pad_across_processes(
+                    end_top_log_probs, dim=1, pad_index=-100
+                )
+                end_top_index = accelerator.pad_across_processes(
+                    end_top_index, dim=1, pad_index=-100
+                )
+                cls_logits = accelerator.pad_across_processes(
+                    cls_logits, dim=1, pad_index=-100
+                )
 
-            all_start_top_log_probs.append(accelerator.gather_for_metrics(start_top_log_probs).cpu().numpy())
-            all_start_top_index.append(accelerator.gather_for_metrics(start_top_index).cpu().numpy())
-            all_end_top_log_probs.append(accelerator.gather_for_metrics(end_top_log_probs).cpu().numpy())
-            all_end_top_index.append(accelerator.gather_for_metrics(end_top_index).cpu().numpy())
-            all_cls_logits.append(accelerator.gather_for_metrics(cls_logits).cpu().numpy())
+            all_start_top_log_probs.append(
+                accelerator.gather_for_metrics(start_top_log_probs).cpu().numpy()
+            )
+            all_start_top_index.append(
+                accelerator.gather_for_metrics(start_top_index).cpu().numpy()
+            )
+            all_end_top_log_probs.append(
+                accelerator.gather_for_metrics(end_top_log_probs).cpu().numpy()
+            )
+            all_end_top_index.append(
+                accelerator.gather_for_metrics(end_top_index).cpu().numpy()
+            )
+            all_cls_logits.append(
+                accelerator.gather_for_metrics(cls_logits).cpu().numpy()
+            )
 
-    max_len = max([x.shape[1] for x in all_end_top_log_probs])  # Get the max_length of the tensor
+    max_len = max(
+        [x.shape[1] for x in all_end_top_log_probs]
+    )  # Get the max_length of the tensor
 
     # concatenate all numpy arrays collected above
-    start_top_log_probs_concat = create_and_fill_np_array(all_start_top_log_probs, eval_dataset, max_len)
-    start_top_index_concat = create_and_fill_np_array(all_start_top_index, eval_dataset, max_len)
-    end_top_log_probs_concat = create_and_fill_np_array(all_end_top_log_probs, eval_dataset, max_len)
-    end_top_index_concat = create_and_fill_np_array(all_end_top_index, eval_dataset, max_len)
+    start_top_log_probs_concat = create_and_fill_np_array(
+        all_start_top_log_probs, eval_dataset, max_len
+    )
+    start_top_index_concat = create_and_fill_np_array(
+        all_start_top_index, eval_dataset, max_len
+    )
+    end_top_log_probs_concat = create_and_fill_np_array(
+        all_end_top_log_probs, eval_dataset, max_len
+    )
+    end_top_index_concat = create_and_fill_np_array(
+        all_end_top_index, eval_dataset, max_len
+    )
     cls_logits_concat = np.concatenate(all_cls_logits, axis=0)
 
     # delete the list of numpy arrays
@@ -916,7 +1102,9 @@ def main():
         cls_logits_concat,
     )
     prediction = post_processing_function(eval_examples, eval_dataset, outputs_numpy)
-    eval_metric = metric.compute(predictions=prediction.predictions, references=prediction.label_ids)
+    eval_metric = metric.compute(
+        predictions=prediction.predictions, references=prediction.label_ids
+    )
     logger.info(f"Evaluation metrics: {eval_metric}")
 
     if args.do_predict:
@@ -939,26 +1127,58 @@ def main():
                 end_top_index = outputs.end_top_index
                 cls_logits = outputs.cls_logits
 
-                if not args.pad_to_max_length:  # necessary to pad predictions and labels for being gathered
-                    start_top_log_probs = accelerator.pad_across_processes(start_top_log_probs, dim=1, pad_index=-100)
-                    start_top_index = accelerator.pad_across_processes(start_top_index, dim=1, pad_index=-100)
-                    end_top_log_probs = accelerator.pad_across_processes(end_top_log_probs, dim=1, pad_index=-100)
-                    end_top_index = accelerator.pad_across_processes(end_top_index, dim=1, pad_index=-100)
-                    cls_logits = accelerator.pad_across_processes(cls_logits, dim=1, pad_index=-100)
+                if (
+                    not args.pad_to_max_length
+                ):  # necessary to pad predictions and labels for being gathered
+                    start_top_log_probs = accelerator.pad_across_processes(
+                        start_top_log_probs, dim=1, pad_index=-100
+                    )
+                    start_top_index = accelerator.pad_across_processes(
+                        start_top_index, dim=1, pad_index=-100
+                    )
+                    end_top_log_probs = accelerator.pad_across_processes(
+                        end_top_log_probs, dim=1, pad_index=-100
+                    )
+                    end_top_index = accelerator.pad_across_processes(
+                        end_top_index, dim=1, pad_index=-100
+                    )
+                    cls_logits = accelerator.pad_across_processes(
+                        cls_logits, dim=1, pad_index=-100
+                    )
 
-                all_start_top_log_probs.append(accelerator.gather_for_metrics(start_top_log_probs).cpu().numpy())
-                all_start_top_index.append(accelerator.gather_for_metrics(start_top_index).cpu().numpy())
-                all_end_top_log_probs.append(accelerator.gather_for_metrics(end_top_log_probs).cpu().numpy())
-                all_end_top_index.append(accelerator.gather_for_metrics(end_top_index).cpu().numpy())
-                all_cls_logits.append(accelerator.gather_for_metrics(cls_logits).cpu().numpy())
+                all_start_top_log_probs.append(
+                    accelerator.gather_for_metrics(start_top_log_probs).cpu().numpy()
+                )
+                all_start_top_index.append(
+                    accelerator.gather_for_metrics(start_top_index).cpu().numpy()
+                )
+                all_end_top_log_probs.append(
+                    accelerator.gather_for_metrics(end_top_log_probs).cpu().numpy()
+                )
+                all_end_top_index.append(
+                    accelerator.gather_for_metrics(end_top_index).cpu().numpy()
+                )
+                all_cls_logits.append(
+                    accelerator.gather_for_metrics(cls_logits).cpu().numpy()
+                )
 
-        max_len = max([x.shape[1] for x in all_end_top_log_probs])  # Get the max_length of the tensor
+        max_len = max(
+            [x.shape[1] for x in all_end_top_log_probs]
+        )  # Get the max_length of the tensor
 
         # concatenate all numpy arrays collected above
-        start_top_log_probs_concat = create_and_fill_np_array(all_start_top_log_probs, predict_dataset, max_len)
-        start_top_index_concat = create_and_fill_np_array(all_start_top_index, predict_dataset, max_len)
-        end_top_log_probs_concat = create_and_fill_np_array(all_end_top_log_probs, predict_dataset, max_len)
-        end_top_index_concat = create_and_fill_np_array(all_end_top_index, predict_dataset, max_len)
+        start_top_log_probs_concat = create_and_fill_np_array(
+            all_start_top_log_probs, predict_dataset, max_len
+        )
+        start_top_index_concat = create_and_fill_np_array(
+            all_start_top_index, predict_dataset, max_len
+        )
+        end_top_log_probs_concat = create_and_fill_np_array(
+            all_end_top_log_probs, predict_dataset, max_len
+        )
+        end_top_index_concat = create_and_fill_np_array(
+            all_end_top_index, predict_dataset, max_len
+        )
         cls_logits_concat = np.concatenate(all_cls_logits, axis=0)
 
         # delete the list of numpy arrays
@@ -976,8 +1196,12 @@ def main():
             cls_logits_concat,
         )
 
-        prediction = post_processing_function(predict_examples, predict_dataset, outputs_numpy)
-        predict_metric = metric.compute(predictions=prediction.predictions, references=prediction.label_ids)
+        prediction = post_processing_function(
+            predict_examples, predict_dataset, outputs_numpy
+        )
+        predict_metric = metric.compute(
+            predictions=prediction.predictions, references=prediction.label_ids
+        )
         logger.info(f"Predict metrics: {predict_metric}")
 
     if args.with_tracking:
@@ -988,7 +1212,9 @@ def main():
             "step": completed_steps,
         }
         if args.do_predict:
-            log["squad_v2_predict" if args.version_2_with_negative else "squad_predict"] = predict_metric
+            log[
+                "squad_v2_predict" if args.version_2_with_negative else "squad_predict"
+            ] = predict_metric
 
         accelerator.log(log)
 
@@ -999,7 +1225,9 @@ def main():
         accelerator.wait_for_everyone()
         unwrapped_model = accelerator.unwrap_model(model)
         unwrapped_model.save_pretrained(
-            args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
+            args.output_dir,
+            is_main_process=accelerator.is_main_process,
+            save_function=accelerator.save,
         )
         if accelerator.is_main_process:
             tokenizer.save_pretrained(args.output_dir)

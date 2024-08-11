@@ -89,6 +89,7 @@ class OPTConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "opt"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -123,7 +124,9 @@ class OPTConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.num_attention_heads = num_attention_heads
-        self.word_embed_proj_dim = word_embed_proj_dim if word_embed_proj_dim is not None else hidden_size
+        self.word_embed_proj_dim = (
+            word_embed_proj_dim if word_embed_proj_dim is not None else hidden_size
+        )
         self.ffn_dim = ffn_dim
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers

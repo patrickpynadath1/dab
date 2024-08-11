@@ -33,8 +33,12 @@ VOCAB_FILES_NAMES = {
 }
 
 PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {"facebook/blenderbot-3B": "https://huggingface.co/facebook/blenderbot-3B/resolve/main/vocab.json"},
-    "merges_file": {"facebook/blenderbot-3B": "https://huggingface.co/facebook/blenderbot-3B/resolve/main/merges.txt"},
+    "vocab_file": {
+        "facebook/blenderbot-3B": "https://huggingface.co/facebook/blenderbot-3B/resolve/main/vocab.json"
+    },
+    "merges_file": {
+        "facebook/blenderbot-3B": "https://huggingface.co/facebook/blenderbot-3B/resolve/main/merges.txt"
+    },
     "tokenizer_config_file": {
         "facebook/blenderbot-3B": "https://huggingface.co/facebook/blenderbot-3B/resolve/main/tokenizer_config.json"
     },
@@ -52,11 +56,14 @@ class BlenderbotTokenizer(RobertaTokenizer):
 
     Refer to superclass [`RobertaTokenizer`] for usage examples and documentation concerning parameters.
     """
+
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
-    def build_inputs_with_special_tokens(self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None):
+    def build_inputs_with_special_tokens(
+        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
+    ):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A Blenderbot sequence has the following format:
@@ -88,7 +95,9 @@ class BlenderbotTokenizer(RobertaTokenizer):
         input_ids = self.encode(full_string)
         if len(input_ids) > self.model_max_length:
             input_ids = input_ids[-self.model_max_length :]
-            logger.warning(f"Trimmed input from conversation as it was longer than {self.model_max_length} tokens.")
+            logger.warning(
+                f"Trimmed input from conversation as it was longer than {self.model_max_length} tokens."
+            )
         return input_ids
 
 

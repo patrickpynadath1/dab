@@ -76,12 +76,21 @@ class PipelineIterator(IterableDataset):
             # Batch data is assumed to be BaseModelOutput (or dict)
             loader_batched = {}
             for k, element in self._loader_batch_data.items():
-                if k in {"hidden_states", "past_key_values", "attentions"} and isinstance(element, tuple):
+                if k in {
+                    "hidden_states",
+                    "past_key_values",
+                    "attentions",
+                } and isinstance(element, tuple):
                     # Those are stored as lists of tensors so need specific unbatching.
                     if isinstance(element[0], torch.Tensor):
-                        loader_batched[k] = tuple(el[self._loader_batch_index].unsqueeze(0) for el in element)
+                        loader_batched[k] = tuple(
+                            el[self._loader_batch_index].unsqueeze(0) for el in element
+                        )
                     elif isinstance(element[0], np.ndarray):
-                        loader_batched[k] = tuple(np.expand_dims(el[self._loader_batch_index], 0) for el in element)
+                        loader_batched[k] = tuple(
+                            np.expand_dims(el[self._loader_batch_index], 0)
+                            for el in element
+                        )
                     continue
                 if isinstance(element[self._loader_batch_index], torch.Tensor):
                     # Take correct batch data, but make it looked like batch_size=1
@@ -91,7 +100,9 @@ class PipelineIterator(IterableDataset):
                 elif isinstance(element[self._loader_batch_index], np.ndarray):
                     # Take correct batch data, but make it looked like batch_size=1
                     # For compatibility with other methods within transformers
-                    loader_batched[k] = np.expand_dims(element[self._loader_batch_index], 0)
+                    loader_batched[k] = np.expand_dims(
+                        element[self._loader_batch_index], 0
+                    )
                 else:
                     # This is typically a list, so no need to `unsqueeze`.
                     loader_batched[k] = element[self._loader_batch_index]
@@ -102,7 +113,10 @@ class PipelineIterator(IterableDataset):
         return result
 
     def __next__(self):
-        if self._loader_batch_index is not None and self._loader_batch_index < self.loader_batch_size:
+        if (
+            self._loader_batch_index is not None
+            and self._loader_batch_index < self.loader_batch_size
+        ):
             # We are currently unrolling a batch so we just need to return
             # the current item within a batch
             return self.loader_batch_item()
@@ -241,7 +255,10 @@ class PipelinePackIterator(PipelineIterator):
         # its a `is_last` and then just passes it on to the caller.
         is_last = False
         accumulator = []
-        if self._loader_batch_index is not None and self._loader_batch_index < self.loader_batch_size:
+        if (
+            self._loader_batch_index is not None
+            and self._loader_batch_index < self.loader_batch_size
+        ):
             while self._loader_batch_index < self.loader_batch_size:
                 item = self.loader_batch_item()
                 is_last = item.pop("is_last")

@@ -22,7 +22,13 @@ from typing import Dict, List, Tuple
 
 from transformers import DeformableDetrConfig, is_timm_available, is_vision_available
 from transformers.file_utils import cached_property
-from transformers.testing_utils import require_timm, require_torch_gpu, require_vision, slow, torch_device
+from transformers.testing_utils import (
+    require_timm,
+    require_torch_gpu,
+    require_vision,
+    slow,
+    torch_device,
+)
 
 from ...generation.test_generation_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -94,9 +100,13 @@ class DeformableDetrModelTester:
         self.decoder_seq_length = self.num_queries
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
-        pixel_mask = torch.ones([self.batch_size, self.image_size, self.image_size], device=torch_device)
+        pixel_mask = torch.ones(
+            [self.batch_size, self.image_size, self.image_size], device=torch_device
+        )
 
         labels = None
         if self.use_labels:
@@ -108,7 +118,12 @@ class DeformableDetrModelTester:
                     high=self.num_labels, size=(self.n_targets,), device=torch_device
                 )
                 target["boxes"] = torch.rand(self.n_targets, 4, device=torch_device)
-                target["masks"] = torch.rand(self.n_targets, self.image_size, self.image_size, device=torch_device)
+                target["masks"] = torch.rand(
+                    self.n_targets,
+                    self.image_size,
+                    self.image_size,
+                    device=torch_device,
+                )
                 labels.append(target)
 
         config = self.get_config()
@@ -137,7 +152,9 @@ class DeformableDetrModelTester:
         inputs_dict = {"pixel_values": pixel_values, "pixel_mask": pixel_mask}
         return config, inputs_dict
 
-    def create_and_check_deformable_detr_model(self, config, pixel_values, pixel_mask, labels):
+    def create_and_check_deformable_detr_model(
+        self, config, pixel_values, pixel_mask, labels
+    ):
         model = DeformableDetrModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -145,9 +162,14 @@ class DeformableDetrModelTester:
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.num_queries, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.num_queries, self.hidden_size),
+        )
 
-    def create_and_check_deformable_detr_object_detection_head_model(self, config, pixel_values, pixel_mask, labels):
+    def create_and_check_deformable_detr_object_detection_head_model(
+        self, config, pixel_values, pixel_mask, labels
+    ):
         model = DeformableDetrForObjectDetection(config=config)
         model.to(torch_device)
         model.eval()
@@ -155,19 +177,33 @@ class DeformableDetrModelTester:
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_queries, self.num_labels))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_queries, 4))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_queries, self.num_labels)
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_queries, 4)
+        )
 
         result = model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels)
 
         self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_queries, self.num_labels))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_queries, 4))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_queries, self.num_labels)
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_queries, 4)
+        )
 
 
 @require_timm
-class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
-    all_model_classes = (DeformableDetrModel, DeformableDetrForObjectDetection) if is_timm_available() else ()
+class DeformableDetrModelTest(
+    ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
+):
+    all_model_classes = (
+        (DeformableDetrModel, DeformableDetrForObjectDetection)
+        if is_timm_available()
+        else ()
+    )
     is_encoder_decoder = True
     test_torchscript = False
     test_pruning = False
@@ -176,7 +212,9 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
     # special case for head models
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels
+        )
 
         if return_labels:
             if model_class.__name__ == "DeformableDetrForObjectDetection":
@@ -184,10 +222,15 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
                 for i in range(self.model_tester.batch_size):
                     target = {}
                     target["class_labels"] = torch.ones(
-                        size=(self.model_tester.n_targets,), device=torch_device, dtype=torch.long
+                        size=(self.model_tester.n_targets,),
+                        device=torch_device,
+                        dtype=torch.long,
                     )
                     target["boxes"] = torch.ones(
-                        self.model_tester.n_targets, 4, device=torch_device, dtype=torch.float
+                        self.model_tester.n_targets,
+                        4,
+                        device=torch_device,
+                        dtype=torch.float,
                     )
                     target["masks"] = torch.ones(
                         self.model_tester.n_targets,
@@ -203,7 +246,9 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
     def setUp(self):
         self.model_tester = DeformableDetrModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=DeformableDetrConfig, has_text_modality=False)
+        self.config_tester = ConfigTester(
+            self, config_class=DeformableDetrConfig, has_text_modality=False
+        )
 
     def test_config(self):
         # we don't test common_properties and arguments_init as these don't apply for Deformable DETR
@@ -219,7 +264,9 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
     def test_deformable_detr_object_detection_head_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_deformable_detr_object_detection_head_model(*config_and_inputs)
+        self.model_tester.create_and_check_deformable_detr_object_detection_head_model(
+            *config_and_inputs
+        )
 
     @unittest.skip(reason="Deformable DETR does not use inputs_embeds")
     def test_inputs_embeds(self):
@@ -292,10 +339,16 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
             # decoder attentions
             decoder_attentions = outputs.decoder_attentions
             self.assertIsInstance(decoder_attentions, (list, tuple))
-            self.assertEqual(len(decoder_attentions), self.model_tester.num_hidden_layers)
+            self.assertEqual(
+                len(decoder_attentions), self.model_tester.num_hidden_layers
+            )
             self.assertListEqual(
                 list(decoder_attentions[0].shape[-3:]),
-                [self.model_tester.num_attention_heads, self.model_tester.num_queries, self.model_tester.num_queries],
+                [
+                    self.model_tester.num_attention_heads,
+                    self.model_tester.num_queries,
+                    self.model_tester.num_queries,
+                ],
             )
 
             # cross attentions
@@ -349,12 +402,18 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
             with torch.no_grad():
-                tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-                dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs).to_tuple()
+                tuple_output = model(
+                    **tuple_inputs, return_dict=False, **additional_kwargs
+                )
+                dict_output = model(
+                    **dict_inputs, return_dict=True, **additional_kwargs
+                ).to_tuple()
 
                 def recursive_check(tuple_object, dict_object):
                     if isinstance(tuple_object, (List, Tuple)):
-                        for tuple_iterable_value, dict_iterable_value in zip(tuple_object, dict_object):
+                        for tuple_iterable_value, dict_iterable_value in zip(
+                            tuple_object, dict_object
+                        ):
                             recursive_check(tuple_iterable_value, dict_iterable_value)
                     elif isinstance(tuple_object, Dict):
                         for tuple_iterable_value, dict_iterable_value in zip(
@@ -366,7 +425,9 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
                     else:
                         self.assertTrue(
                             torch.allclose(
-                                set_nan_tensor_to_zero(tuple_object), set_nan_tensor_to_zero(dict_object), atol=1e-5
+                                set_nan_tensor_to_zero(tuple_object),
+                                set_nan_tensor_to_zero(dict_object),
+                                atol=1e-5,
                             ),
                             msg=(
                                 "Tuple and dict output are not equal. Difference:"
@@ -388,30 +449,57 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
             check_equivalence(model, tuple_inputs, dict_inputs)
 
-            tuple_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            dict_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
+            tuple_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            dict_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
             check_equivalence(model, tuple_inputs, dict_inputs)
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
-            check_equivalence(model, tuple_inputs, dict_inputs, {"output_hidden_states": True})
+            check_equivalence(
+                model, tuple_inputs, dict_inputs, {"output_hidden_states": True}
+            )
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
-            check_equivalence(model, tuple_inputs, dict_inputs, {"output_attentions": True})
-
-            tuple_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            dict_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            check_equivalence(model, tuple_inputs, dict_inputs, {"output_hidden_states": True})
-
-            tuple_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            dict_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            check_equivalence(model, tuple_inputs, dict_inputs, {"output_attentions": True})
-
-            tuple_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-            dict_inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             check_equivalence(
-                model, tuple_inputs, dict_inputs, {"output_hidden_states": True, "output_attentions": True}
+                model, tuple_inputs, dict_inputs, {"output_attentions": True}
+            )
+
+            tuple_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            dict_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            check_equivalence(
+                model, tuple_inputs, dict_inputs, {"output_hidden_states": True}
+            )
+
+            tuple_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            dict_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            check_equivalence(
+                model, tuple_inputs, dict_inputs, {"output_attentions": True}
+            )
+
+            tuple_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            dict_inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
+            check_equivalence(
+                model,
+                tuple_inputs,
+                dict_inputs,
+                {"output_hidden_states": True, "output_attentions": True},
             )
 
     def test_retain_grad_hidden_states_attentions(self):
@@ -467,7 +555,9 @@ class DeformableDetrModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
                     if "head_mask" and "decoder_head_mask" in arg_names
                     else []
                 )
-                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+                self.assertListEqual(
+                    arg_names[: len(expected_arg_names)], expected_arg_names
+                )
             else:
                 expected_arg_names = ["pixel_values", "pixel_mask"]
                 self.assertListEqual(arg_names[:1], expected_arg_names)
@@ -535,10 +625,16 @@ def prepare_img():
 class DeformableDetrModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return AutoFeatureExtractor.from_pretrained("SenseTime/deformable-detr") if is_vision_available() else None
+        return (
+            AutoFeatureExtractor.from_pretrained("SenseTime/deformable-detr")
+            if is_vision_available()
+            else None
+        )
 
     def test_inference_object_detection_head(self):
-        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable-detr").to(torch_device)
+        model = DeformableDetrForObjectDetection.from_pretrained(
+            "SenseTime/deformable-detr"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -549,21 +645,35 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
         with torch.no_grad():
             outputs = model(pixel_values, pixel_mask)
 
-        expected_shape_logits = torch.Size((1, model.config.num_queries, model.config.num_labels))
+        expected_shape_logits = torch.Size(
+            (1, model.config.num_queries, model.config.num_labels)
+        )
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
 
         expected_logits = torch.tensor(
-            [[-9.6645, -4.3449, -5.8705], [-9.7035, -3.8504, -5.0724], [-10.5634, -5.3379, -7.5116]]
+            [
+                [-9.6645, -4.3449, -5.8705],
+                [-9.7035, -3.8504, -5.0724],
+                [-10.5634, -5.3379, -7.5116],
+            ]
         ).to(torch_device)
         expected_boxes = torch.tensor(
-            [[0.8693, 0.2289, 0.2492], [0.3150, 0.5489, 0.5845], [0.5563, 0.7580, 0.8518]]
+            [
+                [0.8693, 0.2289, 0.2492],
+                [0.3150, 0.5489, 0.5845],
+                [0.5563, 0.7580, 0.8518],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_logits, atol=1e-4)
+        )
 
         expected_shape_boxes = torch.Size((1, model.config.num_queries, 4))
         self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.pred_boxes[0, :3, :3], expected_boxes, atol=1e-4)
+        )
 
     def test_inference_object_detection_head_with_box_refine_two_stage(self):
         model = DeformableDetrForObjectDetection.from_pretrained(
@@ -579,21 +689,35 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
         with torch.no_grad():
             outputs = model(pixel_values, pixel_mask)
 
-        expected_shape_logits = torch.Size((1, model.config.num_queries, model.config.num_labels))
+        expected_shape_logits = torch.Size(
+            (1, model.config.num_queries, model.config.num_labels)
+        )
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
 
         expected_logits = torch.tensor(
-            [[-6.7108, -4.3213, -6.3777], [-8.9014, -6.1799, -6.7240], [-6.9315, -4.4735, -6.2298]]
+            [
+                [-6.7108, -4.3213, -6.3777],
+                [-8.9014, -6.1799, -6.7240],
+                [-6.9315, -4.4735, -6.2298],
+            ]
         ).to(torch_device)
         expected_boxes = torch.tensor(
-            [[0.2583, 0.5499, 0.4683], [0.7652, 0.9068, 0.4882], [0.5490, 0.2763, 0.0564]]
+            [
+                [0.2583, 0.5499, 0.4683],
+                [0.7652, 0.9068, 0.4882],
+                [0.5490, 0.2763, 0.0564],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_logits, atol=1e-4)
+        )
 
         expected_shape_boxes = torch.Size((1, model.config.num_queries, 4))
         self.assertEqual(outputs.pred_boxes.shape, expected_shape_boxes)
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.pred_boxes[0, :3, :3], expected_boxes, atol=1e-4)
+        )
 
     @require_torch_gpu
     def test_inference_object_detection_head_equivalence_cpu_gpu(self):
@@ -604,7 +728,9 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
         pixel_mask = encoding["pixel_mask"]
 
         # 1. run model on CPU
-        model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable-detr-single-scale")
+        model = DeformableDetrForObjectDetection.from_pretrained(
+            "SenseTime/deformable-detr-single-scale"
+        )
 
         with torch.no_grad():
             cpu_outputs = model(pixel_values, pixel_mask)
@@ -620,6 +746,10 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
             assert torch.allclose(cpu_outputs[key], gpu_outputs[key].cpu(), atol=1e-4)
 
         expected_logits = torch.tensor(
-            [[-9.9051, -4.2541, -6.4852], [-9.6947, -4.0854, -6.8033], [-10.0665, -5.8470, -7.7003]]
+            [
+                [-9.9051, -4.2541, -6.4852],
+                [-9.6947, -4.0854, -6.8033],
+                [-10.0665, -5.8470, -7.7003],
+            ]
         )
         assert torch.allclose(cpu_outputs.logits[0, :3, :3], expected_logits, atol=1e-4)

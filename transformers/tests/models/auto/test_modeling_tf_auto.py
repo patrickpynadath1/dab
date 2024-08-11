@@ -17,7 +17,15 @@ import copy
 import tempfile
 import unittest
 
-from transformers import CONFIG_MAPPING, AutoConfig, BertConfig, GPT2Config, T5Config, TapasConfig, is_tf_available
+from transformers import (
+    CONFIG_MAPPING,
+    AutoConfig,
+    BertConfig,
+    GPT2Config,
+    T5Config,
+    TapasConfig,
+    is_tf_available,
+)
 from transformers.testing_utils import (
     DUMMY_UNKNOWN_IDENTIFIER,
     SMALL_MODEL_IDENTIFIER,
@@ -63,10 +71,18 @@ if is_tf_available():
         TF_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING,
         TF_MODEL_MAPPING,
     )
-    from transformers.models.bert.modeling_tf_bert import TF_BERT_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.gpt2.modeling_tf_gpt2 import TF_GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.t5.modeling_tf_t5 import TF_T5_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.tapas.modeling_tf_tapas import TF_TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.bert.modeling_tf_bert import (
+        TF_BERT_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
+    from transformers.models.gpt2.modeling_tf_gpt2 import (
+        TF_GPT2_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
+    from transformers.models.t5.modeling_tf_t5 import (
+        TF_T5_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
+    from transformers.models.tapas.modeling_tf_tapas import (
+        TF_TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 class NewModelConfig(BertConfig):
@@ -111,7 +127,9 @@ class TFAutoModelTest(unittest.TestCase):
             self.assertIsInstance(config, GPT2Config)
 
             model = TFAutoModelForCausalLM.from_pretrained(model_name)
-            model, loading_info = TFAutoModelForCausalLM.from_pretrained(model_name, output_loading_info=True)
+            model, loading_info = TFAutoModelForCausalLM.from_pretrained(
+                model_name, output_loading_info=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, TFGPT2LMHeadModel)
 
@@ -134,7 +152,9 @@ class TFAutoModelTest(unittest.TestCase):
             self.assertIsInstance(config, BertConfig)
 
             model = TFAutoModelForMaskedLM.from_pretrained(model_name)
-            model, loading_info = TFAutoModelForMaskedLM.from_pretrained(model_name, output_loading_info=True)
+            model, loading_info = TFAutoModelForMaskedLM.from_pretrained(
+                model_name, output_loading_info=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, TFBertForMaskedLM)
 
@@ -146,7 +166,9 @@ class TFAutoModelTest(unittest.TestCase):
             self.assertIsInstance(config, T5Config)
 
             model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
-            model, loading_info = TFAutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
+            model, loading_info = TFAutoModelForSeq2SeqLM.from_pretrained(
+                model_name, output_loading_info=True
+            )
             self.assertIsNotNone(model)
             self.assertIsInstance(model, TFT5ForConditionalGeneration)
 
@@ -268,13 +290,15 @@ class TFAutoModelTest(unittest.TestCase):
 
     def test_repo_not_found(self):
         with self.assertRaisesRegex(
-            EnvironmentError, "bert-base is not a local folder and is not a valid model identifier"
+            EnvironmentError,
+            "bert-base is not a local folder and is not a valid model identifier",
         ):
             _ = TFAutoModel.from_pretrained("bert-base")
 
     def test_revision_not_found(self):
         with self.assertRaisesRegex(
-            EnvironmentError, r"aaaaaa is not a valid git identifier \(branch name, tag name or commit id\)"
+            EnvironmentError,
+            r"aaaaaa is not a valid git identifier \(branch name, tag name or commit id\)",
         ):
             _ = TFAutoModel.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, revision="aaaaaa")
 
@@ -286,7 +310,9 @@ class TFAutoModelTest(unittest.TestCase):
             _ = TFAutoModel.from_pretrained("hf-internal-testing/config-no-model")
 
     def test_model_from_pt_suggestion(self):
-        with self.assertRaisesRegex(EnvironmentError, "Use `from_pt=True` to load this model"):
+        with self.assertRaisesRegex(
+            EnvironmentError, "Use `from_pt=True` to load this model"
+        ):
             _ = TFAutoModel.from_pretrained("hf-internal-testing/tiny-bert-pt-only")
 
     def test_cached_model_has_minimum_calls_to_head(self):

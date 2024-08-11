@@ -85,11 +85,16 @@ class DeiTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         self.do_center_crop = do_center_crop
         self.crop_size = crop_size
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_DEFAULT_STD
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -128,7 +133,11 @@ class DeiTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -139,7 +148,10 @@ class DeiTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -147,11 +159,17 @@ class DeiTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         # transformations (resizing + center cropping + normalization)
         if self.do_resize and self.size is not None and self.resample is not None:
-            images = [self.resize(image=image, size=self.size, resample=self.resample) for image in images]
+            images = [
+                self.resize(image=image, size=self.size, resample=self.resample)
+                for image in images
+            ]
         if self.do_center_crop and self.crop_size is not None:
             images = [self.center_crop(image, self.crop_size) for image in images]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

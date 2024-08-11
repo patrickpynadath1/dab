@@ -86,10 +86,18 @@ class Message:
             if len(time_parts) == 1:
                 time_parts = [0, 0, time_parts[0]]
 
-            hours, minutes, seconds = int(time_parts[0]), int(time_parts[1]), float(time_parts[2])
+            hours, minutes, seconds = (
+                int(time_parts[0]),
+                int(time_parts[1]),
+                float(time_parts[2]),
+            )
             total_secs += hours * 3600 + minutes * 60 + seconds
 
-        hours, minutes, seconds = total_secs // 3600, (total_secs % 3600) // 60, total_secs % 60
+        hours, minutes, seconds = (
+            total_secs // 3600,
+            (total_secs % 3600) // 60,
+            total_secs % 60,
+        )
         return f"{int(hours)}h{int(minutes)}m{int(seconds)}s"
 
     @property
@@ -107,7 +115,11 @@ class Message:
             },
             "accessory": {
                 "type": "button",
-                "text": {"type": "plain_text", "text": "Check Action results", "emoji": True},
+                "text": {
+                    "type": "plain_text",
+                    "text": "Check Action results",
+                    "emoji": True,
+                },
                 "url": f"https://github.com/huggingface/transformers/actions/runs/{os.environ['GITHUB_RUN_ID']}",
             },
         }
@@ -126,7 +138,11 @@ class Message:
             },
             "accessory": {
                 "type": "button",
-                "text": {"type": "plain_text", "text": "Check Action results", "emoji": True},
+                "text": {
+                    "type": "plain_text",
+                    "text": "Check Action results",
+                    "emoji": True,
+                },
                 "url": f"https://github.com/huggingface/transformers/actions/runs/{os.environ['GITHUB_RUN_ID']}",
             },
         }
@@ -134,7 +150,9 @@ class Message:
     @property
     def category_failures(self) -> Dict:
         line_length = 40
-        category_failures = {k: v["failed"] for k, v in doc_test_results.items() if isinstance(v, dict)}
+        category_failures = {
+            k: v["failed"] for k, v in doc_test_results.items() if isinstance(v, dict)
+        }
 
         report = ""
         for category, failures in category_failures.items():
@@ -144,7 +162,12 @@ class Message:
             if report != "":
                 report += "\n\n"
 
-            report += f"*{category} failures*:".ljust(line_length // 2).rjust(line_length // 2) + "\n"
+            report += (
+                f"*{category} failures*:".ljust(line_length // 2).rjust(
+                    line_length // 2
+                )
+                + "\n"
+            )
             report += "`"
             report += "`\n`".join(failures)
             report += "`"
@@ -183,7 +206,11 @@ class Message:
                 },
                 "accessory": {
                     "type": "button",
-                    "text": {"type": "plain_text", "text": "Check Action results", "emoji": True},
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Check Action results",
+                        "emoji": True,
+                    },
                     "url": f"https://github.com/huggingface/transformers/actions/runs/{os.environ['GITHUB_RUN_ID']}",
                 },
             }
@@ -202,7 +229,11 @@ class Message:
         print("Sending the following payload")
         print(json.dumps({"blocks": json.loads(self.payload)}))
 
-        text = f"{self.n_failures} failures out of {self.n_tests} tests," if self.n_failures else "All tests passed."
+        text = (
+            f"{self.n_failures} failures out of {self.n_tests} tests,"
+            if self.n_failures
+            else "All tests passed."
+        )
 
         self.thread_ts = client.chat_postMessage(
             channel=os.environ["CI_SLACK_CHANNEL_ID_DAILY"],
@@ -222,12 +253,19 @@ class Message:
         if job_link is not None:
             content["accessory"] = {
                 "type": "button",
-                "text": {"type": "plain_text", "text": "GitHub Action job", "emoji": True},
+                "text": {
+                    "type": "plain_text",
+                    "text": "GitHub Action job",
+                    "emoji": True,
+                },
                 "url": job_link,
             }
 
         return [
-            {"type": "header", "text": {"type": "plain_text", "text": title.upper(), "emoji": True}},
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": title.upper(), "emoji": True},
+            },
             content,
             {"type": "section", "text": {"type": "mrkdwn", "text": failures_text}},
         ]

@@ -1427,7 +1427,9 @@ _TRAINERSPEC.fields_by_name["model_type"].enum_type = _TRAINERSPEC_MODELTYPE
 _TRAINERSPEC_MODELTYPE.containing_type = _TRAINERSPEC
 _SELFTESTDATA_SAMPLE.containing_type = _SELFTESTDATA
 _SELFTESTDATA.fields_by_name["samples"].message_type = _SELFTESTDATA_SAMPLE
-_MODELPROTO_SENTENCEPIECE.fields_by_name["type"].enum_type = _MODELPROTO_SENTENCEPIECE_TYPE
+_MODELPROTO_SENTENCEPIECE.fields_by_name["type"].enum_type = (
+    _MODELPROTO_SENTENCEPIECE_TYPE
+)
 _MODELPROTO_SENTENCEPIECE.containing_type = _MODELPROTO
 _MODELPROTO_SENTENCEPIECE_TYPE.containing_type = _MODELPROTO_SENTENCEPIECE
 _MODELPROTO.fields_by_name["pieces"].message_type = _MODELPROTO_SENTENCEPIECE
@@ -1446,7 +1448,7 @@ TrainerSpec = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     {
         "DESCRIPTOR": _TRAINERSPEC,
-        "__module__": "sentencepiece_model_pb2"
+        "__module__": "sentencepiece_model_pb2",
         # @@protoc_insertion_point(class_scope:sentencepiece.TrainerSpec)
     },
 )
@@ -1457,7 +1459,7 @@ NormalizerSpec = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     {
         "DESCRIPTOR": _NORMALIZERSPEC,
-        "__module__": "sentencepiece_model_pb2"
+        "__module__": "sentencepiece_model_pb2",
         # @@protoc_insertion_point(class_scope:sentencepiece.NormalizerSpec)
     },
 )
@@ -1472,12 +1474,12 @@ SelfTestData = _reflection.GeneratedProtocolMessageType(
             (_message.Message,),
             {
                 "DESCRIPTOR": _SELFTESTDATA_SAMPLE,
-                "__module__": "sentencepiece_model_pb2"
+                "__module__": "sentencepiece_model_pb2",
                 # @@protoc_insertion_point(class_scope:sentencepiece.SelfTestData.Sample)
             },
         ),
         "DESCRIPTOR": _SELFTESTDATA,
-        "__module__": "sentencepiece_model_pb2"
+        "__module__": "sentencepiece_model_pb2",
         # @@protoc_insertion_point(class_scope:sentencepiece.SelfTestData)
     },
 )
@@ -1493,12 +1495,12 @@ ModelProto = _reflection.GeneratedProtocolMessageType(
             (_message.Message,),
             {
                 "DESCRIPTOR": _MODELPROTO_SENTENCEPIECE,
-                "__module__": "sentencepiece_model_pb2"
+                "__module__": "sentencepiece_model_pb2",
                 # @@protoc_insertion_point(class_scope:sentencepiece.ModelProto.SentencePiece)
             },
         ),
         "DESCRIPTOR": _MODELPROTO,
-        "__module__": "sentencepiece_model_pb2"
+        "__module__": "sentencepiece_model_pb2",
         # @@protoc_insertion_point(class_scope:sentencepiece.ModelProto)
     },
 )

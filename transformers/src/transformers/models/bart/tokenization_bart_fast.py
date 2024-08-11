@@ -27,7 +27,11 @@ from .tokenization_bart import BartTokenizer
 logger = logging.get_logger(__name__)
 
 
-VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "tokenizer_file": "tokenizer.json"}
+VOCAB_FILES_NAMES = {
+    "vocab_file": "vocab.json",
+    "merges_file": "merges.txt",
+    "tokenizer_file": "tokenizer.json",
+}
 
 # See all BART models at https://huggingface.co/models?filter=bart
 PRETRAINED_VOCAB_FILES_MAP = {
@@ -145,6 +149,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets (`bool`, *optional*, defaults to `True`):
             Whether the post processing step should trim offsets to avoid including whitespaces.
     """
+
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
@@ -166,7 +171,7 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         mask_token="<mask>",
         add_prefix_space=False,
         trim_offsets=True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             vocab_file,
@@ -195,7 +200,9 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
 
         # the pre_tokenizer is already updated in the GPT2TokenizerFast `__init__`
         tokenizer_component = "post_processor"
-        tokenizer_component_instance = getattr(self.backend_tokenizer, tokenizer_component, None)
+        tokenizer_component_instance = getattr(
+            self.backend_tokenizer, tokenizer_component, None
+        )
         if tokenizer_component_instance:
             state = json.loads(tokenizer_component_instance.__getstate__())
 
@@ -244,7 +251,11 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
         """
         # Mask token behave like a normal word, i.e. include the space before it
         # So we set lstrip to True
-        value = AddedToken(value, lstrip=True, rstrip=False) if isinstance(value, str) else value
+        value = (
+            AddedToken(value, lstrip=True, rstrip=False)
+            if isinstance(value, str)
+            else value
+        )
         self._mask_token = value
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
@@ -269,7 +280,9 @@ class BartTokenizerFast(PreTrainedTokenizerFast):
 
         return super()._encode_plus(*args, **kwargs)
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

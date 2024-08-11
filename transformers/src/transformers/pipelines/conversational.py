@@ -54,7 +54,11 @@ class Conversation:
     ```"""
 
     def __init__(
-        self, text: str = None, conversation_id: uuid.UUID = None, past_user_inputs=None, generated_responses=None
+        self,
+        text: str = None,
+        conversation_id: uuid.UUID = None,
+        past_user_inputs=None,
+        generated_responses=None,
     ):
         if not conversation_id:
             conversation_id = uuid.uuid4()
@@ -128,7 +132,9 @@ class Conversation:
         Returns: Iterator of (is_user, text_chunk) in chronological order of the conversation. `is_user` is a `bool`,
         `text_chunks` is a `str`.
         """
-        for user_input, generated_response in zip(self.past_user_inputs, self.generated_responses):
+        for user_input, generated_response in zip(
+            self.past_user_inputs, self.generated_responses
+        ):
             yield True, user_input
             yield False, generated_response
         if self.new_user_input:
@@ -194,7 +200,11 @@ class ConversationalPipeline(Pipeline):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _sanitize_parameters(
-        self, min_length_for_response=None, minimum_tokens=None, clean_up_tokenization_spaces=None, **generate_kwargs
+        self,
+        min_length_for_response=None,
+        minimum_tokens=None,
+        clean_up_tokenization_spaces=None,
+        **generate_kwargs,
     ):
         preprocess_params = {}
         forward_params = {}
@@ -209,13 +219,20 @@ class ConversationalPipeline(Pipeline):
             forward_params["max_length"] = generate_kwargs["max_length"]
             # self.max_length = generate_kwargs.get("max_length", self.model.config.max_length)
         if clean_up_tokenization_spaces is not None:
-            postprocess_params["clean_up_tokenization_spaces"] = clean_up_tokenization_spaces
+            postprocess_params["clean_up_tokenization_spaces"] = (
+                clean_up_tokenization_spaces
+            )
 
         if generate_kwargs:
             forward_params.update(generate_kwargs)
         return preprocess_params, forward_params, postprocess_params
 
-    def __call__(self, conversations: Union[Conversation, List[Conversation]], num_workers=0, **kwargs):
+    def __call__(
+        self,
+        conversations: Union[Conversation, List[Conversation]],
+        num_workers=0,
+        **kwargs,
+    ):
         r"""
         Generate responses for the conversation(s) given as inputs.
 
@@ -241,7 +258,9 @@ class ConversationalPipeline(Pipeline):
             return outputs[0]
         return outputs
 
-    def preprocess(self, conversation: Conversation, min_length_for_response=32) -> Dict[str, Any]:
+    def preprocess(
+        self, conversation: Conversation, min_length_for_response=32
+    ) -> Dict[str, Any]:
         if not isinstance(conversation, Conversation):
             raise ValueError("ConversationalPipeline, expects Conversation as inputs")
         if conversation.new_user_input is None:
@@ -266,11 +285,15 @@ class ConversationalPipeline(Pipeline):
 
         n = model_inputs["input_ids"].shape[1]
         if max_length - minimum_tokens < n:
-            logger.warning(f"Conversation input is to long ({n}), trimming it to ({max_length} - {minimum_tokens})")
+            logger.warning(
+                f"Conversation input is to long ({n}), trimming it to ({max_length} - {minimum_tokens})"
+            )
             trim = max_length - minimum_tokens
             model_inputs["input_ids"] = model_inputs["input_ids"][:, -trim:]
             if "attention_mask" in model_inputs:
-                model_inputs["attention_mask"] = model_inputs["attention_mask"][:, -trim:]
+                model_inputs["attention_mask"] = model_inputs["attention_mask"][
+                    :, -trim:
+                ]
         conversation = model_inputs.pop("conversation")
         generate_kwargs["max_length"] = max_length
         output_ids = self.model.generate(**model_inputs, **generate_kwargs)
@@ -278,7 +301,10 @@ class ConversationalPipeline(Pipeline):
             start_position = 1
         else:
             start_position = n
-        return {"output_ids": output_ids[:, start_position:], "conversation": conversation}
+        return {
+            "output_ids": output_ids[:, start_position:],
+            "conversation": conversation,
+        }
 
     def postprocess(self, model_outputs, clean_up_tokenization_spaces=True):
         output_ids = model_outputs["output_ids"]
@@ -297,7 +323,10 @@ class ConversationalPipeline(Pipeline):
         input_ids = []
         for is_user, text in conversation.iter_texts():
             if eos_token_id is not None:
-                input_ids.extend(self.tokenizer.encode(text, add_special_tokens=False) + [eos_token_id])
+                input_ids.extend(
+                    self.tokenizer.encode(text, add_special_tokens=False)
+                    + [eos_token_id]
+                )
             else:
                 input_ids.extend(self.tokenizer.encode(text, add_special_tokens=False))
 

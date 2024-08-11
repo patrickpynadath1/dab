@@ -70,6 +70,7 @@ class VisionEncoderDecoderConfig(PretrainedConfig):
     >>> encoder_decoder_config = VisionEncoderDecoderConfig.from_pretrained("my-model")
     >>> model = VisionEncoderDecoderModel.from_pretrained("my-model", config=encoder_decoder_config)
     ```"""
+
     model_type = "vision-encoder-decoder"
     is_composition = True
 
@@ -92,7 +93,10 @@ class VisionEncoderDecoderConfig(PretrainedConfig):
 
     @classmethod
     def from_encoder_decoder_configs(
-        cls, encoder_config: PretrainedConfig, decoder_config: PretrainedConfig, **kwargs
+        cls,
+        encoder_config: PretrainedConfig,
+        decoder_config: PretrainedConfig,
+        **kwargs,
     ) -> PretrainedConfig:
         r"""
         Instantiate a [`VisionEncoderDecoderConfig`] (or a derived class) from a pre-trained encoder model
@@ -101,11 +105,15 @@ class VisionEncoderDecoderConfig(PretrainedConfig):
         Returns:
             [`VisionEncoderDecoderConfig`]: An instance of a configuration object
         """
-        logger.info("Setting `config.is_decoder=True` and `config.add_cross_attention=True` for decoder_config")
+        logger.info(
+            "Setting `config.is_decoder=True` and `config.add_cross_attention=True` for decoder_config"
+        )
         decoder_config.is_decoder = True
         decoder_config.add_cross_attention = True
 
-        return cls(encoder=encoder_config.to_dict(), decoder=decoder_config.to_dict(), **kwargs)
+        return cls(
+            encoder=encoder_config.to_dict(), decoder=decoder_config.to_dict(), **kwargs
+        )
 
     def to_dict(self):
         """

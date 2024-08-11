@@ -91,11 +91,15 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
         text_model_type = text_config.pop("model_type")
 
         if vision_model_type == "clip":
-            self.vision_config = AutoConfig.for_model(vision_model_type, **vision_config).vision_config
+            self.vision_config = AutoConfig.for_model(
+                vision_model_type, **vision_config
+            ).vision_config
         elif vision_model_type == "clip_vision_model":
             self.vision_config = CLIPVisionConfig(**vision_config)
         else:
-            self.vision_config = AutoConfig.for_model(vision_model_type, **vision_config)
+            self.vision_config = AutoConfig.for_model(
+                vision_model_type, **vision_config
+            )
 
         self.text_config = AutoConfig.for_model(text_model_type, **text_config)
 
@@ -103,7 +107,9 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
         self.logit_scale_init_value = logit_scale_init_value
 
     @classmethod
-    def from_vision_text_configs(cls, vision_config: PretrainedConfig, text_config: PretrainedConfig, **kwargs):
+    def from_vision_text_configs(
+        cls, vision_config: PretrainedConfig, text_config: PretrainedConfig, **kwargs
+    ):
         r"""
         Instantiate a [`VisionTextDualEncoderConfig`] (or a derived class) from text model configuration and vision
         model configuration.
@@ -112,7 +118,11 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
             [`VisionTextDualEncoderConfig`]: An instance of a configuration object
         """
 
-        return cls(vision_config=vision_config.to_dict(), text_config=text_config.to_dict(), **kwargs)
+        return cls(
+            vision_config=vision_config.to_dict(),
+            text_config=text_config.to_dict(),
+            **kwargs
+        )
 
     def to_dict(self):
         """

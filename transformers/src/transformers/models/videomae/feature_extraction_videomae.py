@@ -72,11 +72,16 @@ class VideoMAEFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMix
         self.resample = resample
         self.do_center_crop = do_center_crop
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_DEFAULT_STD
 
     def resize_video(self, video, size, resample="bilinear"):
-        return [self.resize(frame, size, resample, default_to_square=False) for frame in video]
+        return [
+            self.resize(frame, size, resample, default_to_square=False)
+            for frame in video
+        ]
 
     def crop_video(self, video, size):
         return [self.center_crop(frame, size) for frame in video]
@@ -98,7 +103,10 @@ class VideoMAEFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMix
         return (video - mean[None, :, None, None]) / std[None, :, None, None]
 
     def __call__(
-        self, videos: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        videos: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several video(s).
@@ -136,10 +144,13 @@ class VideoMAEFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMix
 
         # Check that videos have a valid type
         if isinstance(videos, (list, tuple)):
-            if isinstance(videos[0], (Image.Image, np.ndarray)) or is_torch_tensor(videos[0]):
+            if isinstance(videos[0], (Image.Image, np.ndarray)) or is_torch_tensor(
+                videos[0]
+            ):
                 valid_videos = True
             elif isinstance(videos[0], (list, tuple)) and (
-                isinstance(videos[0][0], (Image.Image, np.ndarray)) or is_torch_tensor(videos[0][0])
+                isinstance(videos[0][0], (Image.Image, np.ndarray))
+                or is_torch_tensor(videos[0][0])
             ):
                 valid_videos = True
                 is_batched = True
@@ -156,11 +167,17 @@ class VideoMAEFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMix
 
         # transformations (resizing + center cropping + normalization)
         if self.do_resize and self.size is not None:
-            videos = [self.resize_video(video, size=self.size, resample=self.resample) for video in videos]
+            videos = [
+                self.resize_video(video, size=self.size, resample=self.resample)
+                for video in videos
+            ]
         if self.do_center_crop and self.size is not None:
             videos = [self.crop_video(video, size=self.size) for video in videos]
         if self.do_normalize:
-            videos = [self.normalize_video(video, mean=self.image_mean, std=self.image_std) for video in videos]
+            videos = [
+                self.normalize_video(video, mean=self.image_mean, std=self.image_std)
+                for video in videos
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": videos}

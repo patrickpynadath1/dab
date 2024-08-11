@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING
 from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_torch_available
 
 
-_import_structure = {"configuration_cvt": ["CVT_PRETRAINED_CONFIG_ARCHIVE_MAP", "CvtConfig"]}
+_import_structure = {
+    "configuration_cvt": ["CVT_PRETRAINED_CONFIG_ARCHIVE_MAP", "CvtConfig"]
+}
 
 
 try:
@@ -56,4 +58,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

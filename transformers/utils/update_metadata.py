@@ -42,7 +42,9 @@ transformers_module = spec.loader.load_module()
 
 # Regexes that match TF/Flax/PT model names.
 _re_tf_models = re.compile(r"TF(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
-_re_flax_models = re.compile(r"Flax(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
+_re_flax_models = re.compile(
+    r"Flax(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)"
+)
 # Will match any TF or Flax model too so need to be in an else branch afterthe two previous regexes.
 _re_pt_models = re.compile(r"(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
 
@@ -51,24 +53,64 @@ _re_pt_models = re.compile(r"(.*)(?:Model|Encoder|Decoder|ForConditionalGenerati
 PIPELINE_TAGS_AND_AUTO_MODELS = [
     ("pretraining", "MODEL_FOR_PRETRAINING_MAPPING_NAMES", "AutoModelForPreTraining"),
     ("feature-extraction", "MODEL_MAPPING_NAMES", "AutoModel"),
-    ("audio-classification", "MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES", "AutoModelForAudioClassification"),
+    (
+        "audio-classification",
+        "MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES",
+        "AutoModelForAudioClassification",
+    ),
     ("text-generation", "MODEL_FOR_CAUSAL_LM_MAPPING_NAMES", "AutoModelForCausalLM"),
     ("automatic-speech-recognition", "MODEL_FOR_CTC_MAPPING_NAMES", "AutoModelForCTC"),
-    ("image-classification", "MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES", "AutoModelForImageClassification"),
-    ("image-segmentation", "MODEL_FOR_IMAGE_SEGMENTATION_MAPPING_NAMES", "AutoModelForImageSegmentation"),
+    (
+        "image-classification",
+        "MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES",
+        "AutoModelForImageClassification",
+    ),
+    (
+        "image-segmentation",
+        "MODEL_FOR_IMAGE_SEGMENTATION_MAPPING_NAMES",
+        "AutoModelForImageSegmentation",
+    ),
     ("fill-mask", "MODEL_FOR_MASKED_LM_MAPPING_NAMES", "AutoModelForMaskedLM"),
-    ("object-detection", "MODEL_FOR_OBJECT_DETECTION_MAPPING_NAMES", "AutoModelForObjectDetection"),
-    ("question-answering", "MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES", "AutoModelForQuestionAnswering"),
-    ("text2text-generation", "MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES", "AutoModelForSeq2SeqLM"),
-    ("text-classification", "MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES", "AutoModelForSequenceClassification"),
-    ("automatic-speech-recognition", "MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES", "AutoModelForSpeechSeq2Seq"),
+    (
+        "object-detection",
+        "MODEL_FOR_OBJECT_DETECTION_MAPPING_NAMES",
+        "AutoModelForObjectDetection",
+    ),
+    (
+        "question-answering",
+        "MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES",
+        "AutoModelForQuestionAnswering",
+    ),
+    (
+        "text2text-generation",
+        "MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES",
+        "AutoModelForSeq2SeqLM",
+    ),
+    (
+        "text-classification",
+        "MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES",
+        "AutoModelForSequenceClassification",
+    ),
+    (
+        "automatic-speech-recognition",
+        "MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES",
+        "AutoModelForSpeechSeq2Seq",
+    ),
     (
         "table-question-answering",
         "MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING_NAMES",
         "AutoModelForTableQuestionAnswering",
     ),
-    ("token-classification", "MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES", "AutoModelForTokenClassification"),
-    ("multiple-choice", "MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES", "AutoModelForMultipleChoice"),
+    (
+        "token-classification",
+        "MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES",
+        "AutoModelForTokenClassification",
+    ),
+    (
+        "multiple-choice",
+        "MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES",
+        "AutoModelForMultipleChoice",
+    ),
     (
         "next-sentence-prediction",
         "MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING_NAMES",
@@ -79,7 +121,11 @@ PIPELINE_TAGS_AND_AUTO_MODELS = [
         "MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING_NAMES",
         "AutoModelForAudioFrameClassification",
     ),
-    ("audio-xvector", "MODEL_FOR_AUDIO_XVECTOR_MAPPING_NAMES", "AutoModelForAudioXVector"),
+    (
+        "audio-xvector",
+        "MODEL_FOR_AUDIO_XVECTOR_MAPPING_NAMES",
+        "AutoModelForAudioXVector",
+    ),
     (
         "document-question-answering",
         "MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES",
@@ -90,7 +136,11 @@ PIPELINE_TAGS_AND_AUTO_MODELS = [
         "MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES",
         "AutoModelForVisualQuestionAnswering",
     ),
-    ("image-to-text", "MODEL_FOR_FOR_VISION_2_SEQ_MAPPING_NAMES", "AutoModelForVision2Seq"),
+    (
+        "image-to-text",
+        "MODEL_FOR_FOR_VISION_2_SEQ_MAPPING_NAMES",
+        "AutoModelForVision2Seq",
+    ),
     (
         "zero-shot-image-classification",
         "_MODEL_FOR_ZERO_SHOT_IMAGE_CLASSIFICATION_MAPPING_NAMES",
@@ -102,7 +152,9 @@ PIPELINE_TAGS_AND_AUTO_MODELS = [
 # Thanks to https://stackoverflow.com/questions/29916065/how-to-do-camelcase-split-in-python
 def camel_case_split(identifier):
     "Split a camelcased `identifier` into words."
-    matches = re.finditer(".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier)
+    matches = re.finditer(
+        ".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier
+    )
     return [m.group(0) for m in matches]
 
 
@@ -112,9 +164,12 @@ def get_frameworks_table():
     modules.
     """
     # Dictionary model names to config.
-    config_maping_names = transformers_module.models.auto.configuration_auto.CONFIG_MAPPING_NAMES
+    config_maping_names = (
+        transformers_module.models.auto.configuration_auto.CONFIG_MAPPING_NAMES
+    )
     model_prefix_to_model_type = {
-        config.replace("Config", ""): model_type for model_type, config in config_maping_names.items()
+        config.replace("Config", ""): model_type
+        for model_type, config in config_maping_names.items()
     }
 
     # Dictionaries flagging if each model prefix has a backend in PT/TF/Flax.
@@ -143,7 +198,9 @@ def get_frameworks_table():
                 # Try again after removing the last word in the name
                 attr_name = "".join(camel_case_split(attr_name)[:-1])
 
-    all_models = set(list(pt_models.keys()) + list(tf_models.keys()) + list(flax_models.keys()))
+    all_models = set(
+        list(pt_models.keys()) + list(tf_models.keys()) + list(flax_models.keys())
+    )
     all_models = list(all_models)
     all_models.sort()
 
@@ -157,9 +214,15 @@ def get_frameworks_table():
     for t in all_models:
         if t in transformers_module.models.auto.processing_auto.PROCESSOR_MAPPING_NAMES:
             processors[t] = "AutoProcessor"
-        elif t in transformers_module.models.auto.tokenization_auto.TOKENIZER_MAPPING_NAMES:
+        elif (
+            t
+            in transformers_module.models.auto.tokenization_auto.TOKENIZER_MAPPING_NAMES
+        ):
             processors[t] = "AutoTokenizer"
-        elif t in transformers_module.models.auto.feature_extraction_auto.FEATURE_EXTRACTOR_MAPPING_NAMES:
+        elif (
+            t
+            in transformers_module.models.auto.feature_extraction_auto.FEATURE_EXTRACTOR_MAPPING_NAMES
+        ):
             processors[t] = "AutoFeatureExtractor"
         else:
             # Default to AutoTokenizer if a model has nothing, for backward compatibility.
@@ -197,7 +260,9 @@ def update_pipeline_and_auto_class_table(table):
                     model_names.extend(list(name))
 
             # Add pipeline tag and auto model class for those models
-            table.update({model_name: (pipeline_tag, cls) for model_name in model_names})
+            table.update(
+                {model_name: (pipeline_tag, cls) for model_name in model_names}
+            )
 
     return table
 
@@ -208,7 +273,10 @@ def update_metadata(token, commit_sha):
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo = Repository(
-            tmp_dir, clone_from="huggingface/transformers-metadata", repo_type="dataset", use_auth_token=token
+            tmp_dir,
+            clone_from="huggingface/transformers-metadata",
+            repo_type="dataset",
+            use_auth_token=token,
         )
 
         frameworks_table = get_frameworks_table()
@@ -217,7 +285,10 @@ def update_metadata(token, commit_sha):
 
         tags_dataset = Dataset.from_json(os.path.join(tmp_dir, "pipeline_tags.json"))
         table = {
-            tags_dataset[i]["model_class"]: (tags_dataset[i]["pipeline_tag"], tags_dataset[i]["auto_class"])
+            tags_dataset[i]["model_class"]: (
+                tags_dataset[i]["pipeline_tag"],
+                tags_dataset[i]["auto_class"],
+            )
             for i in range(len(tags_dataset))
         }
         table = update_pipeline_and_auto_class_table(table)
@@ -270,9 +341,19 @@ def check_pipeline_tags():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--token", type=str, help="The token to use to push to the transformers-metadata dataset.")
-    parser.add_argument("--commit_sha", type=str, help="The sha of the commit going with this update.")
-    parser.add_argument("--check-only", action="store_true", help="Activate to just check all pipelines are present.")
+    parser.add_argument(
+        "--token",
+        type=str,
+        help="The token to use to push to the transformers-metadata dataset.",
+    )
+    parser.add_argument(
+        "--commit_sha", type=str, help="The sha of the commit going with this update."
+    )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Activate to just check all pipelines are present.",
+    )
     args = parser.parse_args()
 
     if args.check_only:

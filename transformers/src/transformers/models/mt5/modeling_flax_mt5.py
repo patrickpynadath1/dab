@@ -17,7 +17,11 @@
 import numpy as np
 
 from ...utils import logging
-from ..t5.modeling_flax_t5 import FlaxT5EncoderModel, FlaxT5ForConditionalGeneration, FlaxT5Model
+from ..t5.modeling_flax_t5 import (
+    FlaxT5EncoderModel,
+    FlaxT5ForConditionalGeneration,
+    FlaxT5Model,
+)
 from .configuration_mt5 import MT5Config
 
 
@@ -28,7 +32,9 @@ _TOKENIZER_FOR_DOC = "T5Tokenizer"
 
 
 # Copied from transformers.models.bart.modeling_flax_bart.shift_tokens_right
-def shift_tokens_right(input_ids: np.array, pad_token_id: int, decoder_start_token_id: int) -> np.ndarray:
+def shift_tokens_right(
+    input_ids: np.array, pad_token_id: int, decoder_start_token_id: int
+) -> np.ndarray:
     """
     Shift input ids one token to the right.
     """
@@ -36,7 +42,9 @@ def shift_tokens_right(input_ids: np.array, pad_token_id: int, decoder_start_tok
     shifted_input_ids[:, 1:] = input_ids[:, :-1]
     shifted_input_ids[:, 0] = decoder_start_token_id
 
-    shifted_input_ids = np.where(shifted_input_ids == -100, pad_token_id, shifted_input_ids)
+    shifted_input_ids = np.where(
+        shifted_input_ids == -100, pad_token_id, shifted_input_ids
+    )
     return shifted_input_ids
 
 
@@ -62,6 +70,7 @@ class FlaxMT5Model(FlaxT5Model):
     >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=decoder_input_ids)
     >>> hidden_states = outputs.last_hidden_state
     ```"""
+
     model_type = "mt5"
     config_class = MT5Config
 
@@ -88,6 +97,7 @@ class FlaxMT5EncoderModel(FlaxT5EncoderModel):
     >>> outputs = model(input_ids=inputs["input_ids"])
     >>> hidden_states = outputs.last_hidden_state
     ```"""
+
     model_type = "mt5"
     config_class = MT5Config
 

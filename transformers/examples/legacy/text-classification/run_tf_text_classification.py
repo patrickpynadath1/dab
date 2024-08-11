@@ -72,7 +72,10 @@ def get_tfds(
         for k in files.keys():
             transformed_ds[k] = ds[k].map(
                 lambda example: tokenizer.batch_encode_plus(
-                    example[features_name[0]], truncation=True, max_length=max_seq_length, padding="max_length"
+                    example[features_name[0]],
+                    truncation=True,
+                    max_length=max_seq_length,
+                    padding="max_length",
                 ),
                 batched=True,
             )
@@ -117,7 +120,9 @@ def get_tfds(
     )
 
     if train_ds is not None:
-        train_ds = train_ds.apply(tf.data.experimental.assert_cardinality(len(ds[datasets.Split.TRAIN])))
+        train_ds = train_ds.apply(
+            tf.data.experimental.assert_cardinality(len(ds[datasets.Split.TRAIN]))
+        )
 
     val_ds = (
         tf.data.Dataset.from_generator(
@@ -130,7 +135,9 @@ def get_tfds(
     )
 
     if val_ds is not None:
-        val_ds = val_ds.apply(tf.data.experimental.assert_cardinality(len(ds[datasets.Split.VALIDATION])))
+        val_ds = val_ds.apply(
+            tf.data.experimental.assert_cardinality(len(ds[datasets.Split.VALIDATION]))
+        )
 
     test_ds = (
         tf.data.Dataset.from_generator(
@@ -143,7 +150,9 @@ def get_tfds(
     )
 
     if test_ds is not None:
-        test_ds = test_ds.apply(tf.data.experimental.assert_cardinality(len(ds[datasets.Split.TEST])))
+        test_ds = test_ds.apply(
+            tf.data.experimental.assert_cardinality(len(ds[datasets.Split.TEST]))
+        )
 
     return train_ds, val_ds, test_ds, label2id
 
@@ -162,9 +171,15 @@ class DataTrainingArguments:
     """
 
     label_column_id: int = field(metadata={"help": "Which column contains the label"})
-    train_file: str = field(default=None, metadata={"help": "The path of the training file"})
-    dev_file: Optional[str] = field(default=None, metadata={"help": "The path of the development file"})
-    test_file: Optional[str] = field(default=None, metadata={"help": "The path of the test file"})
+    train_file: str = field(
+        default=None, metadata={"help": "The path of the training file"}
+    )
+    dev_file: Optional[str] = field(
+        default=None, metadata={"help": "The path of the development file"}
+    )
+    test_file: Optional[str] = field(
+        default=None, metadata={"help": "The path of the test file"}
+    )
     max_seq_length: int = field(
         default=128,
         metadata={
@@ -175,7 +190,8 @@ class DataTrainingArguments:
         },
     )
     overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
+        default=False,
+        metadata={"help": "Overwrite the cached training and evaluation sets"},
     )
 
 
@@ -186,20 +202,32 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"
+        }
     )
     config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained config name or path if not the same as model_name"
+        },
     )
     tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained tokenizer name or path if not the same as model_name"
+        },
     )
-    use_fast: bool = field(default=False, metadata={"help": "Set this flag to use fast tokenization."})
+    use_fast: bool = field(
+        default=False, metadata={"help": "Set this flag to use fast tokenization."}
+    )
     # If you want to tweak more attributes on your tokenizer, you should do it in a distinct script,
     # or just modify its tokenizer_config.json.
     cache_dir: Optional[str] = field(
         default=None,
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+        metadata={
+            "help": "Where do you want to store the pretrained models downloaded from huggingface.co"
+        },
     )
 
 
@@ -207,7 +235,9 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TFTrainingArguments))
+    parser = HfArgumentParser(
+        (ModelArguments, DataTrainingArguments, TFTrainingArguments)
+    )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     if (
@@ -240,7 +270,11 @@ def main():
     # download model & vocab.
 
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        (
+            model_args.tokenizer_name
+            if model_args.tokenizer_name
+            else model_args.model_name_or_path
+        ),
         cache_dir=model_args.cache_dir,
     )
 
@@ -254,7 +288,11 @@ def main():
     )
 
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        (
+            model_args.config_name
+            if model_args.config_name
+            else model_args.model_name_or_path
+        ),
         num_labels=len(label2id),
         label2id=label2id,
         id2label={id: label for label, id in label2id.items()},

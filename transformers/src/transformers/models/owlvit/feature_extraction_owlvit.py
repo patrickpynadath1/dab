@@ -36,7 +36,12 @@ def center_to_corners_format(x):
     (left, top, right, bottom).
     """
     x_center, y_center, width, height = x.unbind(-1)
-    boxes = [(x_center - 0.5 * width), (y_center - 0.5 * height), (x_center + 0.5 * width), (y_center + 0.5 * height)]
+    boxes = [
+        (x_center - 0.5 * width),
+        (y_center - 0.5 * height),
+        (x_center + 0.5 * width),
+        (y_center + 0.5 * height),
+    ]
     return torch.stack(boxes, dim=-1)
 
 
@@ -99,8 +104,14 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
         self.do_resize = do_resize
         self.do_center_crop = do_center_crop
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else [0.48145466, 0.4578275, 0.40821073]
-        self.image_std = image_std if image_std is not None else [0.26862954, 0.26130258, 0.27577711]
+        self.image_mean = (
+            image_mean
+            if image_mean is not None
+            else [0.48145466, 0.4578275, 0.40821073]
+        )
+        self.image_std = (
+            image_std if image_std is not None else [0.26862954, 0.26130258, 0.27577711]
+        )
 
     def post_process(self, outputs, target_sizes):
         """
@@ -120,9 +131,13 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
         logits, boxes = outputs.logits, outputs.pred_boxes
 
         if len(logits) != len(target_sizes):
-            raise ValueError("Make sure that you pass in as many target sizes as the batch dimension of the logits")
+            raise ValueError(
+                "Make sure that you pass in as many target sizes as the batch dimension of the logits"
+            )
         if target_sizes.shape[1] != 2:
-            raise ValueError("Each element of target_sizes must contain the size (h, w) of each image of the batch")
+            raise ValueError(
+                "Each element of target_sizes must contain the size (h, w) of each image of the batch"
+            )
 
         probs = torch.max(logits, dim=-1)
         scores = torch.sigmoid(probs.values)
@@ -136,14 +151,22 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = boxes * scale_fct[:, None, :]
 
-        results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
+        results = [
+            {"scores": s, "labels": l, "boxes": b}
+            for s, l, b in zip(scores, labels, boxes)
+        ]
 
         return results
 
     def __call__(
         self,
         images: Union[
-            Image.Image, np.ndarray, "torch.Tensor", List[Image.Image], List[np.ndarray], List["torch.Tensor"]  # noqa
+            Image.Image,
+            np.ndarray,
+            "torch.Tensor",
+            List[Image.Image],
+            List[np.ndarray],
+            List["torch.Tensor"],  # noqa
         ],
         return_tensors: Optional[Union[str, TensorType]] = None,
         **kwargs
@@ -184,7 +207,9 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(
+                images[0]
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -195,7 +220,10 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -204,13 +232,21 @@ class OwlViTFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin
         # transformations (resizing + center cropping + normalization)
         if self.do_resize and self.size is not None and self.resample is not None:
             images = [
-                self.resize(image=image, size=self.size, resample=self.resample, default_to_square=True)
+                self.resize(
+                    image=image,
+                    size=self.size,
+                    resample=self.resample,
+                    default_to_square=True,
+                )
                 for image in images
             ]
         if self.do_center_crop and self.crop_size is not None:
             images = [self.center_crop(image, self.crop_size) for image in images]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

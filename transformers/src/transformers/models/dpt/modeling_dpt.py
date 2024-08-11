@@ -77,19 +77,29 @@ class DPTViTEmbeddings(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, config.hidden_size))
         self.patch_embeddings = DPTViTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = nn.Parameter(torch.zeros(1, num_patches + 1, config.hidden_size))
+        self.position_embeddings = nn.Parameter(
+            torch.zeros(1, num_patches + 1, config.hidden_size)
+        )
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.config = config
 
-    def _resize_pos_embed(self, posemb, grid_size_height, grid_size_width, start_index=1):
+    def _resize_pos_embed(
+        self, posemb, grid_size_height, grid_size_width, start_index=1
+    ):
         posemb_tok = posemb[:, :start_index]
         posemb_grid = posemb[0, start_index:]
 
         old_grid_size = int(math.sqrt(len(posemb_grid)))
 
-        posemb_grid = posemb_grid.reshape(1, old_grid_size, old_grid_size, -1).permute(0, 3, 1, 2)
-        posemb_grid = nn.functional.interpolate(posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear")
-        posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, grid_size_height * grid_size_width, -1)
+        posemb_grid = posemb_grid.reshape(1, old_grid_size, old_grid_size, -1).permute(
+            0, 3, 1, 2
+        )
+        posemb_grid = nn.functional.interpolate(
+            posemb_grid, size=(grid_size_height, grid_size_width), mode="bilinear"
+        )
+        posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(
+            1, grid_size_height * grid_size_width, -1
+        )
 
         posemb = torch.cat([posemb_tok, posemb_grid], dim=1)
 
@@ -131,15 +141,27 @@ class DPTViTPatchEmbeddings(nn.Module):
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
 
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size
+        )
 
     def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
@@ -155,7 +177,9 @@ class DPTViTPatchEmbeddings(nn.Module):
 class DPTViTSelfAttention(nn.Module):
     def __init__(self, config: DPTConfig) -> None:
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size {config.hidden_size,} is not a multiple of the number of attention "
                 f"heads {config.num_attention_heads}."
@@ -165,19 +189,31 @@ class DPTViTSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
-        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
-        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
+        self.query = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
+        self.key = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
+        self.value = nn.Linear(
+            config.hidden_size, self.all_head_size, bias=config.qkv_bias
+        )
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self, hidden_states, head_mask: Optional[torch.Tensor] = None, output_attentions: bool = False
+        self,
+        hidden_states,
+        head_mask: Optional[torch.Tensor] = None,
+        output_attentions: bool = False,
     ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
 
@@ -207,7 +243,9 @@ class DPTViTSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
 
         return outputs
 
@@ -224,7 +262,9 @@ class DPTViTSelfOutput(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
 
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -244,7 +284,10 @@ class DPTViTAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.attention.num_attention_heads, self.attention.attention_head_size, self.pruned_heads
+            heads,
+            self.attention.num_attention_heads,
+            self.attention.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
@@ -254,8 +297,12 @@ class DPTViTAttention(nn.Module):
         self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
-        self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
-        self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
+        self.attention.num_attention_heads = self.attention.num_attention_heads - len(
+            heads
+        )
+        self.attention.all_head_size = (
+            self.attention.attention_head_size * self.attention.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     # Copied from transformers.models.vit.modeling_vit.ViTAttention.forward
@@ -269,7 +316,9 @@ class DPTViTAttention(nn.Module):
 
         attention_output = self.output(self_outputs[0], hidden_states)
 
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
@@ -298,7 +347,9 @@ class DPTViTOutput(nn.Module):
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -318,8 +369,12 @@ class DPTViTLayer(nn.Module):
         self.attention = DPTViTAttention(config)
         self.intermediate = DPTViTIntermediate(config)
         self.output = DPTViTOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
+        self.layernorm_after = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
 
     def forward(
         self,
@@ -328,12 +383,16 @@ class DPTViTLayer(nn.Module):
         output_attentions: bool = False,
     ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
         self_attention_outputs = self.attention(
-            self.layernorm_before(hidden_states),  # in ViT, layernorm is applied before self-attention
+            self.layernorm_before(
+                hidden_states
+            ),  # in ViT, layernorm is applied before self-attention
             head_mask,
             output_attentions=output_attentions,
         )
         attention_output = self_attention_outputs[0]
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         # first residual connection
         hidden_states = attention_output + hidden_states
@@ -355,7 +414,9 @@ class DPTViTEncoder(nn.Module):
     def __init__(self, config: DPTConfig) -> None:
         super().__init__()
         self.config = config
-        self.layer = nn.ModuleList([DPTViTLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList(
+            [DPTViTLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
     def forward(
@@ -389,7 +450,9 @@ class DPTViTEncoder(nn.Module):
                     layer_head_mask,
                 )
             else:
-                layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions)
+                layer_outputs = layer_module(
+                    hidden_states, layer_head_mask, output_attentions
+                )
 
             hidden_states = layer_outputs[0]
 
@@ -400,7 +463,11 @@ class DPTViTEncoder(nn.Module):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return BaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
@@ -429,14 +496,23 @@ class DPTReassembleStage(nn.Module):
 
         self.config = config
         self.layers = nn.ModuleList()
-        for i, factor in zip(range(len(config.neck_hidden_sizes)), config.reassemble_factors):
-            self.layers.append(DPTReassembleLayer(config, channels=config.neck_hidden_sizes[i], factor=factor))
+        for i, factor in zip(
+            range(len(config.neck_hidden_sizes)), config.reassemble_factors
+        ):
+            self.layers.append(
+                DPTReassembleLayer(
+                    config, channels=config.neck_hidden_sizes[i], factor=factor
+                )
+            )
 
         if config.readout_type == "project":
             self.readout_projects = nn.ModuleList()
             for _ in range(len(config.neck_hidden_sizes)):
                 self.readout_projects.append(
-                    nn.Sequential(nn.Linear(2 * config.hidden_size, config.hidden_size), ACT2FN[config.hidden_act])
+                    nn.Sequential(
+                        nn.Linear(2 * config.hidden_size, config.hidden_size),
+                        ACT2FN[config.hidden_act],
+                    )
                 )
 
     def forward(self, hidden_states: List[torch.Tensor]) -> List[torch.Tensor]:
@@ -461,7 +537,9 @@ class DPTReassembleStage(nn.Module):
                 hidden_state = hidden_state.flatten(2).permute((0, 2, 1))
                 readout = cls_token.unsqueeze(1).expand_as(hidden_state)
                 # concatenate the readout token to the hidden states and project
-                hidden_state = self.readout_projects[i](torch.cat((hidden_state, readout), -1))
+                hidden_state = self.readout_projects[i](
+                    torch.cat((hidden_state, readout), -1)
+                )
                 # reshape back to (B, C, H, W)
                 hidden_state = hidden_state.permute(0, 2, 1).reshape(feature_shape)
             elif self.config.readout_type == "add":
@@ -477,16 +555,22 @@ class DPTReassembleLayer(nn.Module):
     def __init__(self, config, channels, factor):
         super().__init__()
         # projection
-        self.projection = nn.Conv2d(in_channels=config.hidden_size, out_channels=channels, kernel_size=1)
+        self.projection = nn.Conv2d(
+            in_channels=config.hidden_size, out_channels=channels, kernel_size=1
+        )
 
         # up/down sampling depending on factor
         if factor > 1:
-            self.resize = nn.ConvTranspose2d(channels, channels, kernel_size=factor, stride=factor, padding=0)
+            self.resize = nn.ConvTranspose2d(
+                channels, channels, kernel_size=factor, stride=factor, padding=0
+            )
         elif factor == 1:
             self.resize = nn.Identity()
         elif factor < 1:
             # so should downsample
-            self.resize = nn.Conv2d(channels, channels, kernel_size=3, stride=int(1 / factor), padding=1)
+            self.resize = nn.Conv2d(
+                channels, channels, kernel_size=3, stride=int(1 / factor), padding=1
+            )
 
     def forward(self, hidden_state):
         hidden_state = self.projection(hidden_state)
@@ -587,7 +671,12 @@ class DPTFeatureFusionLayer(nn.Module):
 
         self.align_corners = align_corners
 
-        self.projection = nn.Conv2d(config.fusion_hidden_size, config.fusion_hidden_size, kernel_size=1, bias=True)
+        self.projection = nn.Conv2d(
+            config.fusion_hidden_size,
+            config.fusion_hidden_size,
+            kernel_size=1,
+            bias=True,
+        )
 
         self.residual_layer1 = DPTPreActResidualLayer(config)
         self.residual_layer2 = DPTPreActResidualLayer(config)
@@ -596,13 +685,19 @@ class DPTFeatureFusionLayer(nn.Module):
         if residual is not None:
             if hidden_state.shape != residual.shape:
                 residual = nn.functional.interpolate(
-                    residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=False
+                    residual,
+                    size=(hidden_state.shape[2], hidden_state.shape[3]),
+                    mode="bilinear",
+                    align_corners=False,
                 )
             hidden_state = hidden_state + self.residual_layer1(residual)
 
         hidden_state = self.residual_layer2(hidden_state)
         hidden_state = nn.functional.interpolate(
-            hidden_state, scale_factor=2, mode="bilinear", align_corners=self.align_corners
+            hidden_state,
+            scale_factor=2,
+            mode="bilinear",
+            align_corners=self.align_corners,
         )
         hidden_state = self.projection(hidden_state)
 
@@ -718,11 +813,19 @@ class DPTModel(DPTPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -743,10 +846,16 @@ class DPTModel(DPTPreTrainedModel):
 
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(sequence_output) if self.pooler is not None else None
+        )
 
         if not return_dict:
-            head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
+            head_outputs = (
+                (sequence_output, pooled_output)
+                if pooled_output is not None
+                else (sequence_output,)
+            )
             return head_outputs + encoder_outputs[1:]
 
         return BaseModelOutputWithPooling(
@@ -794,7 +903,15 @@ class DPTNeck(nn.Module):
         self.reassemble_stage = DPTReassembleStage(config)
         self.convs = nn.ModuleList()
         for channel in config.neck_hidden_sizes:
-            self.convs.append(nn.Conv2d(channel, config.fusion_hidden_size, kernel_size=3, padding=1, bias=False))
+            self.convs.append(
+                nn.Conv2d(
+                    channel,
+                    config.fusion_hidden_size,
+                    kernel_size=3,
+                    padding=1,
+                    bias=False,
+                )
+            )
 
         # fusion
         self.fusion_stage = DPTFeatureFusionStage(config)
@@ -804,7 +921,9 @@ class DPTNeck(nn.Module):
             raise ValueError("hidden_states should be a list of tensors")
 
         if len(hidden_states) != len(self.config.neck_hidden_sizes):
-            raise ValueError("The number of hidden states should be equal to the number of neck hidden sizes.")
+            raise ValueError(
+                "The number of hidden states should be equal to the number of neck hidden sizes."
+            )
 
         # postprocess hidden states
         features = self.reassemble_stage(hidden_states)
@@ -872,7 +991,9 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
         self.post_init()
 
     @add_start_docstrings_to_model_forward(DPT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=DepthEstimatorOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=DepthEstimatorOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         pixel_values,
@@ -922,9 +1043,13 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
         >>> formatted = (output * 255 / np.max(output)).astype("uint8")
         >>> depth = Image.fromarray(formatted)
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
 
         outputs = self.dpt(
@@ -940,7 +1065,9 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
         # only keep certain features based on config.backbone_out_indices
         # note that the hidden_states also include the initial embeddings
         hidden_states = [
-            feature for idx, feature in enumerate(hidden_states[1:]) if idx in self.config.backbone_out_indices
+            feature
+            for idx, feature in enumerate(hidden_states[1:])
+            if idx in self.config.backbone_out_indices
         ]
 
         hidden_states = self.neck(hidden_states)
@@ -1027,13 +1154,17 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
 
         # Segmentation head(s)
         self.head = DPTSemanticSegmentationHead(config)
-        self.auxiliary_head = DPTAuxiliaryHead(config) if config.use_auxiliary_head else None
+        self.auxiliary_head = (
+            DPTAuxiliaryHead(config) if config.use_auxiliary_head else None
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
 
     @add_start_docstrings_to_model_forward(DPT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         pixel_values=None,
@@ -1067,9 +1198,13 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
 
         outputs = self.dpt(
@@ -1085,7 +1220,9 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
         # only keep certain features based on config.backbone_out_indices
         # note that the hidden_states also include the initial embeddings
         hidden_states = [
-            feature for idx, feature in enumerate(hidden_states[1:]) if idx in self.config.backbone_out_indices
+            feature
+            for idx, feature in enumerate(hidden_states[1:])
+            if idx in self.config.backbone_out_indices
         ]
 
         hidden_states = self.neck(hidden_states)
@@ -1107,10 +1244,15 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
                 )
                 if auxiliary_logits is not None:
                     upsampled_auxiliary_logits = nn.functional.interpolate(
-                        auxiliary_logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
+                        auxiliary_logits,
+                        size=labels.shape[-2:],
+                        mode="bilinear",
+                        align_corners=False,
                     )
                 # compute weighted loss
-                loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
+                loss_fct = CrossEntropyLoss(
+                    ignore_index=self.config.semantic_loss_ignore_index
+                )
                 main_loss = loss_fct(upsampled_logits, labels)
                 auxiliary_loss = loss_fct(upsampled_auxiliary_logits, labels)
                 loss = main_loss + self.config.auxiliary_loss_weight * auxiliary_loss

@@ -29,7 +29,9 @@ from ...utils import (
 )
 
 
-_import_structure = {"configuration_xglm": ["XGLM_PRETRAINED_CONFIG_ARCHIVE_MAP", "XGLMConfig"]}
+_import_structure = {
+    "configuration_xglm": ["XGLM_PRETRAINED_CONFIG_ARCHIVE_MAP", "XGLMConfig"]
+}
 
 try:
     if not is_sentencepiece_available():
@@ -113,7 +115,12 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_xglm import XGLM_PRETRAINED_MODEL_ARCHIVE_LIST, XGLMForCausalLM, XGLMModel, XGLMPreTrainedModel
+        from .modeling_xglm import (
+            XGLM_PRETRAINED_MODEL_ARCHIVE_LIST,
+            XGLMForCausalLM,
+            XGLMModel,
+            XGLMPreTrainedModel,
+        )
 
     try:
         if not is_flax_available():
@@ -121,7 +128,11 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_flax_xglm import FlaxXGLMForCausalLM, FlaxXGLMModel, FlaxXGLMPreTrainedModel
+        from .modeling_flax_xglm import (
+            FlaxXGLMForCausalLM,
+            FlaxXGLMModel,
+            FlaxXGLMPreTrainedModel,
+        )
 
     try:
         if not is_tf_available():
@@ -140,4 +151,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure
+    )

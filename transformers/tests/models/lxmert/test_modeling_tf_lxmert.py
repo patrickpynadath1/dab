@@ -23,13 +23,20 @@ from transformers import LxmertConfig, is_tf_available
 from transformers.testing_utils import require_tf, slow, tooslow
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_tf_common import TFModelTesterMixin, ids_tensor, random_attention_mask
+from ...test_modeling_tf_common import (
+    TFModelTesterMixin,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_tf_available():
     import tensorflow as tf
 
-    from transformers.models.lxmert.modeling_tf_lxmert import TFLxmertForPreTraining, TFLxmertModel
+    from transformers.models.lxmert.modeling_tf_lxmert import (
+        TFLxmertForPreTraining,
+        TFLxmertModel,
+    )
 
 
 class TFLxmertModelTester(object):
@@ -114,46 +121,72 @@ class TFLxmertModelTester(object):
         self.output_attentions = output_attentions
         self.output_hidden_states = output_hidden_states
         self.scope = scope
-        self.num_hidden_layers = {"vision": r_layers, "cross_encoder": x_layers, "language": l_layers}
+        self.num_hidden_layers = {
+            "vision": r_layers,
+            "cross_encoder": x_layers,
+            "language": l_layers,
+        }
 
     def prepare_config_and_inputs(self):
         output_attentions = self.output_attentions
-        input_ids = ids_tensor([self.batch_size, self.seq_length], vocab_size=self.vocab_size)
-        visual_feats = tf.random.uniform((self.batch_size, self.num_visual_features, self.visual_feat_dim))
-        bounding_boxes = tf.random.uniform((self.batch_size, self.num_visual_features, 4))
+        input_ids = ids_tensor(
+            [self.batch_size, self.seq_length], vocab_size=self.vocab_size
+        )
+        visual_feats = tf.random.uniform(
+            (self.batch_size, self.num_visual_features, self.visual_feat_dim)
+        )
+        bounding_boxes = tf.random.uniform(
+            (self.batch_size, self.num_visual_features, 4)
+        )
 
         input_mask = None
         if self.use_lang_mask:
             input_mask = random_attention_mask([self.batch_size, self.seq_length])
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
         obj_labels = None
         if self.task_obj_predict:
             obj_labels = {}
         if self.visual_attr_loss and self.task_obj_predict:
             obj_labels["attr"] = (
-                ids_tensor([self.batch_size, self.num_visual_features], self.num_attr_labels),
-                ids_tensor([self.batch_size, self.num_visual_features], self.num_attr_labels),
+                ids_tensor(
+                    [self.batch_size, self.num_visual_features], self.num_attr_labels
+                ),
+                ids_tensor(
+                    [self.batch_size, self.num_visual_features], self.num_attr_labels
+                ),
             )
         if self.visual_feat_loss and self.task_obj_predict:
             obj_labels["feat"] = (
                 ids_tensor(
-                    [self.batch_size, self.num_visual_features, self.visual_feat_dim], self.num_visual_features
+                    [self.batch_size, self.num_visual_features, self.visual_feat_dim],
+                    self.num_visual_features,
                 ),
-                ids_tensor([self.batch_size, self.num_visual_features], self.num_visual_features),
+                ids_tensor(
+                    [self.batch_size, self.num_visual_features],
+                    self.num_visual_features,
+                ),
             )
         if self.visual_obj_loss and self.task_obj_predict:
             obj_labels["obj"] = (
-                ids_tensor([self.batch_size, self.num_visual_features], self.num_object_labels),
-                ids_tensor([self.batch_size, self.num_visual_features], self.num_object_labels),
+                ids_tensor(
+                    [self.batch_size, self.num_visual_features], self.num_object_labels
+                ),
+                ids_tensor(
+                    [self.batch_size, self.num_visual_features], self.num_object_labels
+                ),
             )
         ans = None
         if self.task_qa:
             ans = ids_tensor([self.batch_size], self.num_qa_labels)
         masked_lm_labels = None
         if self.task_mask_lm:
-            masked_lm_labels = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+            masked_lm_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.vocab_size
+            )
         matched_label = None
         if self.task_matched:
             matched_label = ids_tensor([self.batch_size], self.num_labels)
@@ -240,11 +273,17 @@ class TFLxmertModelTester(object):
         result = model(input_ids, visual_feats, bounding_boxes, return_dict=False)
         result = model(input_ids, visual_feats, bounding_boxes, return_dict=True)
 
-        self.parent.assertEqual(result.language_output.shape, (self.batch_size, self.seq_length, self.hidden_size))
         self.parent.assertEqual(
-            result.vision_output.shape, (self.batch_size, self.num_visual_features, self.hidden_size)
+            result.language_output.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
         )
-        self.parent.assertEqual(result.pooled_output.shape, (self.batch_size, self.hidden_size))
+        self.parent.assertEqual(
+            result.vision_output.shape,
+            (self.batch_size, self.num_visual_features, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooled_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def prepare_config_and_inputs_for_common(self, return_obj_labels=False):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -359,19 +398,26 @@ class TFLxmertModelTester(object):
             output_attentions=not output_attentions,
         )
 
-        self.parent.assertEqual(result.prediction_logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result.prediction_logits.shape,
+            (self.batch_size, self.seq_length, self.vocab_size),
+        )
 
 
 @require_tf
 class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
 
-    all_model_classes = (TFLxmertModel, TFLxmertForPreTraining) if is_tf_available() else ()
+    all_model_classes = (
+        (TFLxmertModel, TFLxmertForPreTraining) if is_tf_available() else ()
+    )
     test_head_masking = False
     test_onnx = False
 
     def setUp(self):
         self.model_tester = TFLxmertModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=LxmertConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=LxmertConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -399,7 +445,9 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
             else self.model_tester.seq_length
         )
         encoder_key_length = (
-            self.model_tester.key_length if hasattr(self.model_tester, "key_length") else encoder_seq_length
+            self.model_tester.key_length
+            if hasattr(self.model_tester, "key_length")
+            else encoder_seq_length
         )
 
         for model_class in self.all_model_classes:
@@ -407,23 +455,47 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             model = model_class(config)
             outputs = model(self._prepare_for_class(inputs_dict, model_class))
-            language_attentions, vision_attentions, cross_encoder_attentions = (outputs[-3], outputs[-2], outputs[-1])
+            language_attentions, vision_attentions, cross_encoder_attentions = (
+                outputs[-3],
+                outputs[-2],
+                outputs[-1],
+            )
 
             self.assertEqual(model.config.output_hidden_states, False)
 
-            self.assertEqual(len(language_attentions), self.model_tester.num_hidden_layers["language"])
-            self.assertEqual(len(vision_attentions), self.model_tester.num_hidden_layers["vision"])
-            self.assertEqual(len(cross_encoder_attentions), self.model_tester.num_hidden_layers["cross_encoder"])
+            self.assertEqual(
+                len(language_attentions),
+                self.model_tester.num_hidden_layers["language"],
+            )
+            self.assertEqual(
+                len(vision_attentions), self.model_tester.num_hidden_layers["vision"]
+            )
+            self.assertEqual(
+                len(cross_encoder_attentions),
+                self.model_tester.num_hidden_layers["cross_encoder"],
+            )
 
-            attentions = [language_attentions, vision_attentions, cross_encoder_attentions]
+            attentions = [
+                language_attentions,
+                vision_attentions,
+                cross_encoder_attentions,
+            ]
             attention_shapes = [
-                [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_seq_length,
+                    encoder_key_length,
+                ],
                 [
                     self.model_tester.num_attention_heads,
                     self.model_tester.num_visual_features,
                     self.model_tester.num_visual_features,
                 ],
-                [self.model_tester.num_attention_heads, encoder_key_length, self.model_tester.num_visual_features],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_key_length,
+                    self.model_tester.num_visual_features,
+                ],
             ]
 
             for attention, attention_shape in zip(attentions, attention_shapes):
@@ -438,20 +510,44 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
 
             # 2 hidden states were added
             self.assertEqual(out_len + 2, len(outputs))
-            language_attentions, vision_attentions, cross_encoder_attentions = (outputs[-3], outputs[-2], outputs[-1])
-            self.assertEqual(len(language_attentions), self.model_tester.num_hidden_layers["language"])
-            self.assertEqual(len(vision_attentions), self.model_tester.num_hidden_layers["vision"])
-            self.assertEqual(len(cross_encoder_attentions), self.model_tester.num_hidden_layers["cross_encoder"])
+            language_attentions, vision_attentions, cross_encoder_attentions = (
+                outputs[-3],
+                outputs[-2],
+                outputs[-1],
+            )
+            self.assertEqual(
+                len(language_attentions),
+                self.model_tester.num_hidden_layers["language"],
+            )
+            self.assertEqual(
+                len(vision_attentions), self.model_tester.num_hidden_layers["vision"]
+            )
+            self.assertEqual(
+                len(cross_encoder_attentions),
+                self.model_tester.num_hidden_layers["cross_encoder"],
+            )
 
-            attentions = [language_attentions, vision_attentions, cross_encoder_attentions]
+            attentions = [
+                language_attentions,
+                vision_attentions,
+                cross_encoder_attentions,
+            ]
             attention_shapes = [
-                [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_seq_length,
+                    encoder_key_length,
+                ],
                 [
                     self.model_tester.num_attention_heads,
                     self.model_tester.num_visual_features,
                     self.model_tester.num_visual_features,
                 ],
-                [self.model_tester.num_attention_heads, encoder_key_length, self.model_tester.num_visual_features],
+                [
+                    self.model_tester.num_attention_heads,
+                    encoder_key_length,
+                    self.model_tester.num_visual_features,
+                ],
             ]
 
             for attention, attention_shape in zip(attentions, attention_shapes):
@@ -465,8 +561,14 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
             outputs = model(self._prepare_for_class(inputs_dict, model_class))
             language_hidden_states, vision_hidden_states = outputs[-2], outputs[-1]
 
-            self.assertEqual(len(language_hidden_states), self.model_tester.num_hidden_layers["language"] + 1)
-            self.assertEqual(len(vision_hidden_states), self.model_tester.num_hidden_layers["vision"] + 1)
+            self.assertEqual(
+                len(language_hidden_states),
+                self.model_tester.num_hidden_layers["language"] + 1,
+            )
+            self.assertEqual(
+                len(vision_hidden_states),
+                self.model_tester.num_hidden_layers["vision"] + 1,
+            )
 
             seq_length = self.model_tester.seq_length
             num_visual_features = self.model_tester.num_visual_features
@@ -497,7 +599,10 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
             if isinstance(value, dict):
                 pt_inputs_dict[key] = self.prepare_pt_inputs_from_tf_inputs(value)
             elif isinstance(value, (list, tuple)):
-                pt_inputs_dict[key] = (self.prepare_pt_inputs_from_tf_inputs(iter_value) for iter_value in value)
+                pt_inputs_dict[key] = (
+                    self.prepare_pt_inputs_from_tf_inputs(iter_value)
+                    for iter_value in value
+                )
             elif type(key) == bool:
                 pt_inputs_dict[key] = value
             elif key == "input_values":
@@ -516,8 +621,10 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
 
     def test_save_load(self):
         for model_class in self.all_model_classes:
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common(
-                return_obj_labels="PreTraining" in model_class.__name__
+            config, inputs_dict = (
+                self.model_tester.prepare_config_and_inputs_for_common(
+                    return_obj_labels="PreTraining" in model_class.__name__
+                )
             )
 
             model = model_class(config)
@@ -531,17 +638,24 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
                 self.assert_outputs_same(after_outputs, outputs)
 
     def test_compile_tf_model(self):
-        optimizer = tf.keras.optimizers.Adam(learning_rate=3e-5, epsilon=1e-08, clipnorm=1.0)
+        optimizer = tf.keras.optimizers.Adam(
+            learning_rate=3e-5, epsilon=1e-08, clipnorm=1.0
+        )
         loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         metric = tf.keras.metrics.SparseCategoricalAccuracy("accuracy")
 
         for model_class in self.all_model_classes:
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common(
-                return_obj_labels="PreTraining" in model_class.__name__
+            config, inputs_dict = (
+                self.model_tester.prepare_config_and_inputs_for_common(
+                    return_obj_labels="PreTraining" in model_class.__name__
+                )
             )
 
             input_ids = tf.keras.Input(
-                batch_shape=(self.model_tester.batch_size, self.model_tester.seq_length),
+                batch_shape=(
+                    self.model_tester.batch_size,
+                    self.model_tester.seq_length,
+                ),
                 name="input_ids",
                 dtype="int32",
             )
@@ -555,7 +669,11 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
                 dtype="int32",
             )
             visual_pos = tf.keras.Input(
-                batch_shape=(self.model_tester.batch_size, self.model_tester.num_visual_features, 4),
+                batch_shape=(
+                    self.model_tester.batch_size,
+                    self.model_tester.num_visual_features,
+                    4,
+                ),
                 name="visual_pos",
                 dtype="int32",
             )
@@ -565,7 +683,9 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
 
             # Let's load it from the disk to be sure we can use pretrained weights
             with tempfile.TemporaryDirectory() as tmpdirname:
-                outputs = model(self._prepare_for_class(inputs_dict, model_class))  # build the model
+                outputs = model(
+                    self._prepare_for_class(inputs_dict, model_class)
+                )  # build the model
                 model.save_pretrained(tmpdirname)
                 model = model_class.from_pretrained(tmpdirname)
 
@@ -573,10 +693,14 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
             hidden_states = outputs_dict[0]
 
             # Add a dense layer on top to test integration with other keras modules
-            outputs = tf.keras.layers.Dense(2, activation="softmax", name="outputs")(hidden_states)
+            outputs = tf.keras.layers.Dense(2, activation="softmax", name="outputs")(
+                hidden_states
+            )
 
             # Compile extended model
-            extended_model = tf.keras.Model(inputs=[input_ids, visual_feats, visual_pos], outputs=[outputs])
+            extended_model = tf.keras.Model(
+                inputs=[input_ids, visual_feats, visual_pos], outputs=[outputs]
+            )
             extended_model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
 
     def test_model_common_attributes(self):
@@ -613,8 +737,12 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
         if hasattr(config, "use_cache"):
             config.use_cache = True
 
-        encoder_seq_length = getattr(self.model_tester, "encoder_seq_length", self.model_tester.seq_length)
-        encoder_key_length = getattr(self.model_tester, "key_length", encoder_seq_length)
+        encoder_seq_length = getattr(
+            self.model_tester, "encoder_seq_length", self.model_tester.seq_length
+        )
+        encoder_key_length = getattr(
+            self.model_tester, "key_length", encoder_seq_length
+        )
 
         for model_class in self.all_model_classes:
             class_inputs_dict = self._prepare_for_class(inputs_dict, model_class)
@@ -634,8 +762,14 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
 
                 self.assertEqual(len(outputs), num_out)
 
-                self.assertEqual(len(language_hidden_states), self.model_tester.num_hidden_layers["language"] + 1)
-                self.assertEqual(len(vision_hidden_states), self.model_tester.num_hidden_layers["vision"] + 1)
+                self.assertEqual(
+                    len(language_hidden_states),
+                    self.model_tester.num_hidden_layers["language"] + 1,
+                )
+                self.assertEqual(
+                    len(vision_hidden_states),
+                    self.model_tester.num_hidden_layers["vision"] + 1,
+                )
 
                 seq_length = self.model_tester.seq_length
                 num_visual_features = self.model_tester.num_visual_features
@@ -649,19 +783,40 @@ class TFLxmertModelTest(TFModelTesterMixin, unittest.TestCase):
                     [num_visual_features, self.model_tester.hidden_size],
                 )
 
-                self.assertEqual(len(language_attentions), self.model_tester.num_hidden_layers["language"])
-                self.assertEqual(len(vision_attentions), self.model_tester.num_hidden_layers["vision"])
-                self.assertEqual(len(cross_encoder_attentions), self.model_tester.num_hidden_layers["cross_encoder"])
+                self.assertEqual(
+                    len(language_attentions),
+                    self.model_tester.num_hidden_layers["language"],
+                )
+                self.assertEqual(
+                    len(vision_attentions),
+                    self.model_tester.num_hidden_layers["vision"],
+                )
+                self.assertEqual(
+                    len(cross_encoder_attentions),
+                    self.model_tester.num_hidden_layers["cross_encoder"],
+                )
 
-                attentions = [language_attentions, vision_attentions, cross_encoder_attentions]
+                attentions = [
+                    language_attentions,
+                    vision_attentions,
+                    cross_encoder_attentions,
+                ]
                 attention_shapes = [
-                    [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
+                    [
+                        self.model_tester.num_attention_heads,
+                        encoder_seq_length,
+                        encoder_key_length,
+                    ],
                     [
                         self.model_tester.num_attention_heads,
                         self.model_tester.num_visual_features,
                         self.model_tester.num_visual_features,
                     ],
-                    [self.model_tester.num_attention_heads, encoder_key_length, self.model_tester.num_visual_features],
+                    [
+                        self.model_tester.num_attention_heads,
+                        encoder_key_length,
+                        self.model_tester.num_visual_features,
+                    ],
                 ]
 
                 for attention, attention_shape in zip(attentions, attention_shapes):
@@ -673,10 +828,14 @@ class TFLxmertModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_masked_lm(self):
         model = TFLxmertModel.from_pretrained("unc-nlp/lxmert-base-uncased")
-        input_ids = tf.constant([[101, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 102]])
+        input_ids = tf.constant(
+            [[101, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 102]]
+        )
 
         num_visual_features = 10
-        _, visual_feats = np.random.seed(0), np.random.rand(1, num_visual_features, model.config.visual_feat_dim)
+        _, visual_feats = np.random.seed(0), np.random.rand(
+            1, num_visual_features, model.config.visual_feat_dim
+        )
         _, visual_pos = np.random.seed(0), np.random.rand(1, num_visual_features, 4)
         visual_feats = tf.convert_to_tensor(visual_feats, dtype=tf.float32)
         visual_pos = tf.convert_to_tensor(visual_pos, dtype=tf.float32)

@@ -104,7 +104,7 @@ class FNetTokenizerFast(PreTrainedTokenizerFast):
         pad_token="<pad>",
         cls_token="[CLS]",
         mask_token="[MASK]",
-        **kwargs
+        **kwargs,
     ):
         # Mask token behave like a normal word, i.e. include the space before it and
         # is included in the raw text, there should be a match in a non-normalized sentence.
@@ -189,12 +189,16 @@ class FNetTokenizerFast(PreTrainedTokenizerFast):
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
         out_vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["vocab_file"],
         )
 
         if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file):

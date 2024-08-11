@@ -18,11 +18,19 @@
 
 from typing import TYPE_CHECKING
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_tf_available, is_torch_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_tf_available,
+    is_torch_available,
+)
 
 
 _import_structure = {
-    "configuration_data2vec_audio": ["DATA2VEC_AUDIO_PRETRAINED_CONFIG_ARCHIVE_MAP", "Data2VecAudioConfig"],
+    "configuration_data2vec_audio": [
+        "DATA2VEC_AUDIO_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "Data2VecAudioConfig",
+    ],
     "configuration_data2vec_text": [
         "DATA2VEC_TEXT_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "Data2VecTextConfig",
@@ -79,7 +87,10 @@ if is_tf_available():
     ]
 
 if TYPE_CHECKING:
-    from .configuration_data2vec_audio import DATA2VEC_AUDIO_PRETRAINED_CONFIG_ARCHIVE_MAP, Data2VecAudioConfig
+    from .configuration_data2vec_audio import (
+        DATA2VEC_AUDIO_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        Data2VecAudioConfig,
+    )
     from .configuration_data2vec_text import (
         DATA2VEC_TEXT_PRETRAINED_CONFIG_ARCHIVE_MAP,
         Data2VecTextConfig,
@@ -136,4 +147,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

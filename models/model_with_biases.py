@@ -53,7 +53,15 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.n_tokens = self.soft_prompt.num_embeddings
         print(f"Set soft prompt! (n_tokens: {self.n_tokens})")
 
-    def set_biases(self, batch_size, seq_len, attribute, init_noise_rate=0.5, device="cpu", **kwargs):
+    def set_biases(
+        self,
+        batch_size,
+        seq_len,
+        attribute,
+        init_noise_rate=0.5,
+        device="cpu",
+        **kwargs,
+    ):
         self.seq_len = seq_len
         self.biases = nn.ParameterList(
             [
@@ -67,11 +75,11 @@ class GPTPromptTuningWithbiasesModelMixin:
         ).to(device)
 
         if attribute == "pos":
-            self.labels = torch.LongTensor([1]).to(device) 
+            self.labels = torch.LongTensor([1]).to(device)
         elif attribute == "neg":
-            self.labels = torch.LongTensor([0]).to(device) 
+            self.labels = torch.LongTensor([0]).to(device)
         elif attribute == "non_toxic":
-            self.labels = torch.LongTensor([0]).to(device)    # non-toxic
+            self.labels = torch.LongTensor([0]).to(device)  # non-toxic
         else:
             raise Exception("Invalid attribute")
         self.logits_processor = LogitsProcessorList(
@@ -177,7 +185,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         inference=False,
         use_full_prompt=False,
         senti_label=None,
-        **kwargs
+        **kwargs,
     ):
         if senti_label is not None:
             if type(senti_label) == int:
@@ -328,9 +336,9 @@ class GPTPromptTuningWithbiasesModelMixin:
     ):
         if senti_label is not None:
             if type(senti_label) == int:
-                self.labels = torch.LongTensor([senti_label])  
+                self.labels = torch.LongTensor([senti_label])
             else:
-                self.labels = torch.LongTensor(senti_label)  
+                self.labels = torch.LongTensor(senti_label)
         for i in range(gpt_logit.size(1)):
             if i < input_ids.size(1):
                 continue
@@ -367,9 +375,7 @@ class GPTPromptTuningWithbiasesModelMixin:
             torch.matmul(lm_embs, lm_embs.transpose(1, 2)), diagonal=-1
         )
         if self.sim_count is None:
-            self.sim_count = torch.tril(
-                torch.ones(sim_lm_embs.shape), diagonal=-1
-            )  
+            self.sim_count = torch.tril(torch.ones(sim_lm_embs.shape), diagonal=-1)
         sim_loss = torch.sum(sim_lm_embs * self.sim_count) / torch.sum(self.sim_count)
         loss = 1 * senti_loss + 5 * ppl_loss + 0 * sim_loss
 

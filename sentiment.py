@@ -13,7 +13,9 @@ import torch
 import time
 
 
-def sentiment_exp_loop(total_conf, dump_sampling_metrics=True, return_sampling_metrics=False):
+def sentiment_exp_loop(
+    total_conf, dump_sampling_metrics=True, return_sampling_metrics=False
+):
 
     ### LOADING MODELS
     model = load_base_model(
@@ -35,10 +37,7 @@ def sentiment_exp_loop(total_conf, dump_sampling_metrics=True, return_sampling_m
         bias_dim = model.get_input_embeddings().weight.shape[0]
     elif total_conf["sampler"] == "dlp":
         sampler = LangevinSampler(**total_conf)
-        if total_conf["bias_rep_space"] == "logit":
-            bias_dim = model.get_input_embeddings().weight.shape[0]
-        if total_conf["bias_rep_space"] == "embed":
-            bias_dim = model.get_input_embeddings().weight.shape[1]
+        bias_dim = model.get_input_embeddings().weight.shape[0]
     times = []
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
@@ -55,7 +54,7 @@ def sentiment_exp_loop(total_conf, dump_sampling_metrics=True, return_sampling_m
                 labels=inputs,
                 use_full_prompt=False,
                 biases=x_full,
-                bias_rep_space=total_conf["bias_rep_space"],
+                bias_rep_space="logit",
                 weight=total_conf["weight_val"],
             )
         )
@@ -104,7 +103,7 @@ def sentiment_exp_loop(total_conf, dump_sampling_metrics=True, return_sampling_m
     del model
     del discriminator
     pickle.dump(times, open(f"{save_dir}/times.pkl", "wb"))
-    if dump_sampling_metrics: 
+    if dump_sampling_metrics:
         with open(f"{save_dir}/sampling_metrics.pkl", "wb") as f:
             pickle.dump(sampler.get_sampling_metrics(), f)
     if return_sampling_metrics:

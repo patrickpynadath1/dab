@@ -43,7 +43,9 @@ class VisualQuestionAnsweringPipeline(Pipeline):
             postprocess_params["top_k"] = top_k
         return preprocess_params, {}, postprocess_params
 
-    def __call__(self, image: Union["Image.Image", str], question: str = None, **kwargs):
+    def __call__(
+        self, image: Union["Image.Image", str], question: str = None, **kwargs
+    ):
         r"""
         Answers open-ended questions about images. The pipeline accepts several types of inputs which are detailed
         below:
@@ -90,9 +92,14 @@ class VisualQuestionAnsweringPipeline(Pipeline):
     def preprocess(self, inputs, padding=False, truncation=False):
         image = load_image(inputs["image"])
         model_inputs = self.tokenizer(
-            inputs["question"], return_tensors=self.framework, padding=padding, truncation=truncation
+            inputs["question"],
+            return_tensors=self.framework,
+            padding=padding,
+            truncation=truncation,
         )
-        image_features = self.feature_extractor(images=image, return_tensors=self.framework)
+        image_features = self.feature_extractor(
+            images=image, return_tensors=self.framework
+        )
         model_inputs.update(image_features)
         return model_inputs
 
@@ -112,4 +119,7 @@ class VisualQuestionAnsweringPipeline(Pipeline):
 
         scores = scores.tolist()
         ids = ids.tolist()
-        return [{"score": score, "answer": self.model.config.id2label[_id]} for score, _id in zip(scores, ids)]
+        return [
+            {"score": score, "answer": self.model.config.id2label[_id]}
+            for score, _id in zip(scores, ids)
+        ]

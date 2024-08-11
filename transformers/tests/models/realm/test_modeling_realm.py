@@ -23,7 +23,12 @@ from transformers import RealmConfig, is_torch_available
 from transformers.testing_utils import require_torch, slow, torch_device
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    floats_tensor,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_torch_available():
@@ -119,39 +124,60 @@ class RealmModelTester:
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
-        candiate_input_ids = ids_tensor([self.batch_size, self.num_candidates, self.seq_length], self.vocab_size)
-        reader_input_ids = ids_tensor([self.reader_beam_size, self.reader_seq_len], self.vocab_size)
+        candiate_input_ids = ids_tensor(
+            [self.batch_size, self.num_candidates, self.seq_length], self.vocab_size
+        )
+        reader_input_ids = ids_tensor(
+            [self.reader_beam_size, self.reader_seq_len], self.vocab_size
+        )
 
         input_mask = None
         candiate_input_mask = None
         reader_input_mask = None
         if self.use_input_mask:
             input_mask = random_attention_mask([self.batch_size, self.seq_length])
-            candiate_input_mask = random_attention_mask([self.batch_size, self.num_candidates, self.seq_length])
-            reader_input_mask = random_attention_mask([self.reader_beam_size, self.reader_seq_len])
+            candiate_input_mask = random_attention_mask(
+                [self.batch_size, self.num_candidates, self.seq_length]
+            )
+            reader_input_mask = random_attention_mask(
+                [self.reader_beam_size, self.reader_seq_len]
+            )
 
         token_type_ids = None
         candidate_token_type_ids = None
         reader_token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
-            candidate_token_type_ids = ids_tensor(
-                [self.batch_size, self.num_candidates, self.seq_length], self.type_vocab_size
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
             )
-            reader_token_type_ids = ids_tensor([self.reader_beam_size, self.reader_seq_len], self.type_vocab_size)
+            candidate_token_type_ids = ids_tensor(
+                [self.batch_size, self.num_candidates, self.seq_length],
+                self.type_vocab_size,
+            )
+            reader_token_type_ids = ids_tensor(
+                [self.reader_beam_size, self.reader_seq_len], self.type_vocab_size
+            )
 
         sequence_labels = None
         token_labels = None
         choice_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
         config = self.get_config()
 
         # inputs with additional num_candidates axis.
-        scorer_encoder_inputs = (candiate_input_ids, candiate_input_mask, candidate_token_type_ids)
+        scorer_encoder_inputs = (
+            candiate_input_ids,
+            candiate_input_mask,
+            candidate_token_type_ids,
+        )
         # reader inputs
         reader_inputs = (reader_input_ids, reader_input_mask, reader_token_type_ids)
 
@@ -199,8 +225,12 @@ class RealmModelTester:
         model = RealmEmbedder(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
-        self.parent.assertEqual(result.projected_score.shape, (self.batch_size, self.retriever_proj_size))
+        result = model(
+            input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
+        )
+        self.parent.assertEqual(
+            result.projected_score.shape, (self.batch_size, self.retriever_proj_size)
+        )
 
     def create_and_check_encoder(
         self,
@@ -226,7 +256,8 @@ class RealmModelTester:
             labels=token_labels,
         )
         self.parent.assertEqual(
-            result.logits.shape, (self.batch_size * self.num_candidates, self.seq_length, self.vocab_size)
+            result.logits.shape,
+            (self.batch_size * self.num_candidates, self.seq_length, self.vocab_size),
         )
 
     def create_and_check_reader(
@@ -279,10 +310,15 @@ class RealmModelTester:
             candidate_attention_mask=scorer_encoder_inputs[1],
             candidate_token_type_ids=scorer_encoder_inputs[2],
         )
-        self.parent.assertEqual(result.relevance_score.shape, (self.batch_size, self.num_candidates))
-        self.parent.assertEqual(result.query_score.shape, (self.batch_size, self.retriever_proj_size))
         self.parent.assertEqual(
-            result.candidate_score.shape, (self.batch_size, self.num_candidates, self.retriever_proj_size)
+            result.relevance_score.shape, (self.batch_size, self.num_candidates)
+        )
+        self.parent.assertEqual(
+            result.query_score.shape, (self.batch_size, self.retriever_proj_size)
+        )
+        self.parent.assertEqual(
+            result.candidate_score.shape,
+            (self.batch_size, self.num_candidates, self.retriever_proj_size),
         )
 
     def prepare_config_and_inputs_for_common(self):
@@ -298,7 +334,11 @@ class RealmModelTester:
             token_labels,
             choice_labels,
         ) = config_and_inputs
-        inputs_dict = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": input_mask}
+        inputs_dict = {
+            "input_ids": input_ids,
+            "token_type_ids": token_type_ids,
+            "attention_mask": input_mask,
+        }
         return config, inputs_dict
 
 
@@ -368,10 +408,14 @@ class RealmModelTest(ModelTesterMixin, unittest.TestCase):
             "input_ids": scorer_encoder_inputs[0].to(torch_device),
             "attention_mask": scorer_encoder_inputs[1].to(torch_device),
             "token_type_ids": scorer_encoder_inputs[2].to(torch_device),
-            "relevance_score": floats_tensor([self.model_tester.batch_size, self.model_tester.num_candidates]),
+            "relevance_score": floats_tensor(
+                [self.model_tester.batch_size, self.model_tester.num_candidates]
+            ),
         }
         inputs_dict["labels"] = torch.zeros(
-            (self.model_tester.batch_size, self.model_tester.seq_length), dtype=torch.long, device=torch_device
+            (self.model_tester.batch_size, self.model_tester.seq_length),
+            dtype=torch.long,
+            device=torch_device,
         )
         inputs = inputs_dict
         loss = model(**inputs).loss
@@ -379,7 +423,9 @@ class RealmModelTest(ModelTesterMixin, unittest.TestCase):
 
         # RealmForOpenQA training
         openqa_config = copy.deepcopy(config)
-        openqa_config.vocab_size = 30522  # the retrieved texts will inevitably have more than 99 vocabs.
+        openqa_config.vocab_size = (
+            30522  # the retrieved texts will inevitably have more than 99 vocabs.
+        )
         openqa_config.num_block_records = 5
         openqa_config.searcher_beam_size = 2
 
@@ -417,12 +463,16 @@ class RealmModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_embedder_from_pretrained(self):
-        model = RealmEmbedder.from_pretrained("google/realm-cc-news-pretrained-embedder")
+        model = RealmEmbedder.from_pretrained(
+            "google/realm-cc-news-pretrained-embedder"
+        )
         self.assertIsNotNone(model)
 
     @slow
     def test_encoder_from_pretrained(self):
-        model = RealmKnowledgeAugEncoder.from_pretrained("google/realm-cc-news-pretrained-encoder")
+        model = RealmKnowledgeAugEncoder.from_pretrained(
+            "google/realm-cc-news-pretrained-encoder"
+        )
         self.assertIsNotNone(model)
 
     @slow
@@ -447,7 +497,9 @@ class RealmModelIntegrationTest(unittest.TestCase):
     def test_inference_embedder(self):
         retriever_projected_size = 128
 
-        model = RealmEmbedder.from_pretrained("google/realm-cc-news-pretrained-embedder")
+        model = RealmEmbedder.from_pretrained(
+            "google/realm-cc-news-pretrained-embedder"
+        )
         input_ids = torch.tensor([[0, 1, 2, 3, 4, 5]])
         output = model(input_ids)[0]
 
@@ -509,11 +561,17 @@ class RealmModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_reader(self):
         config = RealmConfig(reader_beam_size=2, max_span_width=3)
-        model = RealmReader.from_pretrained("google/realm-orqa-nq-reader", config=config)
+        model = RealmReader.from_pretrained(
+            "google/realm-orqa-nq-reader", config=config
+        )
 
         concat_input_ids = torch.arange(10).view((2, 5))
-        concat_token_type_ids = torch.tensor([[0, 0, 1, 1, 1], [0, 0, 1, 1, 1]], dtype=torch.int64)
-        concat_block_mask = torch.tensor([[0, 0, 1, 1, 0], [0, 0, 1, 1, 0]], dtype=torch.int64)
+        concat_token_type_ids = torch.tensor(
+            [[0, 0, 1, 1, 1], [0, 0, 1, 1, 1]], dtype=torch.int64
+        )
+        concat_block_mask = torch.tensor(
+            [[0, 0, 1, 1, 0], [0, 0, 1, 1, 0]], dtype=torch.int64
+        )
         relevance_score = torch.tensor([0.3, 0.7], dtype=torch.float32)
 
         output = model(
@@ -543,7 +601,9 @@ class RealmModelIntegrationTest(unittest.TestCase):
     def test_inference_scorer(self):
         num_candidates = 2
 
-        model = RealmScorer.from_pretrained("google/realm-cc-news-pretrained-scorer", num_candidates=num_candidates)
+        model = RealmScorer.from_pretrained(
+            "google/realm-cc-news-pretrained-scorer", num_candidates=num_candidates
+        )
 
         input_ids = torch.tensor([[0, 1, 2, 3, 4, 5]])
         candidate_input_ids = torch.tensor([[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]])

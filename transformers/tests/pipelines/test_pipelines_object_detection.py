@@ -59,11 +59,15 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
                 """
             )
 
-        object_detector = ObjectDetectionPipeline(model=model, feature_extractor=feature_extractor)
+        object_detector = ObjectDetectionPipeline(
+            model=model, feature_extractor=feature_extractor
+        )
         return object_detector, ["./tests/fixtures/tests_samples/COCO/000000039769.png"]
 
     def run_pipeline_test(self, object_detector, examples):
-        outputs = object_detector("./tests/fixtures/tests_samples/COCO/000000039769.png", threshold=0.0)
+        outputs = object_detector(
+            "./tests/fixtures/tests_samples/COCO/000000039769.png", threshold=0.0
+        )
 
         self.assertGreater(len(outputs), 0)
         for detected_object in outputs:
@@ -72,13 +76,20 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
                 {
                     "score": ANY(float),
                     "label": ANY(str),
-                    "box": {"xmin": ANY(int), "ymin": ANY(int), "xmax": ANY(int), "ymax": ANY(int)},
+                    "box": {
+                        "xmin": ANY(int),
+                        "ymin": ANY(int),
+                        "xmax": ANY(int),
+                        "ymax": ANY(int),
+                    },
                 },
             )
 
         import datasets
 
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
 
         batch = [
             Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png"),
@@ -101,7 +112,12 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
                     {
                         "score": ANY(float),
                         "label": ANY(str),
-                        "box": {"xmin": ANY(int), "ymin": ANY(int), "xmax": ANY(int), "ymax": ANY(int)},
+                        "box": {
+                            "xmin": ANY(int),
+                            "ymin": ANY(int),
+                            "xmax": ANY(int),
+                            "ymax": ANY(int),
+                        },
                     },
                 )
 
@@ -116,15 +132,27 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
 
         model = AutoModelForObjectDetection.from_pretrained(model_id)
         feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
-        object_detector = ObjectDetectionPipeline(model=model, feature_extractor=feature_extractor)
+        object_detector = ObjectDetectionPipeline(
+            model=model, feature_extractor=feature_extractor
+        )
 
-        outputs = object_detector("http://images.cocodataset.org/val2017/000000039769.jpg", threshold=0.0)
+        outputs = object_detector(
+            "http://images.cocodataset.org/val2017/000000039769.jpg", threshold=0.0
+        )
 
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
-                {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
+                {
+                    "score": 0.3376,
+                    "label": "LABEL_0",
+                    "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                },
+                {
+                    "score": 0.3376,
+                    "label": "LABEL_0",
+                    "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                },
             ],
         )
 
@@ -140,12 +168,28 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
             nested_simplify(outputs, decimals=4),
             [
                 [
-                    {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
-                    {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
+                    {
+                        "score": 0.3376,
+                        "label": "LABEL_0",
+                        "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                    },
+                    {
+                        "score": 0.3376,
+                        "label": "LABEL_0",
+                        "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                    },
                 ],
                 [
-                    {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
-                    {"score": 0.3376, "label": "LABEL_0", "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359}},
+                    {
+                        "score": 0.3376,
+                        "label": "LABEL_0",
+                        "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                    },
+                    {
+                        "score": 0.3376,
+                        "label": "LABEL_0",
+                        "box": {"xmin": 159, "ymin": 120, "xmax": 480, "ymax": 359},
+                    },
                 ],
             ],
         )
@@ -157,17 +201,41 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
 
         model = AutoModelForObjectDetection.from_pretrained(model_id)
         feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
-        object_detector = ObjectDetectionPipeline(model=model, feature_extractor=feature_extractor)
+        object_detector = ObjectDetectionPipeline(
+            model=model, feature_extractor=feature_extractor
+        )
 
-        outputs = object_detector("http://images.cocodataset.org/val2017/000000039769.jpg")
+        outputs = object_detector(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                {
+                    "score": 0.9982,
+                    "label": "remote",
+                    "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                },
+                {
+                    "score": 0.9960,
+                    "label": "remote",
+                    "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                },
+                {
+                    "score": 0.9955,
+                    "label": "couch",
+                    "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                },
+                {
+                    "score": 0.9988,
+                    "label": "cat",
+                    "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                },
+                {
+                    "score": 0.9987,
+                    "label": "cat",
+                    "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                },
             ],
         )
 
@@ -181,18 +249,58 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
             nested_simplify(outputs, decimals=4),
             [
                 [
-                    {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                    {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                    {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                    {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                    {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                    {
+                        "score": 0.9982,
+                        "label": "remote",
+                        "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                    },
+                    {
+                        "score": 0.9960,
+                        "label": "remote",
+                        "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                    },
+                    {
+                        "score": 0.9955,
+                        "label": "couch",
+                        "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                    },
+                    {
+                        "score": 0.9988,
+                        "label": "cat",
+                        "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                    },
+                    {
+                        "score": 0.9987,
+                        "label": "cat",
+                        "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                    },
                 ],
                 [
-                    {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                    {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                    {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                    {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                    {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                    {
+                        "score": 0.9982,
+                        "label": "remote",
+                        "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                    },
+                    {
+                        "score": 0.9960,
+                        "label": "remote",
+                        "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                    },
+                    {
+                        "score": 0.9955,
+                        "label": "couch",
+                        "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                    },
+                    {
+                        "score": 0.9988,
+                        "label": "cat",
+                        "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                    },
+                    {
+                        "score": 0.9987,
+                        "label": "cat",
+                        "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                    },
                 ],
             ],
         )
@@ -204,15 +312,37 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
 
         object_detector = pipeline("object-detection", model=model_id)
 
-        outputs = object_detector("http://images.cocodataset.org/val2017/000000039769.jpg")
+        outputs = object_detector(
+            "http://images.cocodataset.org/val2017/000000039769.jpg"
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                {
+                    "score": 0.9982,
+                    "label": "remote",
+                    "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                },
+                {
+                    "score": 0.9960,
+                    "label": "remote",
+                    "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                },
+                {
+                    "score": 0.9955,
+                    "label": "couch",
+                    "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                },
+                {
+                    "score": 0.9988,
+                    "label": "cat",
+                    "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                },
+                {
+                    "score": 0.9987,
+                    "label": "cat",
+                    "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                },
             ],
         )
 
@@ -226,18 +356,58 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
             nested_simplify(outputs, decimals=4),
             [
                 [
-                    {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                    {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                    {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                    {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                    {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                    {
+                        "score": 0.9982,
+                        "label": "remote",
+                        "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                    },
+                    {
+                        "score": 0.9960,
+                        "label": "remote",
+                        "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                    },
+                    {
+                        "score": 0.9955,
+                        "label": "couch",
+                        "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                    },
+                    {
+                        "score": 0.9988,
+                        "label": "cat",
+                        "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                    },
+                    {
+                        "score": 0.9987,
+                        "label": "cat",
+                        "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                    },
                 ],
                 [
-                    {"score": 0.9982, "label": "remote", "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117}},
-                    {"score": 0.9960, "label": "remote", "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187}},
-                    {"score": 0.9955, "label": "couch", "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473}},
-                    {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                    {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                    {
+                        "score": 0.9982,
+                        "label": "remote",
+                        "box": {"xmin": 40, "ymin": 70, "xmax": 175, "ymax": 117},
+                    },
+                    {
+                        "score": 0.9960,
+                        "label": "remote",
+                        "box": {"xmin": 333, "ymin": 72, "xmax": 368, "ymax": 187},
+                    },
+                    {
+                        "score": 0.9955,
+                        "label": "couch",
+                        "box": {"xmin": 0, "ymin": 1, "xmax": 639, "ymax": 473},
+                    },
+                    {
+                        "score": 0.9988,
+                        "label": "cat",
+                        "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                    },
+                    {
+                        "score": 0.9987,
+                        "label": "cat",
+                        "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                    },
                 ],
             ],
         )
@@ -250,11 +420,22 @@ class ObjectDetectionPipelineTests(unittest.TestCase, metaclass=PipelineTestCase
 
         object_detector = pipeline("object-detection", model=model_id)
 
-        outputs = object_detector("http://images.cocodataset.org/val2017/000000039769.jpg", threshold=threshold)
+        outputs = object_detector(
+            "http://images.cocodataset.org/val2017/000000039769.jpg",
+            threshold=threshold,
+        )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
-                {"score": 0.9988, "label": "cat", "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470}},
-                {"score": 0.9987, "label": "cat", "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368}},
+                {
+                    "score": 0.9988,
+                    "label": "cat",
+                    "box": {"xmin": 13, "ymin": 52, "xmax": 314, "ymax": 470},
+                },
+                {
+                    "score": 0.9987,
+                    "label": "cat",
+                    "box": {"xmin": 345, "ymin": 23, "xmax": 640, "ymax": 368},
+                },
             ],
         )

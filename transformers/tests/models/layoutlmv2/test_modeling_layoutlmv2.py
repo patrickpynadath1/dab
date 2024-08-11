@@ -20,11 +20,22 @@ import random
 import tempfile
 import unittest
 
-from transformers.testing_utils import require_detectron2, require_torch, require_torch_multi_gpu, slow, torch_device
+from transformers.testing_utils import (
+    require_detectron2,
+    require_torch,
+    require_torch_multi_gpu,
+    slow,
+    torch_device,
+)
 from transformers.utils import is_detectron2_available, is_torch_available
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor, random_attention_mask
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    _config_zero_init,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_torch_available():
@@ -38,7 +49,9 @@ if is_torch_available():
         LayoutLMv2ForTokenClassification,
         LayoutLMv2Model,
     )
-    from transformers.models.layoutlmv2.modeling_layoutlmv2 import LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.layoutlmv2.modeling_layoutlmv2 import (
+        LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 if is_detectron2_available():
     from detectron2.structures.image_list import ImageList
@@ -122,7 +135,13 @@ class LayoutLMv2ModelTester:
                     bbox[i, j, 0] = t
 
         image = ImageList(
-            torch.zeros(self.batch_size, self.num_channels, self.image_size, self.image_size, device=torch_device),
+            torch.zeros(
+                self.batch_size,
+                self.num_channels,
+                self.image_size,
+                self.image_size,
+                device=torch_device,
+            ),
             self.image_size,
         )
 
@@ -132,13 +151,19 @@ class LayoutLMv2ModelTester:
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         sequence_labels = None
         token_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
 
         config = LayoutLMv2Config(
             vocab_size=self.vocab_size,
@@ -163,26 +188,65 @@ class LayoutLMv2ModelTester:
         config.detectron2_config_args["MODEL.RESNETS.RES2_OUT_CHANNELS"] = 64
         config.detectron2_config_args["MODEL.RESNETS.NUM_GROUPS"] = 1
 
-        return config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        return (
+            config,
+            input_ids,
+            bbox,
+            image,
+            token_type_ids,
+            input_mask,
+            sequence_labels,
+            token_labels,
+        )
 
     def create_and_check_model(
-        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self,
+        config,
+        input_ids,
+        bbox,
+        image,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
     ):
         model = LayoutLMv2Model(config=config)
         model.to(torch_device)
         model.eval()
 
-        result = model(input_ids, bbox=bbox, image=image, attention_mask=input_mask, token_type_ids=token_type_ids)
+        result = model(
+            input_ids,
+            bbox=bbox,
+            image=image,
+            attention_mask=input_mask,
+            token_type_ids=token_type_ids,
+        )
         result = model(input_ids, bbox=bbox, image=image, token_type_ids=token_type_ids)
         result = model(input_ids, bbox=bbox, image=image)
 
         # LayoutLMv2 has a different expected sequence length, namely also visual tokens are added
-        expected_seq_len = self.seq_length + self.image_feature_pool_shape[0] * self.image_feature_pool_shape[1]
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, expected_seq_len, self.hidden_size))
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
+        expected_seq_len = (
+            self.seq_length
+            + self.image_feature_pool_shape[0] * self.image_feature_pool_shape[1]
+        )
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, expected_seq_len, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooler_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def create_and_check_for_sequence_classification(
-        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self,
+        config,
+        input_ids,
+        bbox,
+        image,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
     ):
         config.num_labels = self.num_labels
         model = LayoutLMv2ForSequenceClassification(config)
@@ -199,7 +263,15 @@ class LayoutLMv2ModelTester:
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_token_classification(
-        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self,
+        config,
+        input_ids,
+        bbox,
+        image,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
     ):
         config.num_labels = self.num_labels
         model = LayoutLMv2ForTokenClassification(config=config)
@@ -213,10 +285,20 @@ class LayoutLMv2ModelTester:
             token_type_ids=token_type_ids,
             labels=token_labels,
         )
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.num_labels)
+        )
 
     def create_and_check_for_question_answering(
-        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self,
+        config,
+        input_ids,
+        bbox,
+        image,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
     ):
         model = LayoutLMv2ForQuestionAnswering(config=config)
         model.to(torch_device)
@@ -230,8 +312,12 @@ class LayoutLMv2ModelTester:
             start_positions=sequence_labels,
             end_positions=sequence_labels,
         )
-        self.parent.assertEqual(result.start_logits.shape, (self.batch_size, self.seq_length))
-        self.parent.assertEqual(result.end_logits.shape, (self.batch_size, self.seq_length))
+        self.parent.assertEqual(
+            result.start_logits.shape, (self.batch_size, self.seq_length)
+        )
+        self.parent.assertEqual(
+            result.end_logits.shape, (self.batch_size, self.seq_length)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -276,7 +362,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = LayoutLMv2ModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=LayoutLMv2Config, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=LayoutLMv2Config, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -303,7 +391,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_for_sequence_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
+        self.model_tester.create_and_check_for_sequence_classification(
+            *config_and_inputs
+        )
 
     def test_for_token_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -352,13 +442,22 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
                 torch.save(state_dict, os.path.join(tmpdirname, "pytorch_model.bin"))
 
                 model_fast_init = model_class_copy.from_pretrained(tmpdirname)
-                model_slow_init = model_class_copy.from_pretrained(tmpdirname, _fast_init=False)
+                model_slow_init = model_class_copy.from_pretrained(
+                    tmpdirname, _fast_init=False
+                )
 
                 for key in model_fast_init.state_dict().keys():
                     if key == "layoutlmv2.visual_segment_embedding":
                         # we skip the visual segment embedding as it has a custom initialization scheme
                         continue
-                    max_diff = (model_slow_init.state_dict()[key] - model_fast_init.state_dict()[key]).sum().item()
+                    max_diff = (
+                        (
+                            model_slow_init.state_dict()[key]
+                            - model_fast_init.state_dict()[key]
+                        )
+                        .sum()
+                        .item()
+                    )
                     self.assertLessEqual(max_diff, 1e-3, msg=f"{key} not identical")
 
     def test_attention_outputs(self):
@@ -368,7 +467,8 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
         # LayoutLMv2 has a different expected sequence length
         expected_seq_len = (
             self.model_tester.seq_length
-            + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+            + self.model_tester.image_feature_pool_shape[0]
+            * self.model_tester.image_feature_pool_shape[1]
         )
 
         for model_class in self.all_model_classes:
@@ -396,7 +496,11 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
             self.assertListEqual(
                 list(attentions[0].shape[-3:]),
-                [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
+                [
+                    self.model_tester.num_attention_heads,
+                    expected_seq_len,
+                    expected_seq_len,
+                ],
             )
             out_len = len(outputs)
 
@@ -420,7 +524,11 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             self.assertEqual(len(self_attentions), self.model_tester.num_hidden_layers)
             self.assertListEqual(
                 list(self_attentions[0].shape[-3:]),
-                [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
+                [
+                    self.model_tester.num_attention_heads,
+                    expected_seq_len,
+                    expected_seq_len,
+                ],
             )
 
     def test_hidden_states_output(self):
@@ -435,14 +543,17 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             hidden_states = outputs.hidden_states
 
             expected_num_layers = getattr(
-                self.model_tester, "expected_num_hidden_layers", self.model_tester.num_hidden_layers + 1
+                self.model_tester,
+                "expected_num_hidden_layers",
+                self.model_tester.num_hidden_layers + 1,
             )
             self.assertEqual(len(hidden_states), expected_num_layers)
 
             # LayoutLMv2 has a different expected sequence length
             expected_seq_len = (
                 self.model_tester.seq_length
-                + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+                + self.model_tester.image_feature_pool_shape[0]
+                * self.model_tester.image_feature_pool_shape[1]
             )
 
             self.assertListEqual(
@@ -504,7 +615,9 @@ def prepare_layoutlmv2_batch_inputs():
 class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_no_head(self):
-        model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased").to(torch_device)
+        model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased").to(
+            torch_device
+        )
 
         (
             input_ids,
@@ -528,16 +641,26 @@ class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
             (
                 2,
                 input_ids.shape[1]
-                + model.config.image_feature_pool_shape[0] * model.config.image_feature_pool_shape[1],
+                + model.config.image_feature_pool_shape[0]
+                * model.config.image_feature_pool_shape[1],
                 model.config.hidden_size,
             )
         )
         self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[-0.1087, 0.0727, -0.3075], [0.0799, -0.0427, -0.0751], [-0.0367, 0.0480, -0.1358]], device=torch_device
+            [
+                [-0.1087, 0.0727, -0.3075],
+                [0.0799, -0.0427, -0.0751],
+                [-0.0367, 0.0480, -0.1358],
+            ],
+            device=torch_device,
         )
-        self.assertTrue(torch.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(
+                outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-3
+            )
+        )
 
         # verify the pooled output
         expected_shape = torch.Size((2, model.config.hidden_size))

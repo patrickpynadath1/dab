@@ -132,7 +132,7 @@ class BertweetTokenizer(PreTrainedTokenizer):
         unk_token="<unk>",
         pad_token="<pad>",
         mask_token="<mask>",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             normalization=normalization,
@@ -208,7 +208,10 @@ class BertweetTokenizer(PreTrainedTokenizer):
         return cls + token_ids_0 + sep + sep + token_ids_1 + sep
 
     def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
@@ -228,7 +231,9 @@ class BertweetTokenizer(PreTrainedTokenizer):
 
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
+                token_ids_0=token_ids_0,
+                token_ids_1=token_ids_1,
+                already_has_special_tokens=True,
             )
 
         if token_ids_1 is None:
@@ -387,15 +392,21 @@ class BertweetTokenizer(PreTrainedTokenizer):
         out_string = " ".join(tokens).replace("@@ ", "").strip()
         return out_string
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
         out_vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["vocab_file"],
         )
         out_merge_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["merges_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["merges_file"],
         )
 
         if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file):
@@ -423,7 +434,9 @@ class BertweetTokenizer(PreTrainedTokenizer):
             except FileNotFoundError as fnfe:
                 raise fnfe
             except UnicodeError:
-                raise Exception(f"Incorrect encoding detected in {f}, please rebuild the dataset")
+                raise Exception(
+                    f"Incorrect encoding detected in {f}, please rebuild the dataset"
+                )
             return
 
         lines = f.readlines()
@@ -431,7 +444,9 @@ class BertweetTokenizer(PreTrainedTokenizer):
             line = lineTmp.strip()
             idx = line.rfind(" ")
             if idx == -1:
-                raise ValueError("Incorrect dictionary format, expected '<token> <cnt>'")
+                raise ValueError(
+                    "Incorrect dictionary format, expected '<token> <cnt>'"
+                )
             word = line[:idx]
             self.encoder[word] = len(self.encoder)
 
@@ -596,7 +611,9 @@ REGEXPS = (
 ######################################################################
 # This is the core tokenizing regex:
 
-WORD_RE = regex.compile(r"""(%s)""" % "|".join(REGEXPS), regex.VERBOSE | regex.I | regex.UNICODE)
+WORD_RE = regex.compile(
+    r"""(%s)""" % "|".join(REGEXPS), regex.VERBOSE | regex.I | regex.UNICODE
+)
 
 # WORD_RE performs poorly on these patterns:
 HANG_RE = regex.compile(r"([^a-zA-Z0-9])\1{3,}")
@@ -726,7 +743,9 @@ class TweetTokenizer:
         words = WORD_RE.findall(safe_text)
         # Possibly alter the case, but avoid changing emoticons like :D into :d:
         if not self.preserve_case:
-            words = list(map((lambda x: x if EMOTICON_RE.search(x) else x.lower()), words))
+            words = list(
+                map((lambda x: x if EMOTICON_RE.search(x) else x.lower()), words)
+            )
         return words
 
 
@@ -763,9 +782,9 @@ def casual_tokenize(text, preserve_case=True, reduce_len=False, strip_handles=Fa
     """
     Convenience function for wrapping the tokenizer.
     """
-    return TweetTokenizer(preserve_case=preserve_case, reduce_len=reduce_len, strip_handles=strip_handles).tokenize(
-        text
-    )
+    return TweetTokenizer(
+        preserve_case=preserve_case, reduce_len=reduce_len, strip_handles=strip_handles
+    ).tokenize(text)
 
 
 ###############################################################################

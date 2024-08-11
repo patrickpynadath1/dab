@@ -88,24 +88,26 @@ class DetermineFrameworkTest(TestCase):
 
         # PyTorch not in environment -> use TensorFlow
         mock_torch_available = MagicMock(return_value=False)
-        with patch("transformers.onnx.features.is_torch_available", mock_torch_available):
+        with patch(
+            "transformers.onnx.features.is_torch_available", mock_torch_available
+        ):
             result = FeaturesManager.determine_framework(self.test_model)
             self.assertEqual(result, self.framework_tf)
 
         # Both in environment -> use PyTorch
         mock_tf_available = MagicMock(return_value=True)
         mock_torch_available = MagicMock(return_value=True)
-        with patch("transformers.onnx.features.is_tf_available", mock_tf_available), patch(
-            "transformers.onnx.features.is_torch_available", mock_torch_available
-        ):
+        with patch(
+            "transformers.onnx.features.is_tf_available", mock_tf_available
+        ), patch("transformers.onnx.features.is_torch_available", mock_torch_available):
             result = FeaturesManager.determine_framework(self.test_model)
             self.assertEqual(result, self.framework_pt)
 
         # Both not in environment -> raise error
         mock_tf_available = MagicMock(return_value=False)
         mock_torch_available = MagicMock(return_value=False)
-        with patch("transformers.onnx.features.is_tf_available", mock_tf_available), patch(
-            "transformers.onnx.features.is_torch_available", mock_torch_available
-        ):
+        with patch(
+            "transformers.onnx.features.is_tf_available", mock_tf_available
+        ), patch("transformers.onnx.features.is_torch_available", mock_torch_available):
             with self.assertRaises(EnvironmentError):
                 result = FeaturesManager.determine_framework(self.test_model)

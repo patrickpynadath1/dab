@@ -29,7 +29,13 @@ from transformers import (
     TFAutoModelForCausalLM,
     pipeline,
 )
-from transformers.testing_utils import is_pipeline_test, require_tf, require_torch, slow, torch_device
+from transformers.testing_utils import (
+    is_pipeline_test,
+    require_tf,
+    require_torch,
+    slow,
+    torch_device,
+)
 
 from .test_pipelines_common import ANY, PipelineTestCaseMeta
 
@@ -42,16 +48,20 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
     model_mapping = dict(
         list(MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING.items())
         if MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
-        else [] + list(MODEL_FOR_CAUSAL_LM_MAPPING.items())
-        if MODEL_FOR_CAUSAL_LM_MAPPING
-        else []
+        else (
+            [] + list(MODEL_FOR_CAUSAL_LM_MAPPING.items())
+            if MODEL_FOR_CAUSAL_LM_MAPPING
+            else []
+        )
     )
     tf_model_mapping = dict(
         list(TF_MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING.items())
         if TF_MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
-        else [] + list(TF_MODEL_FOR_CAUSAL_LM_MAPPING.items())
-        if TF_MODEL_FOR_CAUSAL_LM_MAPPING
-        else []
+        else (
+            [] + list(TF_MODEL_FOR_CAUSAL_LM_MAPPING.items())
+            if TF_MODEL_FOR_CAUSAL_LM_MAPPING
+            else []
+        )
     )
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
@@ -61,11 +71,21 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
     def run_pipeline_test(self, conversation_agent, _):
         # Simple
         outputs = conversation_agent(Conversation("Hi there!"))
-        self.assertEqual(outputs, Conversation(past_user_inputs=["Hi there!"], generated_responses=[ANY(str)]))
+        self.assertEqual(
+            outputs,
+            Conversation(
+                past_user_inputs=["Hi there!"], generated_responses=[ANY(str)]
+            ),
+        )
 
         # Single list
         outputs = conversation_agent([Conversation("Hi there!")])
-        self.assertEqual(outputs, Conversation(past_user_inputs=["Hi there!"], generated_responses=[ANY(str)]))
+        self.assertEqual(
+            outputs,
+            Conversation(
+                past_user_inputs=["Hi there!"], generated_responses=[ANY(str)]
+            ),
+        )
 
         # Batch
         conversation_1 = Conversation("Going to the movies tonight - any suggestions?")
@@ -82,7 +102,10 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
                     past_user_inputs=["Going to the movies tonight - any suggestions?"],
                     generated_responses=[ANY(str)],
                 ),
-                Conversation(past_user_inputs=["What's the last book you have read?"], generated_responses=[ANY(str)]),
+                Conversation(
+                    past_user_inputs=["What's the last book you have read?"],
+                    generated_responses=[ANY(str)],
+                ),
             ],
         )
 
@@ -93,7 +116,10 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(
             outputs,
             Conversation(
-                past_user_inputs=["What's the last book you have read?", "Why do you recommend it?"],
+                past_user_inputs=[
+                    "What's the last book you have read?",
+                    "Why do you recommend it?",
+                ],
                 generated_responses=[ANY(str), ANY(str)],
             ),
         )
@@ -117,16 +143,23 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(len(conversation_1.past_user_inputs), 0)
         self.assertEqual(len(conversation_2.past_user_inputs), 0)
         # When
-        result = conversation_agent([conversation_1, conversation_2], do_sample=False, max_length=1000)
+        result = conversation_agent(
+            [conversation_1, conversation_2], do_sample=False, max_length=1000
+        )
         # Then
         self.assertEqual(result, [conversation_1, conversation_2])
         self.assertEqual(len(result[0].past_user_inputs), 1)
         self.assertEqual(len(result[1].past_user_inputs), 1)
         self.assertEqual(len(result[0].generated_responses), 1)
         self.assertEqual(len(result[1].generated_responses), 1)
-        self.assertEqual(result[0].past_user_inputs[0], "Going to the movies tonight - any suggestions?")
+        self.assertEqual(
+            result[0].past_user_inputs[0],
+            "Going to the movies tonight - any suggestions?",
+        )
         self.assertEqual(result[0].generated_responses[0], "The Big Lebowski")
-        self.assertEqual(result[1].past_user_inputs[0], "What's the last book you have read?")
+        self.assertEqual(
+            result[1].past_user_inputs[0], "What's the last book you have read?"
+        )
         self.assertEqual(result[1].generated_responses[0], "The Last Question")
         # When
         conversation_2.add_user_input("Why do you recommend it?")
@@ -142,7 +175,9 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
     @slow
     def test_integration_torch_conversation_truncated_history(self):
         # When
-        conversation_agent = pipeline(task="conversational", min_length_for_response=24, device=DEFAULT_DEVICE_NUM)
+        conversation_agent = pipeline(
+            task="conversational", min_length_for_response=24, device=DEFAULT_DEVICE_NUM
+        )
         conversation_1 = Conversation("Going to the movies tonight - any suggestions?")
         # Then
         self.assertEqual(len(conversation_1.past_user_inputs), 0)
@@ -152,7 +187,9 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(result, conversation_1)
         self.assertEqual(len(result.past_user_inputs), 1)
         self.assertEqual(len(result.generated_responses), 1)
-        self.assertEqual(result.past_user_inputs[0], "Going to the movies tonight - any suggestions?")
+        self.assertEqual(
+            result.past_user_inputs[0], "Going to the movies tonight - any suggestions?"
+        )
         self.assertEqual(result.generated_responses[0], "The Big Lebowski")
         # When
         conversation_1.add_user_input("Is it an action movie?")
@@ -171,7 +208,9 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
         conversation = Conversation("hello")
         output = conversation_agent(conversation)
-        self.assertEqual(output, Conversation(past_user_inputs=["hello"], generated_responses=["Hi"]))
+        self.assertEqual(
+            output, Conversation(past_user_inputs=["hello"], generated_responses=["Hi"])
+        )
 
     @require_tf
     def test_small_model_tf(self):
@@ -180,7 +219,9 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
         conversation = Conversation("hello")
         output = conversation_agent(conversation)
-        self.assertEqual(output, Conversation(past_user_inputs=["hello"], generated_responses=["Hi"]))
+        self.assertEqual(
+            output, Conversation(past_user_inputs=["hello"], generated_responses=["Hi"])
+        )
 
     @require_torch
     @slow
@@ -193,17 +234,24 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         inputs = conversation_agent.preprocess(conversation_1)
         self.assertEqual(inputs["input_ids"].tolist(), [[31373, 50256]])
 
-        conversation_2 = Conversation("how are you ?", past_user_inputs=["hello"], generated_responses=["Hi there!"])
+        conversation_2 = Conversation(
+            "how are you ?",
+            past_user_inputs=["hello"],
+            generated_responses=["Hi there!"],
+        )
         inputs = conversation_agent.preprocess(conversation_2)
         self.assertEqual(
-            inputs["input_ids"].tolist(), [[31373, 50256, 17250, 612, 0, 50256, 4919, 389, 345, 5633, 50256]]
+            inputs["input_ids"].tolist(),
+            [[31373, 50256, 17250, 612, 0, 50256, 4919, 389, 345, 5633, 50256]],
         )
 
     @require_torch
     @slow
     def test_integration_torch_conversation_blenderbot_400M_input_ids(self):
         tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
-        model = AutoModelForSeq2SeqLM.from_pretrained("facebook/blenderbot-400M-distill")
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            "facebook/blenderbot-400M-distill"
+        )
         conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
 
         # test1
@@ -273,7 +321,9 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
     @slow
     def test_integration_torch_conversation_blenderbot_400M(self):
         tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
-        model = AutoModelForSeq2SeqLM.from_pretrained("facebook/blenderbot-400M-distill")
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            "facebook/blenderbot-400M-distill"
+        )
         conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
 
         conversation_1 = Conversation("hello")
@@ -313,36 +363,48 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         # When
         tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
         model = AutoModelForSeq2SeqLM.from_pretrained("facebook/blenderbot_small-90M")
-        conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer, device=DEFAULT_DEVICE_NUM)
+        conversation_agent = ConversationalPipeline(
+            model=model, tokenizer=tokenizer, device=DEFAULT_DEVICE_NUM
+        )
 
         conversation_1 = Conversation("My name is Sarah and I live in London")
-        conversation_2 = Conversation("Going to the movies tonight, What movie would you recommend? ")
+        conversation_2 = Conversation(
+            "Going to the movies tonight, What movie would you recommend? "
+        )
         # Then
         self.assertEqual(len(conversation_1.past_user_inputs), 0)
         self.assertEqual(len(conversation_2.past_user_inputs), 0)
         # When
-        result = conversation_agent([conversation_1, conversation_2], do_sample=False, max_length=1000)
+        result = conversation_agent(
+            [conversation_1, conversation_2], do_sample=False, max_length=1000
+        )
         # Then
         self.assertEqual(result, [conversation_1, conversation_2])
         self.assertEqual(len(result[0].past_user_inputs), 1)
         self.assertEqual(len(result[1].past_user_inputs), 1)
         self.assertEqual(len(result[0].generated_responses), 1)
         self.assertEqual(len(result[1].generated_responses), 1)
-        self.assertEqual(result[0].past_user_inputs[0], "My name is Sarah and I live in London")
+        self.assertEqual(
+            result[0].past_user_inputs[0], "My name is Sarah and I live in London"
+        )
         self.assertEqual(
             result[0].generated_responses[0],
             "hi sarah, i live in london as well. do you have any plans for the weekend?",
         )
         self.assertEqual(
-            result[1].past_user_inputs[0], "Going to the movies tonight, What movie would you recommend? "
+            result[1].past_user_inputs[0],
+            "Going to the movies tonight, What movie would you recommend? ",
         )
         self.assertEqual(
-            result[1].generated_responses[0], "i don't know... i'm not really sure. what movie are you going to see?"
+            result[1].generated_responses[0],
+            "i don't know... i'm not really sure. what movie are you going to see?",
         )
         # When
         conversation_1.add_user_input("Not yet, what about you?")
         conversation_2.add_user_input("What's your name?")
-        result = conversation_agent([conversation_1, conversation_2], do_sample=False, max_length=1000)
+        result = conversation_agent(
+            [conversation_1, conversation_2], do_sample=False, max_length=1000
+        )
         # Then
         self.assertEqual(result, [conversation_1, conversation_2])
         self.assertEqual(len(result[0].past_user_inputs), 2)
@@ -350,9 +412,15 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         self.assertEqual(len(result[0].generated_responses), 2)
         self.assertEqual(len(result[1].generated_responses), 2)
         self.assertEqual(result[0].past_user_inputs[1], "Not yet, what about you?")
-        self.assertEqual(result[0].generated_responses[1], "i don't have any plans yet. i'm not sure what to do yet.")
+        self.assertEqual(
+            result[0].generated_responses[1],
+            "i don't have any plans yet. i'm not sure what to do yet.",
+        )
         self.assertEqual(result[1].past_user_inputs[1], "What's your name?")
-        self.assertEqual(result[1].generated_responses[1], "i don't have a name, but i'm going to see a horror movie.")
+        self.assertEqual(
+            result[1].generated_responses[1],
+            "i don't have a name, but i'm going to see a horror movie.",
+        )
 
     @require_torch
     @slow
@@ -360,12 +428,16 @@ class ConversationalPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseM
         model_id = "facebook/blenderbot_small-90M"
 
         # from model id
-        conversation_agent_from_model_id = pipeline("conversational", model=model_id, tokenizer=model_id)
+        conversation_agent_from_model_id = pipeline(
+            "conversational", model=model_id, tokenizer=model_id
+        )
 
         # from model object
         model = BlenderbotSmallForConditionalGeneration.from_pretrained(model_id)
         tokenizer = BlenderbotSmallTokenizer.from_pretrained(model_id)
-        conversation_agent_from_model = pipeline("conversational", model=model, tokenizer=tokenizer)
+        conversation_agent_from_model = pipeline(
+            "conversational", model=model, tokenizer=tokenizer
+        )
 
         conversation = Conversation("My name is Sarah and I live in London")
         conversation_copy = Conversation("My name is Sarah and I live in London")

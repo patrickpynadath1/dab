@@ -1,5 +1,0 @@
-step_size: .1
-mh: false 
-weight_val: 1.0 
-k_val: 250
-proposal_temp: .5

@@ -2,7 +2,13 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from ..utils import add_end_docstrings, is_torch_available, is_vision_available, logging, requires_backends
+from ..utils import (
+    add_end_docstrings,
+    is_torch_available,
+    is_vision_available,
+    logging,
+    requires_backends,
+)
 from .base import PIPELINE_INIT_ARGS, Pipeline
 
 
@@ -113,7 +119,9 @@ class ImageSegmentationPipeline(Pipeline):
         model_outputs["target_size"] = target_size
         return model_outputs
 
-    def postprocess(self, model_outputs, raw_image=False, threshold=0.9, mask_threshold=0.5):
+    def postprocess(
+        self, model_outputs, raw_image=False, threshold=0.9, mask_threshold=0.5
+    ):
         if hasattr(self.feature_extractor, "post_process_panoptic_segmentation"):
             outputs = self.feature_extractor.post_process_panoptic_segmentation(
                 model_outputs, object_mask_threshold=threshold
@@ -128,27 +136,40 @@ class ImageSegmentationPipeline(Pipeline):
         elif hasattr(self.feature_extractor, "post_process_segmentation"):
             # Panoptic
             raw_annotations = self.feature_extractor.post_process_segmentation(
-                model_outputs, model_outputs["target_size"], threshold=threshold, mask_threshold=0.5
+                model_outputs,
+                model_outputs["target_size"],
+                threshold=threshold,
+                mask_threshold=0.5,
             )
             raw_annotation = raw_annotations[0]
             raw_annotation["masks"] *= 255  # [0,1] -> [0,255] black and white pixels
             raw_annotation["scores"] = raw_annotation["scores"].tolist()
-            raw_annotation["labels"] = [self.model.config.id2label[label.item()] for label in raw_annotation["labels"]]
+            raw_annotation["labels"] = [
+                self.model.config.id2label[label.item()]
+                for label in raw_annotation["labels"]
+            ]
             raw_annotation["masks"] = [
-                Image.fromarray(mask.numpy().astype(np.uint8), mode="L") for mask in raw_annotation["masks"]
+                Image.fromarray(mask.numpy().astype(np.uint8), mode="L")
+                for mask in raw_annotation["masks"]
             ]
             # {"scores": [...], ...} --> [{"score":x, ...}, ...]
             keys = ["score", "label", "mask"]
             annotation = [
                 dict(zip(keys, vals))
-                for vals in zip(raw_annotation["scores"], raw_annotation["labels"], raw_annotation["masks"])
+                for vals in zip(
+                    raw_annotation["scores"],
+                    raw_annotation["labels"],
+                    raw_annotation["masks"],
+                )
             ]
         else:
             # Default logits
             logits = model_outputs.logits
             logits = logits.softmax(dim=1)
             if len(logits.shape) != 4:
-                raise ValueError(f"Logits don't have expected dimensions, expected [1, N, H, W], got {logits.shape}")
+                raise ValueError(
+                    f"Logits don't have expected dimensions, expected [1, N, H, W], got {logits.shape}"
+                )
             batch_size, num_labels, height, width = logits.shape
             expected_num_labels = len(self.model.config.id2label)
             if num_labels != expected_num_labels:
@@ -156,7 +177,9 @@ class ImageSegmentationPipeline(Pipeline):
                     f"Logits don't have expected dimensions, expected [1, {num_labels}, H, W], got {logits.shape}"
                 )
             size = model_outputs["target_size"].squeeze(0).tolist()
-            logits_reshaped = nn.functional.interpolate(logits, size=size, mode="bilinear", align_corners=False)
+            logits_reshaped = nn.functional.interpolate(
+                logits, size=size, mode="bilinear", align_corners=False
+            )
             classes = logits_reshaped.argmax(dim=1)[0]
             annotation = []
 

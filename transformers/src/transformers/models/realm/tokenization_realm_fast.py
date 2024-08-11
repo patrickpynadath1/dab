@@ -180,7 +180,8 @@ class RealmTokenizerFast(PreTrainedTokenizerFast):
         if (
             normalizer_state.get("lowercase", do_lower_case) != do_lower_case
             or normalizer_state.get("strip_accents", strip_accents) != strip_accents
-            or normalizer_state.get("handle_chinese_chars", tokenize_chinese_chars) != tokenize_chinese_chars
+            or normalizer_state.get("handle_chinese_chars", tokenize_chinese_chars)
+            != tokenize_chinese_chars
         ):
             normalizer_class = getattr(normalizers, normalizer_state.pop("type"))
             normalizer_state["lowercase"] = do_lower_case
@@ -246,7 +247,9 @@ class RealmTokenizerFast(PreTrainedTokenizerFast):
             else:
                 candidate_text_pair = None
 
-            encoded_candidates = super().__call__(candidate_text, candidate_text_pair, return_tensors=None, **kwargs)
+            encoded_candidates = super().__call__(
+                candidate_text, candidate_text_pair, return_tensors=None, **kwargs
+            )
 
             encoded_input_ids = encoded_candidates.get("input_ids")
             encoded_attention_mask = encoded_candidates.get("attention_mask")
@@ -259,7 +262,9 @@ class RealmTokenizerFast(PreTrainedTokenizerFast):
             if encoded_token_type_ids is not None:
                 output_data["token_type_ids"].append(encoded_token_type_ids)
 
-        output_data = dict((key, item) for key, item in output_data.items() if len(item) != 0)
+        output_data = dict(
+            (key, item) for key, item in output_data.items() if len(item) != 0
+        )
 
         return BatchEncoding(output_data, tensor_type=return_tensors)
 
@@ -316,6 +321,8 @@ class RealmTokenizerFast(PreTrainedTokenizerFast):
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)

@@ -1,9 +1,0 @@
-optimizer: adam 
-optimizer_conf: 
-  lr: .025 
-  eps: 1e-8
-  weight_decay: 0
-noise_conf: 
-  mean: 0.01 
-  std: 0.01 
-  device: cuda

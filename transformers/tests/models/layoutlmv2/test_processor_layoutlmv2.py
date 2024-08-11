@@ -19,11 +19,24 @@ import tempfile
 import unittest
 from typing import List
 
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
+from transformers import (
+    PreTrainedTokenizer,
+    PreTrainedTokenizerBase,
+    PreTrainedTokenizerFast,
+)
 from transformers.models.layoutlmv2 import LayoutLMv2Tokenizer, LayoutLMv2TokenizerFast
 from transformers.models.layoutlmv2.tokenization_layoutlmv2 import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_pytesseract, require_tokenizers, require_torch, slow
-from transformers.utils import FEATURE_EXTRACTOR_NAME, cached_property, is_pytesseract_available
+from transformers.testing_utils import (
+    require_pytesseract,
+    require_tokenizers,
+    require_torch,
+    slow,
+)
+from transformers.utils import (
+    FEATURE_EXTRACTOR_NAME,
+    cached_property,
+    is_pytesseract_available,
+)
 
 
 if is_pytesseract_available():
@@ -67,7 +80,9 @@ class LayoutLMv2ProcessorTest(unittest.TestCase):
         self.vocab_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["vocab_file"])
         with open(self.vocab_file, "w", encoding="utf-8") as vocab_writer:
             vocab_writer.write("".join([x + "\n" for x in vocab_tokens]))
-        self.feature_extraction_file = os.path.join(self.tmpdirname, FEATURE_EXTRACTOR_NAME)
+        self.feature_extraction_file = os.path.join(
+            self.tmpdirname, FEATURE_EXTRACTOR_NAME
+        )
         with open(self.feature_extraction_file, "w", encoding="utf-8") as fp:
             fp.write(json.dumps(feature_extractor_map) + "\n")
 
@@ -90,47 +105,84 @@ class LayoutLMv2ProcessorTest(unittest.TestCase):
         feature_extractor = self.get_feature_extractor()
         tokenizers = self.get_tokenizers()
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             processor.save_pretrained(self.tmpdirname)
             processor = LayoutLMv2Processor.from_pretrained(self.tmpdirname)
 
             self.assertEqual(processor.tokenizer.get_vocab(), tokenizer.get_vocab())
-            self.assertIsInstance(processor.tokenizer, (LayoutLMv2Tokenizer, LayoutLMv2TokenizerFast))
+            self.assertIsInstance(
+                processor.tokenizer, (LayoutLMv2Tokenizer, LayoutLMv2TokenizerFast)
+            )
 
-            self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor.to_json_string())
-            self.assertIsInstance(processor.feature_extractor, LayoutLMv2FeatureExtractor)
+            self.assertEqual(
+                processor.feature_extractor.to_json_string(),
+                feature_extractor.to_json_string(),
+            )
+            self.assertIsInstance(
+                processor.feature_extractor, LayoutLMv2FeatureExtractor
+            )
 
     def test_save_load_pretrained_additional_features(self):
-        processor = LayoutLMv2Processor(feature_extractor=self.get_feature_extractor(), tokenizer=self.get_tokenizer())
+        processor = LayoutLMv2Processor(
+            feature_extractor=self.get_feature_extractor(),
+            tokenizer=self.get_tokenizer(),
+        )
         processor.save_pretrained(self.tmpdirname)
 
         # slow tokenizer
         tokenizer_add_kwargs = self.get_tokenizer(bos_token="(BOS)", eos_token="(EOS)")
-        feature_extractor_add_kwargs = self.get_feature_extractor(do_resize=False, size=30)
-
-        processor = LayoutLMv2Processor.from_pretrained(
-            self.tmpdirname, use_fast=False, bos_token="(BOS)", eos_token="(EOS)", do_resize=False, size=30
+        feature_extractor_add_kwargs = self.get_feature_extractor(
+            do_resize=False, size=30
         )
 
-        self.assertEqual(processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab())
+        processor = LayoutLMv2Processor.from_pretrained(
+            self.tmpdirname,
+            use_fast=False,
+            bos_token="(BOS)",
+            eos_token="(EOS)",
+            do_resize=False,
+            size=30,
+        )
+
+        self.assertEqual(
+            processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab()
+        )
         self.assertIsInstance(processor.tokenizer, LayoutLMv2Tokenizer)
 
-        self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor_add_kwargs.to_json_string())
+        self.assertEqual(
+            processor.feature_extractor.to_json_string(),
+            feature_extractor_add_kwargs.to_json_string(),
+        )
         self.assertIsInstance(processor.feature_extractor, LayoutLMv2FeatureExtractor)
 
         # fast tokenizer
-        tokenizer_add_kwargs = self.get_rust_tokenizer(bos_token="(BOS)", eos_token="(EOS)")
-        feature_extractor_add_kwargs = self.get_feature_extractor(do_resize=False, size=30)
-
-        processor = LayoutLMv2Processor.from_pretrained(
-            self.tmpdirname, bos_token="(BOS)", eos_token="(EOS)", do_resize=False, size=30
+        tokenizer_add_kwargs = self.get_rust_tokenizer(
+            bos_token="(BOS)", eos_token="(EOS)"
+        )
+        feature_extractor_add_kwargs = self.get_feature_extractor(
+            do_resize=False, size=30
         )
 
-        self.assertEqual(processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab())
+        processor = LayoutLMv2Processor.from_pretrained(
+            self.tmpdirname,
+            bos_token="(BOS)",
+            eos_token="(EOS)",
+            do_resize=False,
+            size=30,
+        )
+
+        self.assertEqual(
+            processor.tokenizer.get_vocab(), tokenizer_add_kwargs.get_vocab()
+        )
         self.assertIsInstance(processor.tokenizer, LayoutLMv2TokenizerFast)
 
-        self.assertEqual(processor.feature_extractor.to_json_string(), feature_extractor_add_kwargs.to_json_string())
+        self.assertEqual(
+            processor.feature_extractor.to_json_string(),
+            feature_extractor_add_kwargs.to_json_string(),
+        )
         self.assertIsInstance(processor.feature_extractor, LayoutLMv2FeatureExtractor)
 
     @slow
@@ -141,10 +193,14 @@ class LayoutLMv2ProcessorTest(unittest.TestCase):
 
         # set up
         datasets = load_dataset("nielsr/funsd")
-        processor = LayoutLMv2Processor.from_pretrained("microsoft/layoutlmv2-base-uncased", revision="no_ocr")
+        processor = LayoutLMv2Processor.from_pretrained(
+            "microsoft/layoutlmv2-base-uncased", revision="no_ocr"
+        )
 
         def preprocess_data(examples):
-            images = [Image.open(path).convert("RGB") for path in examples["image_path"]]
+            images = [
+                Image.open(path).convert("RGB") for path in examples["image_path"]
+            ]
             words = examples["words"]
             boxes = examples["bboxes"]
             word_labels = examples["ner_tags"]
@@ -185,8 +241,12 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
 
     @cached_property
     def get_tokenizers(self):
-        slow_tokenizer = LayoutLMv2Tokenizer.from_pretrained("microsoft/layoutlmv2-base-uncased")
-        fast_tokenizer = LayoutLMv2TokenizerFast.from_pretrained("microsoft/layoutlmv2-base-uncased")
+        slow_tokenizer = LayoutLMv2Tokenizer.from_pretrained(
+            "microsoft/layoutlmv2-base-uncased"
+        )
+        fast_tokenizer = LayoutLMv2TokenizerFast.from_pretrained(
+            "microsoft/layoutlmv2-base-uncased"
+        )
         return [slow_tokenizer, fast_tokenizer]
 
     @slow
@@ -198,20 +258,30 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
         images = self.get_images
 
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             # not batched
             input_feat_extract = feature_extractor(images[0], return_tensors="pt")
             input_processor = processor(images[0], return_tensors="pt")
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
             # verify image
             self.assertAlmostEqual(
-                input_feat_extract["pixel_values"].sum(), input_processor["image"].sum(), delta=1e-2
+                input_feat_extract["pixel_values"].sum(),
+                input_processor["image"].sum(),
+                delta=1e-2,
             )
 
             # verify input_ids
@@ -227,13 +297,21 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
             input_processor = processor(images, padding=True, return_tensors="pt")
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
             # verify images
             self.assertAlmostEqual(
-                input_feat_extract["pixel_values"].sum(), input_processor["image"].sum(), delta=1e-2
+                input_feat_extract["pixel_values"].sum(),
+                input_processor["image"].sum(),
+                delta=1e-2,
             )
 
             # verify input_ids
@@ -253,15 +331,25 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
         images = self.get_images
 
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             # not batched
             words = ["hello", "world"]
             boxes = [[1, 2, 3, 4], [5, 6, 7, 8]]
-            input_processor = processor(images[0], words, boxes=boxes, return_tensors="pt")
+            input_processor = processor(
+                images[0], words, boxes=boxes, return_tensors="pt"
+            )
 
             # verify keys
-            expected_keys = ["input_ids", "bbox", "token_type_ids", "attention_mask", "image"]
+            expected_keys = [
+                "input_ids",
+                "bbox",
+                "token_type_ids",
+                "attention_mask",
+                "image",
+            ]
             actual_keys = list(input_processor.keys())
             for key in expected_keys:
                 self.assertIn(key, actual_keys)
@@ -273,11 +361,22 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
 
             # batched
             words = [["hello", "world"], ["my", "name", "is", "niels"]]
-            boxes = [[[1, 2, 3, 4], [5, 6, 7, 8]], [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]]]
-            input_processor = processor(images, words, boxes=boxes, padding=True, return_tensors="pt")
+            boxes = [
+                [[1, 2, 3, 4], [5, 6, 7, 8]],
+                [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]],
+            ]
+            input_processor = processor(
+                images, words, boxes=boxes, padding=True, return_tensors="pt"
+            )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -307,16 +406,31 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
         images = self.get_images
 
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             # not batched
             words = ["weirdly", "world"]
             boxes = [[1, 2, 3, 4], [5, 6, 7, 8]]
             word_labels = [1, 2]
-            input_processor = processor(images[0], words, boxes=boxes, word_labels=word_labels, return_tensors="pt")
+            input_processor = processor(
+                images[0],
+                words,
+                boxes=boxes,
+                word_labels=word_labels,
+                return_tensors="pt",
+            )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "labels", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "labels",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -327,18 +441,35 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
 
             # verify labels
             expected_labels = [-100, 1, -100, 2, -100]
-            self.assertListEqual(input_processor.labels.squeeze().tolist(), expected_labels)
+            self.assertListEqual(
+                input_processor.labels.squeeze().tolist(), expected_labels
+            )
 
             # batched
             words = [["hello", "world"], ["my", "name", "is", "niels"]]
-            boxes = [[[1, 2, 3, 4], [5, 6, 7, 8]], [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]]]
+            boxes = [
+                [[1, 2, 3, 4], [5, 6, 7, 8]],
+                [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]],
+            ]
             word_labels = [[1, 2], [6, 3, 10, 2]]
             input_processor = processor(
-                images, words, boxes=boxes, word_labels=word_labels, padding=True, return_tensors="pt"
+                images,
+                words,
+                boxes=boxes,
+                word_labels=word_labels,
+                padding=True,
+                return_tensors="pt",
             )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "labels", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "labels",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -372,14 +503,22 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
         images = self.get_images
 
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             # not batched
             question = "What's his name?"
             input_processor = processor(images[0], question, return_tensors="pt")
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -394,11 +533,22 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
             # batched
             questions = ["How old is he?", "what's the time"]
             input_processor = processor(
-                images, questions, padding="max_length", max_length=20, truncation=True, return_tensors="pt"
+                images,
+                questions,
+                padding="max_length",
+                max_length=20,
+                truncation=True,
+                return_tensors="pt",
             )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -423,16 +573,26 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
         images = self.get_images
 
         for tokenizer in tokenizers:
-            processor = LayoutLMv2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            processor = LayoutLMv2Processor(
+                feature_extractor=feature_extractor, tokenizer=tokenizer
+            )
 
             # not batched
             question = "What's his name?"
             words = ["hello", "world"]
             boxes = [[1, 2, 3, 4], [5, 6, 7, 8]]
-            input_processor = processor(images[0], question, words, boxes, return_tensors="pt")
+            input_processor = processor(
+                images[0], question, words, boxes, return_tensors="pt"
+            )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
@@ -444,16 +604,29 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
             # batched
             questions = ["How old is he?", "what's the time"]
             words = [["hello", "world"], ["my", "name", "is", "niels"]]
-            boxes = [[[1, 2, 3, 4], [5, 6, 7, 8]], [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]]]
-            input_processor = processor(images, questions, words, boxes, padding=True, return_tensors="pt")
+            boxes = [
+                [[1, 2, 3, 4], [5, 6, 7, 8]],
+                [[3, 2, 5, 1], [6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3]],
+            ]
+            input_processor = processor(
+                images, questions, words, boxes, padding=True, return_tensors="pt"
+            )
 
             # verify keys
-            expected_keys = ["attention_mask", "bbox", "image", "input_ids", "token_type_ids"]
+            expected_keys = [
+                "attention_mask",
+                "bbox",
+                "image",
+                "input_ids",
+                "token_type_ids",
+            ]
             actual_keys = sorted(list(input_processor.keys()))
             self.assertListEqual(actual_keys, expected_keys)
 
             # verify input_ids
-            expected_decoding = "[CLS] how old is he? [SEP] hello world [SEP] [PAD] [PAD] [PAD]"
+            expected_decoding = (
+                "[CLS] how old is he? [SEP] hello world [SEP] [PAD] [PAD] [PAD]"
+            )
             decoding = processor.decode(input_processor.input_ids[0].tolist())
             self.assertSequenceEqual(decoding, expected_decoding)
 
@@ -462,5 +635,11 @@ class LayoutLMv2ProcessorIntegrationTests(unittest.TestCase):
             self.assertSequenceEqual(decoding, expected_decoding)
 
             # verify bbox
-            expected_bbox = [[6, 7, 4, 2], [3, 9, 2, 4], [1, 1, 2, 3], [1, 1, 2, 3], [1000, 1000, 1000, 1000]]
+            expected_bbox = [
+                [6, 7, 4, 2],
+                [3, 9, 2, 4],
+                [1, 1, 2, 3],
+                [1, 1, 2, 3],
+                [1000, 1000, 1000, 1000],
+            ]
             self.assertListEqual(input_processor.bbox[1].tolist()[-5:], expected_bbox)

@@ -1,6 +1,12 @@
 from typing import Any, Dict, List, Union
 
-from ..utils import add_end_docstrings, is_torch_available, is_vision_available, logging, requires_backends
+from ..utils import (
+    add_end_docstrings,
+    is_torch_available,
+    is_vision_available,
+    logging,
+    requires_backends,
+)
 from .base import PIPELINE_INIT_ARGS, Pipeline
 
 
@@ -93,7 +99,9 @@ class ObjectDetectionPipeline(Pipeline):
 
     def postprocess(self, model_outputs, threshold=0.9):
         target_size = model_outputs["target_size"]
-        raw_annotations = self.feature_extractor.post_process(model_outputs, target_size)
+        raw_annotations = self.feature_extractor.post_process(
+            model_outputs, target_size
+        )
         raw_annotation = raw_annotations[0]
         keep = raw_annotation["scores"] > threshold
         scores = raw_annotation["scores"][keep]
@@ -101,14 +109,20 @@ class ObjectDetectionPipeline(Pipeline):
         boxes = raw_annotation["boxes"][keep]
 
         raw_annotation["scores"] = scores.tolist()
-        raw_annotation["labels"] = [self.model.config.id2label[label.item()] for label in labels]
+        raw_annotation["labels"] = [
+            self.model.config.id2label[label.item()] for label in labels
+        ]
         raw_annotation["boxes"] = [self._get_bounding_box(box) for box in boxes]
 
         # {"scores": [...], ...} --> [{"score":x, ...}, ...]
         keys = ["score", "label", "box"]
         annotation = [
             dict(zip(keys, vals))
-            for vals in zip(raw_annotation["scores"], raw_annotation["labels"], raw_annotation["boxes"])
+            for vals in zip(
+                raw_annotation["scores"],
+                raw_annotation["labels"],
+                raw_annotation["boxes"],
+            )
         ]
 
         return annotation
@@ -124,7 +138,9 @@ class ObjectDetectionPipeline(Pipeline):
             bbox (`Dict[str, int]`): Dict containing the coordinates in corners format.
         """
         if self.framework != "pt":
-            raise ValueError("The ObjectDetectionPipeline is only available in PyTorch.")
+            raise ValueError(
+                "The ObjectDetectionPipeline is only available in PyTorch."
+            )
         xmin, ymin, xmax, ymax = box.int().tolist()
         bbox = {
             "xmin": xmin,

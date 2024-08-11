@@ -42,7 +42,12 @@ from ...modeling_tf_utils import (
     unpack_inputs,
 )
 from ...tf_utils import shape_list, stable_softmax
-from ...utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
+from ...utils import (
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+    logging,
+    replace_return_docstrings,
+)
 from .configuration_layoutlm import LayoutLMConfig
 
 
@@ -68,7 +73,9 @@ class TFLayoutLMEmbeddings(tf.keras.layers.Layer):
         self.max_position_embeddings = config.max_position_embeddings
         self.max_2d_position_embeddings = config.max_2d_position_embeddings
         self.initializer_range = config.initializer_range
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
     def build(self, input_shape: tf.TensorShape):
@@ -159,25 +166,47 @@ class TFLayoutLMEmbeddings(tf.keras.layers.Layer):
             token_type_ids = tf.fill(dims=input_shape, value=0)
 
         if position_ids is None:
-            position_ids = tf.expand_dims(tf.range(start=0, limit=input_shape[-1]), axis=0)
+            position_ids = tf.expand_dims(
+                tf.range(start=0, limit=input_shape[-1]), axis=0
+            )
 
         if position_ids is None:
-            position_ids = tf.expand_dims(tf.range(start=0, limit=input_shape[-1]), axis=0)
+            position_ids = tf.expand_dims(
+                tf.range(start=0, limit=input_shape[-1]), axis=0
+            )
 
         if bbox is None:
             bbox = bbox = tf.fill(input_shape + [4], value=0)
         try:
-            left_position_embeddings = tf.gather(self.x_position_embeddings, bbox[:, :, 0])
-            upper_position_embeddings = tf.gather(self.y_position_embeddings, bbox[:, :, 1])
-            right_position_embeddings = tf.gather(self.x_position_embeddings, bbox[:, :, 2])
-            lower_position_embeddings = tf.gather(self.y_position_embeddings, bbox[:, :, 3])
+            left_position_embeddings = tf.gather(
+                self.x_position_embeddings, bbox[:, :, 0]
+            )
+            upper_position_embeddings = tf.gather(
+                self.y_position_embeddings, bbox[:, :, 1]
+            )
+            right_position_embeddings = tf.gather(
+                self.x_position_embeddings, bbox[:, :, 2]
+            )
+            lower_position_embeddings = tf.gather(
+                self.y_position_embeddings, bbox[:, :, 3]
+            )
         except IndexError as e:
-            raise IndexError("The `bbox`coordinate values should be within 0-1000 range.") from e
-        h_position_embeddings = tf.gather(self.h_position_embeddings, bbox[:, :, 3] - bbox[:, :, 1])
-        w_position_embeddings = tf.gather(self.w_position_embeddings, bbox[:, :, 2] - bbox[:, :, 0])
+            raise IndexError(
+                "The `bbox`coordinate values should be within 0-1000 range."
+            ) from e
+        h_position_embeddings = tf.gather(
+            self.h_position_embeddings, bbox[:, :, 3] - bbox[:, :, 1]
+        )
+        w_position_embeddings = tf.gather(
+            self.w_position_embeddings, bbox[:, :, 2] - bbox[:, :, 0]
+        )
 
-        position_embeds = tf.gather(params=self.position_embeddings, indices=position_ids)
-        token_type_embeds = tf.gather(params=self.token_type_embeddings, indices=token_type_ids)
+        position_embeds = tf.gather(
+            params=self.position_embeddings, indices=position_ids
+        )
+        token_type_embeds = tf.gather(
+            params=self.token_type_embeddings, indices=token_type_ids
+        )
         final_embeddings = (
             inputs_embeds
             + position_embeds
@@ -212,13 +241,19 @@ class TFLayoutLMSelfAttention(tf.keras.layers.Layer):
         self.sqrt_att_head_size = math.sqrt(self.attention_head_size)
 
         self.query = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="query",
         )
         self.key = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="key"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="key",
         )
         self.value = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="value",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.attention_probs_dropout_prob)
 
@@ -226,7 +261,10 @@ class TFLayoutLMSelfAttention(tf.keras.layers.Layer):
 
     def transpose_for_scores(self, tensor: tf.Tensor, batch_size: int) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size] to [batch_size, seq_length, num_attention_heads, attention_head_size]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size] to [batch_size, num_attention_heads, seq_length, attention_head_size]
         return tf.transpose(tensor, perm=[0, 2, 1, 3])
@@ -256,17 +294,29 @@ class TFLayoutLMSelfAttention(tf.keras.layers.Layer):
             value_layer = past_key_value[1]
             attention_mask = encoder_attention_mask
         elif is_cross_attention:
-            key_layer = self.transpose_for_scores(self.key(inputs=encoder_hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=encoder_hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=encoder_hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=encoder_hidden_states), batch_size
+            )
             attention_mask = encoder_attention_mask
         elif past_key_value is not None:
-            key_layer = self.transpose_for_scores(self.key(inputs=hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=hidden_states), batch_size
+            )
             key_layer = tf.concat([past_key_value[0], key_layer], axis=2)
             value_layer = tf.concat([past_key_value[1], value_layer], axis=2)
         else:
-            key_layer = self.transpose_for_scores(self.key(inputs=hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=hidden_states), batch_size
+            )
 
         query_layer = self.transpose_for_scores(mixed_query_layer, batch_size)
 
@@ -305,8 +355,14 @@ class TFLayoutLMSelfAttention(tf.keras.layers.Layer):
         attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
 
         # (batch_size, seq_len_q, all_head_size)
-        attention_output = tf.reshape(tensor=attention_output, shape=(batch_size, -1, self.all_head_size))
-        outputs = (attention_output, attention_probs) if output_attentions else (attention_output,)
+        attention_output = tf.reshape(
+            tensor=attention_output, shape=(batch_size, -1, self.all_head_size)
+        )
+        outputs = (
+            (attention_output, attention_probs)
+            if output_attentions
+            else (attention_output,)
+        )
 
         if self.is_decoder:
             outputs = outputs + (past_key_value,)
@@ -319,12 +375,18 @@ class TFLayoutLMSelfOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
         hidden_states = self.LayerNorm(inputs=hidden_states + input_tensor)
@@ -379,7 +441,9 @@ class TFLayoutLMIntermediate(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.intermediate_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
 
         if isinstance(config.hidden_act, str):
@@ -400,12 +464,18 @@ class TFLayoutLMOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
         hidden_states = self.LayerNorm(inputs=hidden_states + input_tensor)
@@ -423,7 +493,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
         self.add_cross_attention = config.add_cross_attention
         if self.add_cross_attention:
             if not self.is_decoder:
-                raise ValueError(f"{self} should be used as a decoder model if cross attention is added")
+                raise ValueError(
+                    f"{self} should be used as a decoder model if cross attention is added"
+                )
             self.crossattention = TFLayoutLMAttention(config, name="crossattention")
         self.intermediate = TFLayoutLMIntermediate(config, name="intermediate")
         self.bert_output = TFLayoutLMOutput(config, name="output")
@@ -440,7 +512,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
         training: bool = False,
     ) -> Tuple[tf.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
+        self_attn_past_key_value = (
+            past_key_value[:2] if past_key_value is not None else None
+        )
         self_attention_outputs = self.attention(
             input_tensor=hidden_states,
             attention_mask=attention_mask,
@@ -458,7 +532,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
             outputs = self_attention_outputs[1:-1]
             present_key_value = self_attention_outputs[-1]
         else:
-            outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+            outputs = self_attention_outputs[
+                1:
+            ]  # add self attentions if we output attention weights
 
         cross_attn_present_key_value = None
         if self.is_decoder and encoder_hidden_states is not None:
@@ -469,7 +545,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
                 )
 
             # cross_attn cached key/values tuple is at positions 3,4 of past_key_value tuple
-            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
+            cross_attn_past_key_value = (
+                past_key_value[-2:] if past_key_value is not None else None
+            )
             cross_attention_outputs = self.crossattention(
                 input_tensor=attention_output,
                 attention_mask=attention_mask,
@@ -481,7 +559,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
                 training=training,
             )
             attention_output = cross_attention_outputs[0]
-            outputs = outputs + cross_attention_outputs[1:-1]  # add cross attentions if we output attention weights
+            outputs = (
+                outputs + cross_attention_outputs[1:-1]
+            )  # add cross attentions if we output attention weights
 
             # add cross-attn cache to positions 3,4 of present_key_value tuple
             cross_attn_present_key_value = cross_attention_outputs[-1]
@@ -489,7 +569,9 @@ class TFLayoutLMLayer(tf.keras.layers.Layer):
 
         intermediate_output = self.intermediate(hidden_states=attention_output)
         layer_output = self.bert_output(
-            hidden_states=intermediate_output, input_tensor=attention_output, training=training
+            hidden_states=intermediate_output,
+            input_tensor=attention_output,
+            training=training,
         )
         outputs = (layer_output,) + outputs  # add attentions if we output them
 
@@ -505,7 +587,10 @@ class TFLayoutLMEncoder(tf.keras.layers.Layer):
     def __init__(self, config: LayoutLMConfig, **kwargs):
         super().__init__(**kwargs)
         self.config = config
-        self.layer = [TFLayoutLMLayer(config, name=f"layer_._{i}") for i in range(config.num_hidden_layers)]
+        self.layer = [
+            TFLayoutLMLayer(config, name=f"layer_._{i}")
+            for i in range(config.num_hidden_layers)
+        ]
 
     def call(
         self,
@@ -523,7 +608,9 @@ class TFLayoutLMEncoder(tf.keras.layers.Layer):
     ) -> Union[TFBaseModelOutputWithPastAndCrossAttentions, Tuple[tf.Tensor]]:
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+        all_cross_attentions = (
+            () if output_attentions and self.config.add_cross_attention else None
+        )
 
         next_decoder_cache = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
@@ -549,7 +636,10 @@ class TFLayoutLMEncoder(tf.keras.layers.Layer):
 
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)
-                if self.config.add_cross_attention and encoder_hidden_states is not None:
+                if (
+                    self.config.add_cross_attention
+                    and encoder_hidden_states is not None
+                ):
                     all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
 
         # Add last layer
@@ -558,7 +648,14 @@ class TFLayoutLMEncoder(tf.keras.layers.Layer):
 
         if not return_dict:
             return tuple(
-                v for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions] if v is not None
+                v
+                for v in [
+                    hidden_states,
+                    all_hidden_states,
+                    all_attentions,
+                    all_cross_attentions,
+                ]
+                if v is not None
             )
 
         return TFBaseModelOutputWithPastAndCrossAttentions(
@@ -607,7 +704,9 @@ class TFLayoutLMPredictionHeadTransform(tf.keras.layers.Layer):
         else:
             self.transform_act_fn = config.hidden_act
 
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
 
     def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
@@ -619,7 +718,9 @@ class TFLayoutLMPredictionHeadTransform(tf.keras.layers.Layer):
 
 # Copied from transformers.models.bert.modeling_tf_bert.TFBertLMPredictionHead with Bert->LayoutLM
 class TFLayoutLMLMPredictionHead(tf.keras.layers.Layer):
-    def __init__(self, config: LayoutLMConfig, input_embeddings: tf.keras.layers.Layer, **kwargs):
+    def __init__(
+        self, config: LayoutLMConfig, input_embeddings: tf.keras.layers.Layer, **kwargs
+    ):
         super().__init__(**kwargs)
 
         self.vocab_size = config.vocab_size
@@ -632,7 +733,9 @@ class TFLayoutLMLMPredictionHead(tf.keras.layers.Layer):
         self.input_embeddings = input_embeddings
 
     def build(self, input_shape: tf.TensorShape):
-        self.bias = self.add_weight(shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias")
+        self.bias = self.add_weight(
+            shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias"
+        )
 
         super().build(input_shape)
 
@@ -654,8 +757,12 @@ class TFLayoutLMLMPredictionHead(tf.keras.layers.Layer):
         hidden_states = self.transform(hidden_states=hidden_states)
         seq_length = shape_list(hidden_states)[1]
         hidden_states = tf.reshape(tensor=hidden_states, shape=[-1, self.hidden_size])
-        hidden_states = tf.matmul(a=hidden_states, b=self.input_embeddings.weight, transpose_b=True)
-        hidden_states = tf.reshape(tensor=hidden_states, shape=[-1, seq_length, self.vocab_size])
+        hidden_states = tf.matmul(
+            a=hidden_states, b=self.input_embeddings.weight, transpose_b=True
+        )
+        hidden_states = tf.reshape(
+            tensor=hidden_states, shape=[-1, seq_length, self.vocab_size]
+        )
         hidden_states = tf.nn.bias_add(value=hidden_states, bias=self.bias)
 
         return hidden_states
@@ -663,10 +770,14 @@ class TFLayoutLMLMPredictionHead(tf.keras.layers.Layer):
 
 # Copied from transformers.models.bert.modeling_tf_bert.TFBertMLMHead with Bert->LayoutLM
 class TFLayoutLMMLMHead(tf.keras.layers.Layer):
-    def __init__(self, config: LayoutLMConfig, input_embeddings: tf.keras.layers.Layer, **kwargs):
+    def __init__(
+        self, config: LayoutLMConfig, input_embeddings: tf.keras.layers.Layer, **kwargs
+    ):
         super().__init__(**kwargs)
 
-        self.predictions = TFLayoutLMLMPredictionHead(config, input_embeddings, name="predictions")
+        self.predictions = TFLayoutLMLMPredictionHead(
+            config, input_embeddings, name="predictions"
+        )
 
     def call(self, sequence_output: tf.Tensor) -> tf.Tensor:
         prediction_scores = self.predictions(hidden_states=sequence_output)
@@ -678,14 +789,18 @@ class TFLayoutLMMLMHead(tf.keras.layers.Layer):
 class TFLayoutLMMainLayer(tf.keras.layers.Layer):
     config_class = LayoutLMConfig
 
-    def __init__(self, config: LayoutLMConfig, add_pooling_layer: bool = True, **kwargs):
+    def __init__(
+        self, config: LayoutLMConfig, add_pooling_layer: bool = True, **kwargs
+    ):
         super().__init__(**kwargs)
 
         self.config = config
 
         self.embeddings = TFLayoutLMEmbeddings(config, name="embeddings")
         self.encoder = TFLayoutLMEncoder(config, name="encoder")
-        self.pooler = TFLayoutLMPooler(config, name="pooler") if add_pooling_layer else None
+        self.pooler = (
+            TFLayoutLMPooler(config, name="pooler") if add_pooling_layer else None
+        )
 
     def get_input_embeddings(self) -> tf.keras.layers.Layer:
         return self.embeddings
@@ -720,7 +835,9 @@ class TFLayoutLMMainLayer(tf.keras.layers.Layer):
     ) -> Union[TFBaseModelOutputWithPoolingAndCrossAttentions, Tuple[tf.Tensor]]:
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = shape_list(input_ids)
         elif inputs_embeds is not None:
@@ -750,17 +867,23 @@ class TFLayoutLMMainLayer(tf.keras.layers.Layer):
         # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
         # this attention mask is more simple than the triangular masking of causal attention
         # used in OpenAI GPT, we just need to prepare the broadcast dimension here.
-        extended_attention_mask = tf.reshape(attention_mask, (input_shape[0], 1, 1, input_shape[1]))
+        extended_attention_mask = tf.reshape(
+            attention_mask, (input_shape[0], 1, 1, input_shape[1])
+        )
 
         # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
         # masked positions, this operation will create a tensor which is 0.0 for
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = tf.cast(extended_attention_mask, dtype=embedding_output.dtype)
+        extended_attention_mask = tf.cast(
+            extended_attention_mask, dtype=embedding_output.dtype
+        )
         one_cst = tf.constant(1.0, dtype=embedding_output.dtype)
         ten_thousand_cst = tf.constant(-10000.0, dtype=embedding_output.dtype)
-        extended_attention_mask = tf.multiply(tf.subtract(one_cst, extended_attention_mask), ten_thousand_cst)
+        extended_attention_mask = tf.multiply(
+            tf.subtract(one_cst, extended_attention_mask), ten_thousand_cst
+        )
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -788,7 +911,11 @@ class TFLayoutLMMainLayer(tf.keras.layers.Layer):
         )
 
         sequence_output = encoder_outputs[0]
-        pooled_output = self.pooler(hidden_states=sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(hidden_states=sequence_output)
+            if self.pooler is not None
+            else None
+        )
 
         if not return_dict:
             return (
@@ -924,9 +1051,12 @@ class TFLayoutLMModel(TFLayoutLMPreTrainedModel):
         self.layoutlm = TFLayoutLMMainLayer(config, name="layoutlm")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @replace_return_docstrings(
-        output_type=TFBaseModelOutputWithPoolingAndCrossAttentions, config_class=_CONFIG_FOR_DOC
+        output_type=TFBaseModelOutputWithPoolingAndCrossAttentions,
+        config_class=_CONFIG_FOR_DOC,
     )
     def call(
         self,
@@ -1000,9 +1130,21 @@ class TFLayoutLMModel(TFLayoutLMPreTrainedModel):
     ) -> TFBaseModelOutputWithPoolingAndCrossAttentions:
         output_cache = self.config.use_cache and self.config.is_decoder
         pkv = tf.convert_to_tensor(output.past_key_values) if output_cache else None
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
-        cross_attns = tf.convert_to_tensor(output.cross_attentions) if output.cross_attentions is not None else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
+        cross_attns = (
+            tf.convert_to_tensor(output.cross_attentions)
+            if output.cross_attentions is not None
+            else None
+        )
         if not (self.config.output_attentions and self.config.add_cross_attention):
             cross_attns = None
 
@@ -1016,7 +1158,10 @@ class TFLayoutLMModel(TFLayoutLMPreTrainedModel):
         )
 
 
-@add_start_docstrings("""LayoutLM Model with a `language modeling` head on top.""", LAYOUTLM_START_DOCSTRING)
+@add_start_docstrings(
+    """LayoutLM Model with a `language modeling` head on top.""",
+    LAYOUTLM_START_DOCSTRING,
+)
 class TFLayoutLMForMaskedLM(TFLayoutLMPreTrainedModel, TFMaskedLanguageModelingLoss):
     # names with a '.' represents the authorized unexpected/missing layers when a TF model is loaded from a PT model
     _keys_to_ignore_on_load_unexpected = [
@@ -1035,19 +1180,30 @@ class TFLayoutLMForMaskedLM(TFLayoutLMPreTrainedModel, TFMaskedLanguageModelingL
                 "bi-directional self-attention."
             )
 
-        self.layoutlm = TFLayoutLMMainLayer(config, add_pooling_layer=True, name="layoutlm")
-        self.mlm = TFLayoutLMMLMHead(config, input_embeddings=self.layoutlm.embeddings, name="mlm___cls")
+        self.layoutlm = TFLayoutLMMainLayer(
+            config, add_pooling_layer=True, name="layoutlm"
+        )
+        self.mlm = TFLayoutLMMLMHead(
+            config, input_embeddings=self.layoutlm.embeddings, name="mlm___cls"
+        )
 
     def get_lm_head(self) -> tf.keras.layers.Layer:
         return self.mlm.predictions
 
     def get_prefix_bias_name(self) -> str:
-        warnings.warn("The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.", FutureWarning)
+        warnings.warn(
+            "The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.",
+            FutureWarning,
+        )
         return self.name + "/" + self.mlm.name + "/" + self.mlm.predictions.name
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFMaskedLMOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFMaskedLMOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1123,7 +1279,11 @@ class TFLayoutLMForMaskedLM(TFLayoutLMPreTrainedModel, TFMaskedLanguageModelingL
         )
         sequence_output = outputs[0]
         prediction_scores = self.mlm(sequence_output=sequence_output, training=training)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=prediction_scores)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=prediction_scores)
+        )
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1137,10 +1297,20 @@ class TFLayoutLMForMaskedLM(TFLayoutLMPreTrainedModel, TFMaskedLanguageModelingL
         )
 
     def serving_output(self, output: TFMaskedLMOutput) -> TFMaskedLMOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFMaskedLMOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFMaskedLMOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1150,9 +1320,16 @@ class TFLayoutLMForMaskedLM(TFLayoutLMPreTrainedModel, TFMaskedLanguageModelingL
     """,
     LAYOUTLM_START_DOCSTRING,
 )
-class TFLayoutLMForSequenceClassification(TFLayoutLMPreTrainedModel, TFSequenceClassificationLoss):
+class TFLayoutLMForSequenceClassification(
+    TFLayoutLMPreTrainedModel, TFSequenceClassificationLoss
+):
     # names with a '.' represents the authorized unexpected/missing layers when a TF model is loaded from a PT model
-    _keys_to_ignore_on_load_unexpected = [r"mlm___cls", r"nsp___cls", r"cls.predictions", r"cls.seq_relationship"]
+    _keys_to_ignore_on_load_unexpected = [
+        r"mlm___cls",
+        r"nsp___cls",
+        r"cls.predictions",
+        r"cls.seq_relationship",
+    ]
     _keys_to_ignore_on_load_missing = [r"dropout"]
 
     def __init__(self, config: LayoutLMConfig, *inputs, **kwargs):
@@ -1169,8 +1346,12 @@ class TFLayoutLMForSequenceClassification(TFLayoutLMPreTrainedModel, TFSequenceC
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFSequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFSequenceClassifierOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1247,7 +1428,11 @@ class TFLayoutLMForSequenceClassification(TFLayoutLMPreTrainedModel, TFSequenceC
         pooled_output = outputs[1]
         pooled_output = self.dropout(inputs=pooled_output, training=training)
         logits = self.classifier(inputs=pooled_output)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1260,11 +1445,23 @@ class TFLayoutLMForSequenceClassification(TFLayoutLMPreTrainedModel, TFSequenceC
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFSequenceClassifierOutput
+    ) -> TFSequenceClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFSequenceClassifierOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1274,7 +1471,9 @@ class TFLayoutLMForSequenceClassification(TFLayoutLMPreTrainedModel, TFSequenceC
     """,
     LAYOUTLM_START_DOCSTRING,
 )
-class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassificationLoss):
+class TFLayoutLMForTokenClassification(
+    TFLayoutLMPreTrainedModel, TFTokenClassificationLoss
+):
     # names with a '.' represents the authorized unexpected/missing layers when a TF model is loaded from a PT model
     _keys_to_ignore_on_load_unexpected = [
         r"pooler",
@@ -1290,7 +1489,9 @@ class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassif
 
         self.num_labels = config.num_labels
 
-        self.layoutlm = TFLayoutLMMainLayer(config, add_pooling_layer=True, name="layoutlm")
+        self.layoutlm = TFLayoutLMMainLayer(
+            config, add_pooling_layer=True, name="layoutlm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
             units=config.num_labels,
@@ -1299,8 +1500,12 @@ class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassif
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFTokenClassifierOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFTokenClassifierOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1375,7 +1580,11 @@ class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassif
         sequence_output = outputs[0]
         sequence_output = self.dropout(inputs=sequence_output, training=training)
         logits = self.classifier(inputs=sequence_output)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1388,11 +1597,23 @@ class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassif
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFTokenClassifierOutput) -> TFTokenClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFTokenClassifierOutput
+    ) -> TFTokenClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFTokenClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFTokenClassifierOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1403,7 +1624,9 @@ class TFLayoutLMForTokenClassification(TFLayoutLMPreTrainedModel, TFTokenClassif
     """,
     LAYOUTLM_START_DOCSTRING,
 )
-class TFLayoutLMForQuestionAnswering(TFLayoutLMPreTrainedModel, TFQuestionAnsweringLoss):
+class TFLayoutLMForQuestionAnswering(
+    TFLayoutLMPreTrainedModel, TFQuestionAnsweringLoss
+):
     # names with a '.' represents the authorized unexpected/missing layers when a TF model is loaded from a PT model
     _keys_to_ignore_on_load_unexpected = [
         r"pooler",
@@ -1417,7 +1640,9 @@ class TFLayoutLMForQuestionAnswering(TFLayoutLMPreTrainedModel, TFQuestionAnswer
         super().__init__(config, *inputs, **kwargs)
         self.num_labels = config.num_labels
 
-        self.layoutlm = TFLayoutLMMainLayer(config, add_pooling_layer=True, name="layoutlm")
+        self.layoutlm = TFLayoutLMMainLayer(
+            config, add_pooling_layer=True, name="layoutlm"
+        )
         self.qa_outputs = tf.keras.layers.Dense(
             units=config.num_labels,
             kernel_initializer=get_initializer(config.initializer_range),
@@ -1425,8 +1650,12 @@ class TFLayoutLMForQuestionAnswering(TFLayoutLMPreTrainedModel, TFQuestionAnswer
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFQuestionAnsweringModelOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFQuestionAnsweringModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1519,7 +1748,9 @@ class TFLayoutLMForQuestionAnswering(TFLayoutLMPreTrainedModel, TFQuestionAnswer
         if start_positions is not None and end_positions is not None:
             labels = {"start_position": start_positions}
             labels["end_position"] = end_positions
-            loss = self.hf_compute_loss(labels=labels, logits=(start_logits, end_logits))
+            loss = self.hf_compute_loss(
+                labels=labels, logits=(start_logits, end_logits)
+            )
 
         if not return_dict:
             output = (start_logits, end_logits) + outputs[2:]
@@ -1533,10 +1764,23 @@ class TFLayoutLMForQuestionAnswering(TFLayoutLMPreTrainedModel, TFQuestionAnswer
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFTokenClassifierOutput) -> TFTokenClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFTokenClassifierOutput
+    ) -> TFTokenClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFQuestionAnsweringModelOutput(
-            start_logits=output.start_logits, end_logits=output.end_logits, hidden_states=hs, attentions=attns
+            start_logits=output.start_logits,
+            end_logits=output.end_logits,
+            hidden_states=hs,
+            attentions=attns,
         )

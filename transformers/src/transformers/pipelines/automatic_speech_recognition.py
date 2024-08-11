@@ -27,7 +27,10 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 if is_torch_available():
-    from ..models.auto.modeling_auto import MODEL_FOR_CTC_MAPPING, MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
+    from ..models.auto.modeling_auto import (
+        MODEL_FOR_CTC_MAPPING,
+        MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
+    )
 
 
 def rescale_stride(tokens_or_logits, stride, ratio):
@@ -56,12 +59,18 @@ def chunk_iter(inputs, feature_extractor, chunk_len, stride_left, stride_right):
     for i in range(0, inputs_len, step):
         # add start and end paddings to the chunk
         chunk = inputs[i : i + chunk_len]
-        processed = feature_extractor(chunk, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt")
+        processed = feature_extractor(
+            chunk, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt"
+        )
         _stride_left = 0 if i == 0 else stride_left
         is_last = i + step + stride_left >= inputs_len
         _stride_right = 0 if is_last else stride_right
         if chunk.shape[0] > _stride_left:
-            yield {"is_last": is_last, "stride": (chunk.shape[0], _stride_left, _stride_right), **processed}
+            yield {
+                "is_last": is_last,
+                "stride": (chunk.shape[0], _stride_left, _stride_right),
+                **processed,
+            }
 
 
 class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
@@ -117,7 +126,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             can be passed for language model boosted decoding. See [`Wav2Vec2ProcessorWithLM`] for more information.
     """
 
-    def __init__(self, feature_extractor: Union["SequenceFeatureExtractor", str], *args, **kwargs):
+    def __init__(
+        self, feature_extractor: Union["SequenceFeatureExtractor", str], *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.feature_extractor = feature_extractor
 
@@ -134,9 +145,16 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             self.type = "ctc"
 
         if self.framework == "tf":
-            raise ValueError("The AutomaticSpeechRecognitionPipeline is only available in PyTorch.")
+            raise ValueError(
+                "The AutomaticSpeechRecognitionPipeline is only available in PyTorch."
+            )
 
-        self.check_model_type(dict(MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING.items() + MODEL_FOR_CTC_MAPPING.items()))
+        self.check_model_type(
+            dict(
+                MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING.items()
+                + MODEL_FOR_CTC_MAPPING.items()
+            )
+        )
 
     def __call__(
         self,
@@ -211,7 +229,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             stride = inputs.pop("stride", None)
             # Accepting `"array"` which is the key defined in `datasets` for
             # better integration
-            if not ("sampling_rate" in inputs and ("raw" in inputs or "array" in inputs)):
+            if not (
+                "sampling_rate" in inputs and ("raw" in inputs or "array" in inputs)
+            ):
                 raise ValueError(
                     "When passing a dictionnary to AutomaticSpeechRecognitionPipeline, the dict needs to contain a "
                     '"raw" key containing the numpy array representing the audio and a "sampling_rate" key, '
@@ -229,7 +249,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 from torchaudio import functional as F
 
                 inputs = F.resample(
-                    torch.from_numpy(inputs), in_sampling_rate, self.feature_extractor.sampling_rate
+                    torch.from_numpy(inputs),
+                    in_sampling_rate,
+                    self.feature_extractor.sampling_rate,
                 ).numpy()
                 ratio = self.feature_extractor.sampling_rate / in_sampling_rate
             else:
@@ -242,11 +264,19 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 # swallowed by the `feature_extractor` later, and then batching
                 # can add extra data in the inputs, so we need to keep track
                 # of the original length in the stride so we can cut properly.
-                stride = (inputs.shape[0], int(round(stride[0] * ratio)), int(round(stride[1] * ratio)))
+                stride = (
+                    inputs.shape[0],
+                    int(round(stride[0] * ratio)),
+                    int(round(stride[1] * ratio)),
+                )
         if not isinstance(inputs, np.ndarray):
-            raise ValueError(f"We expect a numpy ndarray as input, got `{type(inputs)}`")
+            raise ValueError(
+                f"We expect a numpy ndarray as input, got `{type(inputs)}`"
+            )
         if len(inputs.shape) != 1:
-            raise ValueError("We expect a single channel audio input for AutomaticSpeechRecognitionPipeline")
+            raise ValueError(
+                "We expect a single channel audio input for AutomaticSpeechRecognitionPipeline"
+            )
 
         if chunk_length_s:
             if stride_length_s is None:
@@ -259,9 +289,34 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             # Currently chunking is not possible at this level for `seq2seq` so
             # it's ok.
             align_to = self.model.config.inputs_to_logits_ratio
-            chunk_len = int(round(chunk_length_s * self.feature_extractor.sampling_rate / align_to)) * align_to
-            stride_left = int(round(stride_length_s[0] * self.feature_extractor.sampling_rate / align_to)) * align_to
-            stride_right = int(round(stride_length_s[1] * self.feature_extractor.sampling_rate / align_to)) * align_to
+            chunk_len = (
+                int(
+                    round(
+                        chunk_length_s * self.feature_extractor.sampling_rate / align_to
+                    )
+                )
+                * align_to
+            )
+            stride_left = (
+                int(
+                    round(
+                        stride_length_s[0]
+                        * self.feature_extractor.sampling_rate
+                        / align_to
+                    )
+                )
+                * align_to
+            )
+            stride_right = (
+                int(
+                    round(
+                        stride_length_s[1]
+                        * self.feature_extractor.sampling_rate
+                        / align_to
+                    )
+                )
+                * align_to
+            )
 
             if self.type not in {"ctc", "ctc_with_lm"}:
                 raise ValueError(
@@ -271,15 +326,21 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 raise ValueError("Chunk length must be superior to stride length")
 
             # make sure that
-            for item in chunk_iter(inputs, self.feature_extractor, chunk_len, stride_left, stride_right):
+            for item in chunk_iter(
+                inputs, self.feature_extractor, chunk_len, stride_left, stride_right
+            ):
                 yield item
         else:
             processed = self.feature_extractor(
-                inputs, sampling_rate=self.feature_extractor.sampling_rate, return_tensors="pt"
+                inputs,
+                sampling_rate=self.feature_extractor.sampling_rate,
+                return_tensors="pt",
             )
             if stride is not None:
                 if self.model.__class__ in MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING.values():
-                    raise ValueError("Stride is only usable with CTC models, try removing it")
+                    raise ValueError(
+                        "Stride is only usable with CTC models, try removing it"
+                    )
 
                 processed["stride"] = stride
             yield {"is_last": True, **processed, **extra}
@@ -314,7 +375,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
             stride = model_inputs.pop("stride", None)
             input_values = model_inputs.pop("input_values")
             attention_mask = model_inputs.pop("attention_mask", None)
-            outputs = self.model(input_values=input_values, attention_mask=attention_mask)
+            outputs = self.model(
+                input_values=input_values, attention_mask=attention_mask
+            )
             logits = outputs.logits
 
             if self.type == "ctc_with_lm":
@@ -334,14 +397,21 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
         extra = model_inputs
         return {"is_last": is_last, **out, **extra}
 
-    def postprocess(self, model_outputs, decoder_kwargs: Optional[Dict] = None, return_timestamps=None):
+    def postprocess(
+        self,
+        model_outputs,
+        decoder_kwargs: Optional[Dict] = None,
+        return_timestamps=None,
+    ):
         # Optional return types
         optional = {}
 
         if return_timestamps and self.type == "seq2seq":
             raise ValueError("We cannot return_timestamps yet on non-ctc models !")
         if return_timestamps == "char" and self.type == "ctc_with_lm":
-            raise ValueError("CTC with LM cannot return `char` timestamps, only `words`")
+            raise ValueError(
+                "CTC with LM cannot return `char` timestamps, only `words`"
+            )
 
         final_items = []
         key = "logits" if self.type == "ctc_with_lm" else "tokens"
@@ -370,14 +440,22 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 chunk_offset = beams[0][2]
                 word_offsets = []
                 for word, (start_offset, end_offset) in chunk_offset:
-                    word_offsets.append({"word": word, "start_offset": start_offset, "end_offset": end_offset})
+                    word_offsets.append(
+                        {
+                            "word": word,
+                            "start_offset": start_offset,
+                            "end_offset": end_offset,
+                        }
+                    )
 
         else:
             skip_special_tokens = self.type != "ctc"
             text = self.tokenizer.decode(items, skip_special_tokens=skip_special_tokens)
             if return_timestamps:
                 char_offsets = self.tokenizer.decode(
-                    items, skip_special_tokens=skip_special_tokens, output_char_offsets=True
+                    items,
+                    skip_special_tokens=skip_special_tokens,
+                    output_char_offsets=True,
                 )["char_offsets"]
                 if return_timestamps == "word":
                     word_offsets = self.tokenizer._get_word_offsets(
@@ -397,7 +475,9 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 stop = item["end_offset"] * self.model.config.inputs_to_logits_ratio
                 stop /= self.feature_extractor.sampling_rate
 
-                chunks.append({"text": item[return_timestamps], "timestamp": (start, stop)})
+                chunks.append(
+                    {"text": item[return_timestamps], "timestamp": (start, stop)}
+                )
             optional["chunks"] = chunks
 
         extra = defaultdict(list)

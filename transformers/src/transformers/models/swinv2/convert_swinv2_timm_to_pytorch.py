@@ -24,7 +24,11 @@ from PIL import Image
 import requests
 import timm
 from huggingface_hub import hf_hub_download
-from transformers import AutoFeatureExtractor, Swinv2Config, Swinv2ForImageClassification
+from transformers import (
+    AutoFeatureExtractor,
+    Swinv2Config,
+    Swinv2ForImageClassification,
+)
 
 
 def get_swinv2_config(swinv2_name):
@@ -91,7 +95,9 @@ def get_swinv2_config(swinv2_name):
 
 def rename_key(name):
     if "patch_embed.proj" in name:
-        name = name.replace("patch_embed.proj", "embeddings.patch_embeddings.projection")
+        name = name.replace(
+            "patch_embed.proj", "embeddings.patch_embeddings.projection"
+        )
     if "patch_embed.norm" in name:
         name = name.replace("patch_embed.norm", "embeddings.norm")
     if "layers" in name:
@@ -139,7 +145,11 @@ def convert_state_dict(orig_state_dict, model):
             key_split = key.split(".")
             layer_num = int(key_split[1])
             block_num = int(key_split[3])
-            dim = model.swinv2.encoder.layers[layer_num].blocks[block_num].attention.self.all_head_size
+            dim = (
+                model.swinv2.encoder.layers[layer_num]
+                .blocks[block_num]
+                .attention.self.all_head_size
+            )
 
             if "weight" in key:
                 orig_state_dict[
@@ -155,9 +165,9 @@ def convert_state_dict(orig_state_dict, model):
                 orig_state_dict[
                     f"swinv2.encoder.layers.{layer_num}.blocks.{block_num}.attention.self.query.bias"
                 ] = val[:dim]
-                orig_state_dict[f"swinv2.encoder.layers.{layer_num}.blocks.{block_num}.attention.self.key.bias"] = val[
-                    dim : dim * 2
-                ]
+                orig_state_dict[
+                    f"swinv2.encoder.layers.{layer_num}.blocks.{block_num}.attention.self.key.bias"
+                ] = val[dim : dim * 2]
                 orig_state_dict[
                     f"swinv2.encoder.layers.{layer_num}.blocks.{block_num}.attention.self.value.bias"
                 ] = val[-dim:]
@@ -180,7 +190,9 @@ def convert_swinv2_checkpoint(swinv2_name, pytorch_dump_folder_path):
 
     url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 
-    feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/{}".format(swinv2_name.replace("_", "-")))
+    feature_extractor = AutoFeatureExtractor.from_pretrained(
+        "microsoft/{}".format(swinv2_name.replace("_", "-"))
+    )
     image = Image.open(requests.get(url, stream=True).raw)
     inputs = feature_extractor(images=image, return_tensors="pt")
 
@@ -212,7 +224,10 @@ if __name__ == "__main__":
         help="Name of the Swinv2 timm model you'd like to convert.",
     )
     parser.add_argument(
-        "--pytorch_dump_folder_path", default=None, type=str, help="Path to the output PyTorch model directory."
+        "--pytorch_dump_folder_path",
+        default=None,
+        type=str,
+        help="Path to the output PyTorch model directory.",
     )
 
     args = parser.parse_args()

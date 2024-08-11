@@ -24,7 +24,12 @@ from transformers.convert_graph_to_onnx import (
     infer_shapes,
     quantize,
 )
-from transformers.testing_utils import require_tf, require_tokenizers, require_torch, slow
+from transformers.testing_utils import (
+    require_tf,
+    require_tokenizers,
+    require_torch,
+    slow,
+)
 
 
 class FuncContiguousArgs:
@@ -41,7 +46,10 @@ class OnnxExportTestCase(unittest.TestCase):
     MODEL_TO_TEST = [
         # (model_name, model_kwargs)
         ("bert-base-cased", {}),
-        ("gpt2", {"use_cache": False}),  # We don't support exporting GPT2 past keys anymore
+        (
+            "gpt2",
+            {"use_cache": False},
+        ),  # We don't support exporting GPT2 past keys anymore
     ]
 
     @require_tf
@@ -140,8 +148,16 @@ class OnnxExportTestCase(unittest.TestCase):
     def _test_infer_dynamic_axis(self, model, tokenizer, framework):
         feature_extractor = FeatureExtractionPipeline(model, tokenizer)
 
-        variable_names = ["input_ids", "token_type_ids", "attention_mask", "output_0", "output_1"]
-        input_vars, output_vars, shapes, tokens = infer_shapes(feature_extractor, framework)
+        variable_names = [
+            "input_ids",
+            "token_type_ids",
+            "attention_mask",
+            "output_0",
+            "output_1",
+        ]
+        input_vars, output_vars, shapes, tokens = infer_shapes(
+            feature_extractor, framework
+        )
 
         # Assert all variables are present
         self.assertEqual(len(shapes), len(variable_names))
@@ -166,8 +182,14 @@ class OnnxExportTestCase(unittest.TestCase):
         """
         # All generated args are valid
         input_names = ["input_ids", "attention_mask", "token_type_ids"]
-        tokens = {"input_ids": [1, 2, 3, 4], "attention_mask": [0, 0, 0, 0], "token_type_ids": [1, 1, 1, 1]}
-        ordered_input_names, inputs_args = ensure_valid_input(FuncContiguousArgs(), tokens, input_names)
+        tokens = {
+            "input_ids": [1, 2, 3, 4],
+            "attention_mask": [0, 0, 0, 0],
+            "token_type_ids": [1, 1, 1, 1],
+        }
+        ordered_input_names, inputs_args = ensure_valid_input(
+            FuncContiguousArgs(), tokens, input_names
+        )
 
         # Should have exactly the same number of args (all are valid)
         self.assertEqual(len(inputs_args), 3)
@@ -177,10 +199,15 @@ class OnnxExportTestCase(unittest.TestCase):
 
         # Parameter should be reordered according to their respective place in the function:
         # (input_ids, token_type_ids, attention_mask)
-        self.assertEqual(inputs_args, (tokens["input_ids"], tokens["token_type_ids"], tokens["attention_mask"]))
+        self.assertEqual(
+            inputs_args,
+            (tokens["input_ids"], tokens["token_type_ids"], tokens["attention_mask"]),
+        )
 
         # Generated args are interleaved with another args (for instance parameter "past" in GPT2)
-        ordered_input_names, inputs_args = ensure_valid_input(FuncNonContiguousArgs(), tokens, input_names)
+        ordered_input_names, inputs_args = ensure_valid_input(
+            FuncNonContiguousArgs(), tokens, input_names
+        )
 
         # Should have exactly the one arg (all before the one not provided "some_other_args")
         self.assertEqual(len(inputs_args), 1)
@@ -191,5 +218,9 @@ class OnnxExportTestCase(unittest.TestCase):
         self.assertEqual(ordered_input_names[0], "input_ids")
 
     def test_generate_identified_name(self):
-        generated = generate_identified_filename(Path("/home/something/my_fake_model.onnx"), "-test")
-        self.assertEqual("/home/something/my_fake_model-test.onnx", generated.as_posix())
+        generated = generate_identified_filename(
+            Path("/home/something/my_fake_model.onnx"), "-test"
+        )
+        self.assertEqual(
+            "/home/something/my_fake_model-test.onnx", generated.as_posix()
+        )

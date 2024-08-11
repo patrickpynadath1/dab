@@ -22,7 +22,12 @@ from transformers import (
     LxmertConfig,
     pipeline,
 )
-from transformers.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch
+from transformers.testing_utils import (
+    is_pipeline_test,
+    nested_simplify,
+    require_tf,
+    require_torch,
+)
 
 from .test_pipelines_common import PipelineTestCaseMeta
 
@@ -35,7 +40,9 @@ class FeatureExtractionPipelineTests(unittest.TestCase, metaclass=PipelineTestCa
     @require_torch
     def test_small_model_pt(self):
         feature_extractor = pipeline(
-            task="feature-extraction", model="hf-internal-testing/tiny-random-distilbert", framework="pt"
+            task="feature-extraction",
+            model="hf-internal-testing/tiny-random-distilbert",
+            framework="pt",
         )
         outputs = feature_extractor("This is a test")
         self.assertEqual(
@@ -45,7 +52,9 @@ class FeatureExtractionPipelineTests(unittest.TestCase, metaclass=PipelineTestCa
     @require_tf
     def test_small_model_tf(self):
         feature_extractor = pipeline(
-            task="feature-extraction", model="hf-internal-testing/tiny-random-distilbert", framework="tf"
+            task="feature-extraction",
+            model="hf-internal-testing/tiny-random-distilbert",
+            framework="tf",
         )
         outputs = feature_extractor("This is a test")
         self.assertEqual(
@@ -72,8 +81,12 @@ class FeatureExtractionPipelineTests(unittest.TestCase, metaclass=PipelineTestCa
         if tokenizer is None:
             self.skipTest("No tokenizer")
             return
-        elif type(model.config) in FEATURE_EXTRACTOR_MAPPING or isinstance(model.config, LxmertConfig):
-            self.skipTest("This is a bimodal model, we need to find a more consistent way to switch on those models.")
+        elif type(model.config) in FEATURE_EXTRACTOR_MAPPING or isinstance(
+            model.config, LxmertConfig
+        ):
+            self.skipTest(
+                "This is a bimodal model, we need to find a more consistent way to switch on those models."
+            )
             return
         elif model.config.is_encoder_decoder:
             self.skipTest(

@@ -7,7 +7,6 @@ class BaseSampler(nn.Module):
 
     def initialize_batch(self, model, seq_length, sentiment):
         raise NotImplementedError
-    
+
     def step(self, **kwargs):
         raise NotImplementedError
-    

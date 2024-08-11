@@ -57,7 +57,9 @@ def _find_text_in_file(filename, start_prompt, end_prompt):
 ALLOWED_MODEL_SUFFIXES = "Model|Encoder|Decoder|ForConditionalGeneration"
 # Regexes that match TF/Flax/PT model names.
 _re_tf_models = re.compile(r"TF(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
-_re_flax_models = re.compile(r"Flax(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
+_re_flax_models = re.compile(
+    r"Flax(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)"
+)
 # Will match any TF or Flax model too so need to be in an else branch afterthe two previous regexes.
 _re_pt_models = re.compile(r"(.*)(?:Model|Encoder|Decoder|ForConditionalGeneration)")
 
@@ -74,7 +76,9 @@ transformers_module = spec.loader.load_module()
 # Thanks to https://stackoverflow.com/questions/29916065/how-to-do-camelcase-split-in-python
 def camel_case_split(identifier):
     "Split a camelcased `identifier` into words."
-    matches = re.finditer(".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier)
+    matches = re.finditer(
+        ".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier
+    )
     return [m.group(0) for m in matches]
 
 
@@ -88,13 +92,18 @@ def _center_text(text, width):
 def get_model_table_from_auto_modules():
     """Generates an up-to-date model table from the content of the auto modules."""
     # Dictionary model names to config.
-    config_maping_names = transformers_module.models.auto.configuration_auto.CONFIG_MAPPING_NAMES
+    config_maping_names = (
+        transformers_module.models.auto.configuration_auto.CONFIG_MAPPING_NAMES
+    )
     model_name_to_config = {
         name: config_maping_names[code]
         for code, name in transformers_module.MODEL_NAMES_MAPPING.items()
         if code in config_maping_names
     }
-    model_name_to_prefix = {name: config.replace("Config", "") for name, config in model_name_to_config.items()}
+    model_name_to_prefix = {
+        name: config.replace("Config", "")
+        for name, config in model_name_to_config.items()
+    }
 
     # Dictionaries flagging if each model prefix has a slow/fast tokenizer, backend in PT/TF/Flax.
     slow_tokenizers = collections.defaultdict(bool)
@@ -133,13 +142,22 @@ def get_model_table_from_auto_modules():
     # Let's build that table!
     model_names = list(model_name_to_config.keys())
     model_names.sort(key=str.lower)
-    columns = ["Model", "Tokenizer slow", "Tokenizer fast", "PyTorch support", "TensorFlow support", "Flax Support"]
+    columns = [
+        "Model",
+        "Tokenizer slow",
+        "Tokenizer fast",
+        "PyTorch support",
+        "TensorFlow support",
+        "Flax Support",
+    ]
     # We'll need widths to properly display everything in the center (+2 is to leave one extra space on each side).
     widths = [len(c) + 2 for c in columns]
     widths[0] = max([len(name) for name in model_names]) + 2
 
     # Build the table per se
-    table = "|" + "|".join([_center_text(c, w) for c, w in zip(columns, widths)]) + "|\n"
+    table = (
+        "|" + "|".join([_center_text(c, w) for c, w in zip(columns, widths)]) + "|\n"
+    )
     # Use ":-----:" format to center-aligned table cell texts
     table += "|" + "|".join([":" + "-" * (w - 2) + ":" for w in widths]) + "|\n"
 
@@ -154,7 +172,9 @@ def get_model_table_from_auto_modules():
             check[tf_models[prefix]],
             check[flax_models[prefix]],
         ]
-        table += "|" + "|".join([_center_text(l, w) for l, w in zip(line, widths)]) + "|\n"
+        table += (
+            "|" + "|".join([_center_text(l, w) for l, w in zip(line, widths)]) + "|\n"
+        )
     return table
 
 
@@ -169,7 +189,12 @@ def check_model_table(overwrite=False):
 
     if current_table != new_table:
         if overwrite:
-            with open(os.path.join(PATH_TO_DOCS, "index.mdx"), "w", encoding="utf-8", newline="\n") as f:
+            with open(
+                os.path.join(PATH_TO_DOCS, "index.mdx"),
+                "w",
+                encoding="utf-8",
+                newline="\n",
+            ) as f:
                 f.writelines(lines[:start_index] + [new_table] + lines[end_index:])
         else:
             raise ValueError(
@@ -199,8 +224,12 @@ def get_onnx_model_list():
     Return the list of models supporting ONNX.
     """
     config_mapping = transformers_module.models.auto.configuration_auto.CONFIG_MAPPING
-    model_names = config_mapping = transformers_module.models.auto.configuration_auto.MODEL_NAMES_MAPPING
-    onnx_model_types = [model_type for model_type in config_mapping.keys() if has_onnx(model_type)]
+    model_names = config_mapping = (
+        transformers_module.models.auto.configuration_auto.MODEL_NAMES_MAPPING
+    )
+    onnx_model_types = [
+        model_type for model_type in config_mapping.keys() if has_onnx(model_type)
+    ]
     onnx_model_names = [model_names[model_type] for model_type in onnx_model_types]
     onnx_model_names.sort(key=lambda x: x.upper())
     return "\n".join([f"- {name}" for name in onnx_model_names]) + "\n"
@@ -217,15 +246,26 @@ def check_onnx_model_list(overwrite=False):
 
     if current_list != new_list:
         if overwrite:
-            with open(os.path.join(PATH_TO_DOCS, "serialization.mdx"), "w", encoding="utf-8", newline="\n") as f:
+            with open(
+                os.path.join(PATH_TO_DOCS, "serialization.mdx"),
+                "w",
+                encoding="utf-8",
+                newline="\n",
+            ) as f:
                 f.writelines(lines[:start_index] + [new_list] + lines[end_index:])
         else:
-            raise ValueError("The list of ONNX-supported models needs an update. Run `make fix-copies` to fix this.")
+            raise ValueError(
+                "The list of ONNX-supported models needs an update. Run `make fix-copies` to fix this."
+            )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fix_and_overwrite", action="store_true", help="Whether to fix inconsistencies.")
+    parser.add_argument(
+        "--fix_and_overwrite",
+        action="store_true",
+        help="Whether to fix inconsistencies.",
+    )
     args = parser.parse_args()
 
     check_model_table(args.fix_and_overwrite)

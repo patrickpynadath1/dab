@@ -27,7 +27,10 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_speech_to_text_2": ["SPEECH_TO_TEXT_2_PRETRAINED_CONFIG_ARCHIVE_MAP", "Speech2Text2Config"],
+    "configuration_speech_to_text_2": [
+        "SPEECH_TO_TEXT_2_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "Speech2Text2Config",
+    ],
     "processing_speech_to_text_2": ["Speech2Text2Processor"],
     "tokenization_speech_to_text_2": ["Speech2Text2Tokenizer"],
 }
@@ -47,7 +50,10 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_speech_to_text_2 import SPEECH_TO_TEXT_2_PRETRAINED_CONFIG_ARCHIVE_MAP, Speech2Text2Config
+    from .configuration_speech_to_text_2 import (
+        SPEECH_TO_TEXT_2_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        Speech2Text2Config,
+    )
     from .processing_speech_to_text_2 import Speech2Text2Processor
     from .tokenization_speech_to_text_2 import Speech2Text2Tokenizer
 
@@ -66,4 +72,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

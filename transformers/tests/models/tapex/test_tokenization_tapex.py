@@ -49,14 +49,19 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         self.special_tokens_map = {"unk_token": "<unk>"}
 
         self.vocab_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["vocab_file"])
-        self.merges_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["merges_file"])
+        self.merges_file = os.path.join(
+            self.tmpdirname, VOCAB_FILES_NAMES["merges_file"]
+        )
         with open(self.vocab_file, "w", encoding="utf-8") as fp:
             fp.write(json.dumps(vocab_tokens) + "\n")
         with open(self.merges_file, "w", encoding="utf-8") as fp:
             fp.write("\n".join(merges))
 
     def get_table(self, tokenizer, length=5):
-        toks = [tokenizer.decode([i], clean_up_tokenization_spaces=False) for i in range(len(tokenizer))]
+        toks = [
+            tokenizer.decode([i], clean_up_tokenization_spaces=False)
+            for i in range(len(tokenizer))
+        ]
 
         if length == 0:
             data = {}
@@ -68,7 +73,10 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         return table
 
     def get_table_and_query(self, tokenizer, length=5):
-        toks = [tokenizer.decode([i], clean_up_tokenization_spaces=False) for i in range(len(tokenizer))]
+        toks = [
+            tokenizer.decode([i], clean_up_tokenization_spaces=False)
+            for i in range(len(tokenizer))
+        ]
         table = self.get_table(tokenizer, length=length - 3)
         query = " ".join(toks[:3])
 
@@ -85,7 +93,10 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         return_table_and_query: bool = False,
     ):
 
-        toks = [tokenizer.decode([i], clean_up_tokenization_spaces=False) for i in range(len(tokenizer))]
+        toks = [
+            tokenizer.decode([i], clean_up_tokenization_spaces=False)
+            for i in range(len(tokenizer))
+        ]
 
         if empty_table:
             table = pd.DataFrame.from_dict({})
@@ -95,13 +106,19 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
             table = pd.DataFrame.from_dict(data)
             query = " ".join(toks[:3])
 
-        output_ids = tokenizer.encode(table, query, add_special_tokens=add_special_tokens)
+        output_ids = tokenizer.encode(
+            table, query, add_special_tokens=add_special_tokens
+        )
         output_txt = tokenizer.decode(output_ids)
 
         if len(output_ids) < min_length:
-            raise ValueError("Update the code to generate the sequences so that they are larger")
+            raise ValueError(
+                "Update the code to generate the sequences so that they are larger"
+            )
         if len(output_ids) > max_length:
-            raise ValueError("Update the code to generate the sequences so that they are smaller")
+            raise ValueError(
+                "Update the code to generate the sequences so that they are smaller"
+            )
 
         if return_table_and_query:
             return output_txt, output_ids, table, query
@@ -118,7 +135,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         return input_text, output_text
 
     def test_full_tokenizer_roberta(self):
-        tokenizer = self.tokenizer_class(self.vocab_file, self.merges_file, **self.special_tokens_map)
+        tokenizer = self.tokenizer_class(
+            self.vocab_file, self.merges_file, **self.special_tokens_map
+        )
         text = "lower newer"
         bpe_tokens = ["l", "o", "w", "er", "\u0120", "n", "e", "w", "er"]
         tokens = tokenizer.tokenize(text)
@@ -126,14 +145,21 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         input_tokens = tokens + [tokenizer.unk_token]
         input_bpe_tokens = [0, 1, 2, 15, 10, 9, 3, 2, 15, 19]
-        self.assertListEqual(tokenizer.convert_tokens_to_ids(input_tokens), input_bpe_tokens)
+        self.assertListEqual(
+            tokenizer.convert_tokens_to_ids(input_tokens), input_bpe_tokens
+        )
 
     def roberta_dict_integration_testing(self):
         tokenizer = self.get_tokenizer()
 
-        self.assertListEqual(tokenizer.encode("Hello world!", add_special_tokens=False), [0, 31414, 232, 328, 2])
         self.assertListEqual(
-            tokenizer.encode("Hello world! cécé herlolip 418", add_special_tokens=False),
+            tokenizer.encode("Hello world!", add_special_tokens=False),
+            [0, 31414, 232, 328, 2],
+        )
+        self.assertListEqual(
+            tokenizer.encode(
+                "Hello world! cécé herlolip 418", add_special_tokens=False
+            ),
             [0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2],
         )
 
@@ -161,13 +187,20 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertEqual(added_toks, len(new_toks))
                 self.assertEqual(all_size_2, all_size + len(new_toks))
 
-                tokens = tokenizer.encode(table, "aaaaa bbbbbb low cccccccccdddddddd l", add_special_tokens=False)
+                tokens = tokenizer.encode(
+                    table,
+                    "aaaaa bbbbbb low cccccccccdddddddd l",
+                    add_special_tokens=False,
+                )
 
                 self.assertGreaterEqual(len(tokens), 4)
                 self.assertGreater(tokens[0], tokenizer.vocab_size - 1)
                 self.assertGreater(tokens[-2], tokenizer.vocab_size - 1)
 
-                new_toks_2 = {"eos_token": ">>>>|||<||<<|<<", "pad_token": "<<<<<|||>|>>>>|>"}
+                new_toks_2 = {
+                    "eos_token": ">>>>|||<||<<|<<",
+                    "pad_token": "<<<<<|||>|>>>>|>",
+                }
                 added_toks_2 = tokenizer.add_special_tokens(new_toks_2)
                 vocab_size_3 = tokenizer.vocab_size
                 all_size_3 = len(tokenizer)
@@ -205,7 +238,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 output = tokenizer(empty_table, seq_0, return_token_type_ids=True)
 
                 # Assert that the token type IDs have the same length as the input IDs
-                self.assertEqual(len(output["token_type_ids"]), len(output["input_ids"]))
+                self.assertEqual(
+                    len(output["token_type_ids"]), len(output["input_ids"])
+                )
                 self.assertIn(0, output["token_type_ids"])
 
     def test_add_special_tokens(self):
@@ -217,10 +252,14 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 special_token = "[SPECIAL_TOKEN]"
 
                 tokenizer.add_special_tokens({"cls_token": special_token})
-                encoded_special_token = tokenizer.encode(input_table, special_token, add_special_tokens=False)
+                encoded_special_token = tokenizer.encode(
+                    input_table, special_token, add_special_tokens=False
+                )
                 self.assertEqual(len(encoded_special_token), 1)
 
-                decoded = tokenizer.decode(encoded_special_token, skip_special_tokens=True)
+                decoded = tokenizer.decode(
+                    encoded_special_token, skip_special_tokens=True
+                )
                 self.assertTrue(special_token not in decoded)
 
     def test_batch_encode_plus_overflowing_tokens(self):
@@ -233,7 +272,12 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
             tokenizer.batch_encode_plus(
-                table, string_sequences, return_overflowing_tokens=True, truncation=True, padding=True, max_length=3
+                table,
+                string_sequences,
+                return_overflowing_tokens=True,
+                truncation=True,
+                padding=True,
+                max_length=3,
             )
 
     @is_pt_tf_cross_test
@@ -250,8 +294,20 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 table = self.get_table(tokenizer, length=0)
 
                 # A Tensor cannot be build by sequences which are not the same size
-                self.assertRaises(ValueError, tokenizer.batch_encode_plus, table, sequences, return_tensors="pt")
-                self.assertRaises(ValueError, tokenizer.batch_encode_plus, table, sequences, return_tensors="tf")
+                self.assertRaises(
+                    ValueError,
+                    tokenizer.batch_encode_plus,
+                    table,
+                    sequences,
+                    return_tensors="pt",
+                )
+                self.assertRaises(
+                    ValueError,
+                    tokenizer.batch_encode_plus,
+                    table,
+                    sequences,
+                    return_tensors="tf",
+                )
 
                 if tokenizer.pad_token_id is None:
                     self.assertRaises(
@@ -271,11 +327,15 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                         return_tensors="tf",
                     )
                 else:
-                    pytorch_tensor = tokenizer.batch_encode_plus(table, sequences, padding=True, return_tensors="pt")
+                    pytorch_tensor = tokenizer.batch_encode_plus(
+                        table, sequences, padding=True, return_tensors="pt"
+                    )
                     tensorflow_tensor = tokenizer.batch_encode_plus(
                         table, sequences, padding="longest", return_tensors="tf"
                     )
-                    encoded_sequences = tokenizer.batch_encode_plus(table, sequences, padding=True)
+                    encoded_sequences = tokenizer.batch_encode_plus(
+                        table, sequences, padding=True
+                    )
 
                     for key in encoded_sequences.keys():
                         pytorch_value = pytorch_tensor[key].tolist()
@@ -348,12 +408,16 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 tmpdirname = tempfile.mkdtemp()
 
                 sample_text = " He is very happy, UNwant\u00E9d,running"
-                before_tokens = tokenizer.encode(table, sample_text, add_special_tokens=False)
+                before_tokens = tokenizer.encode(
+                    table, sample_text, add_special_tokens=False
+                )
                 before_vocab = tokenizer.get_vocab()
                 tokenizer.save_pretrained(tmpdirname)
 
                 after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname)
-                after_tokens = after_tokenizer.encode(table, sample_text, add_special_tokens=False)
+                after_tokens = after_tokenizer.encode(
+                    table, sample_text, add_special_tokens=False
+                )
                 after_vocab = after_tokenizer.get_vocab()
                 self.assertListEqual(before_tokens, after_tokens)
                 self.assertDictEqual(before_vocab, after_vocab)
@@ -368,11 +432,15 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 table, query = self.get_table_and_query(tokenizer)
 
                 sequences = tokenizer.encode(table, query, add_special_tokens=False)
-                attached_sequences = tokenizer.encode(table, query, add_special_tokens=True)
+                attached_sequences = tokenizer.encode(
+                    table, query, add_special_tokens=True
+                )
 
                 self.assertEqual(2, len(attached_sequences) - len(sequences))
 
-    @unittest.skip("TAPEX cannot handle `prepare_for_model` without passing by `encode_plus` or `batch_encode_plus`")
+    @unittest.skip(
+        "TAPEX cannot handle `prepare_for_model` without passing by `encode_plus` or `batch_encode_plus`"
+    )
     def test_prepare_for_model(self):
         pass
 
@@ -394,7 +462,10 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
             with self.subTest(f"{tokenizer.__class__.__name__}"):
                 table = self.get_table(tokenizer, length=0)
 
-                new_toks = [AddedToken("[ABC]", normalized=False), AddedToken("[DEF]", normalized=False)]
+                new_toks = [
+                    AddedToken("[ABC]", normalized=False),
+                    AddedToken("[DEF]", normalized=False),
+                ]
                 tokenizer.add_tokens(new_toks)
                 input = "[ABC][DEF][ABC][DEF]"
                 if self.space_between_special_tokens:
@@ -402,7 +473,10 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 else:
                     output = input
                 encoded = tokenizer.encode(table, input, add_special_tokens=False)
-                decoded = tokenizer.decode(encoded, spaces_between_special_tokens=self.space_between_special_tokens)
+                decoded = tokenizer.decode(
+                    encoded,
+                    spaces_between_special_tokens=self.space_between_special_tokens,
+                )
                 self.assertIn(decoded, [output, output.lower()])
 
     def test_tokenize_special_tokens(self):
@@ -421,7 +495,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 tokenizer.add_tokens([SPECIAL_TOKEN_1], special_tokens=True)
                 # `add_special_tokens` method stores special tokens in `tokenizer.additional_special_tokens`,
                 # which also occur in `tokenizer.all_special_tokens`. (in tokenization_utils_base.py)
-                tokenizer.add_special_tokens({"additional_special_tokens": [SPECIAL_TOKEN_2]})
+                tokenizer.add_special_tokens(
+                    {"additional_special_tokens": [SPECIAL_TOKEN_2]}
+                )
 
                 token_1 = tokenizer.tokenize(SPECIAL_TOKEN_1)
                 token_2 = tokenizer.tokenize(SPECIAL_TOKEN_2)
@@ -438,15 +514,26 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 table = self.get_table(tokenizer, length=0)
                 sequence_0 = "Encode this."
                 # Testing single inputs
-                encoded_sequence = tokenizer.encode(table, sequence_0, add_special_tokens=False)
+                encoded_sequence = tokenizer.encode(
+                    table, sequence_0, add_special_tokens=False
+                )
                 encoded_sequence_dict = tokenizer.encode_plus(
-                    table, sequence_0, add_special_tokens=True, return_special_tokens_mask=True
+                    table,
+                    sequence_0,
+                    add_special_tokens=True,
+                    return_special_tokens_mask=True,
                 )
                 encoded_sequence_w_special = encoded_sequence_dict["input_ids"]
                 special_tokens_mask = encoded_sequence_dict["special_tokens_mask"]
-                self.assertEqual(len(special_tokens_mask), len(encoded_sequence_w_special))
+                self.assertEqual(
+                    len(special_tokens_mask), len(encoded_sequence_w_special)
+                )
 
-                filtered_sequence = [x for i, x in enumerate(encoded_sequence_w_special) if not special_tokens_mask[i]]
+                filtered_sequence = [
+                    x
+                    for i, x in enumerate(encoded_sequence_w_special)
+                    if not special_tokens_mask[i]
+                ]
                 self.assertEqual(encoded_sequence, filtered_sequence)
 
     def test_padding_to_max_length(self):
@@ -475,14 +562,18 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 padded_sequence_length = len(padded_sequence)
                 self.assertEqual(sequence_length + padding_size, padded_sequence_length)
-                self.assertListEqual(encoded_sequence + [padding_idx] * padding_size, padded_sequence)
+                self.assertListEqual(
+                    encoded_sequence + [padding_idx] * padding_size, padded_sequence
+                )
 
                 # Check that nothing is done when a maximum length is not specified
                 encoded_sequence = tokenizer.encode(table, sequence)
                 sequence_length = len(encoded_sequence)
 
                 tokenizer.padding_side = "right"
-                padded_sequence_right = tokenizer.encode(table, sequence, pad_to_max_length=True)
+                padded_sequence_right = tokenizer.encode(
+                    table, sequence, pad_to_max_length=True
+                )
                 padded_sequence_right_length = len(padded_sequence_right)
                 self.assertEqual(sequence_length, padded_sequence_right_length)
                 self.assertListEqual(encoded_sequence, padded_sequence_right)
@@ -496,20 +587,47 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                     self.skipTest("No padding token.")
                 else:
                     empty_tokens = tokenizer(table, padding=True, pad_to_multiple_of=8)
-                    normal_tokens = tokenizer(table, "This is a sample input", padding=True, pad_to_multiple_of=8)
+                    normal_tokens = tokenizer(
+                        table,
+                        "This is a sample input",
+                        padding=True,
+                        pad_to_multiple_of=8,
+                    )
                     for key, value in empty_tokens.items():
-                        self.assertEqual(len(value) % 8, 0, f"BatchEncoding.{key} is not multiple of 8")
+                        self.assertEqual(
+                            len(value) % 8,
+                            0,
+                            f"BatchEncoding.{key} is not multiple of 8",
+                        )
                     for key, value in normal_tokens.items():
-                        self.assertEqual(len(value) % 8, 0, f"BatchEncoding.{key} is not multiple of 8")
+                        self.assertEqual(
+                            len(value) % 8,
+                            0,
+                            f"BatchEncoding.{key} is not multiple of 8",
+                        )
 
                     normal_tokens = tokenizer(table, "This", pad_to_multiple_of=8)
                     for key, value in normal_tokens.items():
-                        self.assertNotEqual(len(value) % 8, 0, f"BatchEncoding.{key} is not multiple of 8")
+                        self.assertNotEqual(
+                            len(value) % 8,
+                            0,
+                            f"BatchEncoding.{key} is not multiple of 8",
+                        )
 
                     # Should also work with truncation
-                    normal_tokens = tokenizer(table, "This", padding=True, truncation=True, pad_to_multiple_of=8)
+                    normal_tokens = tokenizer(
+                        table,
+                        "This",
+                        padding=True,
+                        truncation=True,
+                        pad_to_multiple_of=8,
+                    )
                     for key, value in normal_tokens.items():
-                        self.assertEqual(len(value) % 8, 0, f"BatchEncoding.{key} is not multiple of 8")
+                        self.assertEqual(
+                            len(value) % 8,
+                            0,
+                            f"BatchEncoding.{key} is not multiple of 8",
+                        )
 
     def test_right_and_left_padding(self):
         tokenizers = self.get_tokenizers(do_lower_case=False)
@@ -529,22 +647,32 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 encoded_sequence = tokenizer.encode(table, sequence)
                 sequence_length = len(encoded_sequence)
                 padded_sequence = tokenizer.encode(
-                    table, sequence, max_length=sequence_length + padding_size, padding="max_length"
+                    table,
+                    sequence,
+                    max_length=sequence_length + padding_size,
+                    padding="max_length",
                 )
                 padded_sequence_length = len(padded_sequence)
                 self.assertEqual(sequence_length + padding_size, padded_sequence_length)
-                self.assertListEqual(encoded_sequence + [padding_idx] * padding_size, padded_sequence)
+                self.assertListEqual(
+                    encoded_sequence + [padding_idx] * padding_size, padded_sequence
+                )
 
                 # LEFT PADDING - Check that it correctly pads when a maximum length is specified along with the padding flag set to True
                 tokenizer.padding_side = "left"
                 encoded_sequence = tokenizer.encode(table, sequence)
                 sequence_length = len(encoded_sequence)
                 padded_sequence = tokenizer.encode(
-                    table, sequence, max_length=sequence_length + padding_size, padding="max_length"
+                    table,
+                    sequence,
+                    max_length=sequence_length + padding_size,
+                    padding="max_length",
                 )
                 padded_sequence_length = len(padded_sequence)
                 self.assertEqual(sequence_length + padding_size, padded_sequence_length)
-                self.assertListEqual([padding_idx] * padding_size + encoded_sequence, padded_sequence)
+                self.assertListEqual(
+                    [padding_idx] * padding_size + encoded_sequence, padded_sequence
+                )
 
                 # RIGHT & LEFT PADDING - Check that nothing is done for 'longest' and 'no_padding'
                 encoded_sequence = tokenizer.encode(table, sequence)
@@ -557,7 +685,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertListEqual(encoded_sequence, padded_sequence_right)
 
                 tokenizer.padding_side = "left"
-                padded_sequence_left = tokenizer.encode(table, sequence, padding="longest")
+                padded_sequence_left = tokenizer.encode(
+                    table, sequence, padding="longest"
+                )
                 padded_sequence_left_length = len(padded_sequence_left)
                 self.assertEqual(sequence_length, padded_sequence_left_length)
                 self.assertListEqual(encoded_sequence, padded_sequence_left)
@@ -588,7 +718,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 padding_idx = tokenizer.pad_token_id
                 token_type_padding_idx = tokenizer.pad_token_type_id
 
-                encoded_sequence = tokenizer.encode_plus(table, sequence, return_special_tokens_mask=True)
+                encoded_sequence = tokenizer.encode_plus(
+                    table, sequence, return_special_tokens_mask=True
+                )
                 input_ids = encoded_sequence["input_ids"]
                 special_tokens_mask = encoded_sequence["special_tokens_mask"]
                 sequence_length = len(input_ids)
@@ -604,12 +736,16 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 not_padded_input_ids = not_padded_sequence["input_ids"]
 
-                not_padded_special_tokens_mask = not_padded_sequence["special_tokens_mask"]
+                not_padded_special_tokens_mask = not_padded_sequence[
+                    "special_tokens_mask"
+                ]
                 not_padded_sequence_length = len(not_padded_input_ids)
 
                 self.assertEqual(sequence_length, not_padded_sequence_length)
                 self.assertListEqual(input_ids, not_padded_input_ids)
-                self.assertListEqual(special_tokens_mask, not_padded_special_tokens_mask)
+                self.assertListEqual(
+                    special_tokens_mask, not_padded_special_tokens_mask
+                )
 
                 not_padded_sequence = tokenizer.encode_plus(
                     table,
@@ -619,12 +755,16 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 not_padded_input_ids = not_padded_sequence["input_ids"]
 
-                not_padded_special_tokens_mask = not_padded_sequence["special_tokens_mask"]
+                not_padded_special_tokens_mask = not_padded_sequence[
+                    "special_tokens_mask"
+                ]
                 not_padded_sequence_length = len(not_padded_input_ids)
 
                 self.assertEqual(sequence_length, not_padded_sequence_length)
                 self.assertListEqual(input_ids, not_padded_input_ids)
-                self.assertListEqual(special_tokens_mask, not_padded_special_tokens_mask)
+                self.assertListEqual(
+                    special_tokens_mask, not_padded_special_tokens_mask
+                )
 
                 # Test right padding
                 tokenizer.padding_side = "right"
@@ -638,12 +778,21 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 right_padded_input_ids = right_padded_sequence["input_ids"]
 
-                right_padded_special_tokens_mask = right_padded_sequence["special_tokens_mask"]
+                right_padded_special_tokens_mask = right_padded_sequence[
+                    "special_tokens_mask"
+                ]
                 right_padded_sequence_length = len(right_padded_input_ids)
 
-                self.assertEqual(sequence_length + padding_size, right_padded_sequence_length)
-                self.assertListEqual(input_ids + [padding_idx] * padding_size, right_padded_input_ids)
-                self.assertListEqual(special_tokens_mask + [1] * padding_size, right_padded_special_tokens_mask)
+                self.assertEqual(
+                    sequence_length + padding_size, right_padded_sequence_length
+                )
+                self.assertListEqual(
+                    input_ids + [padding_idx] * padding_size, right_padded_input_ids
+                )
+                self.assertListEqual(
+                    special_tokens_mask + [1] * padding_size,
+                    right_padded_special_tokens_mask,
+                )
 
                 # Test left padding
                 tokenizer.padding_side = "left"
@@ -655,32 +804,54 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                     return_special_tokens_mask=True,
                 )
                 left_padded_input_ids = left_padded_sequence["input_ids"]
-                left_padded_special_tokens_mask = left_padded_sequence["special_tokens_mask"]
+                left_padded_special_tokens_mask = left_padded_sequence[
+                    "special_tokens_mask"
+                ]
                 left_padded_sequence_length = len(left_padded_input_ids)
 
-                self.assertEqual(sequence_length + padding_size, left_padded_sequence_length)
-                self.assertListEqual([padding_idx] * padding_size + input_ids, left_padded_input_ids)
-                self.assertListEqual([1] * padding_size + special_tokens_mask, left_padded_special_tokens_mask)
+                self.assertEqual(
+                    sequence_length + padding_size, left_padded_sequence_length
+                )
+                self.assertListEqual(
+                    [padding_idx] * padding_size + input_ids, left_padded_input_ids
+                )
+                self.assertListEqual(
+                    [1] * padding_size + special_tokens_mask,
+                    left_padded_special_tokens_mask,
+                )
 
                 if "token_type_ids" in tokenizer.model_input_names:
                     token_type_ids = encoded_sequence["token_type_ids"]
                     left_padded_token_type_ids = left_padded_sequence["token_type_ids"]
-                    right_padded_token_type_ids = right_padded_sequence["token_type_ids"]
+                    right_padded_token_type_ids = right_padded_sequence[
+                        "token_type_ids"
+                    ]
 
                     self.assertListEqual(
-                        (token_type_ids + [[token_type_padding_idx] * 7] * padding_size, right_padded_token_type_ids)
+                        (
+                            token_type_ids
+                            + [[token_type_padding_idx] * 7] * padding_size,
+                            right_padded_token_type_ids,
+                        )
                     )
                     self.assertListEqual(
-                        [[token_type_padding_idx] * 7] * padding_size + token_type_ids, left_padded_token_type_ids
+                        [[token_type_padding_idx] * 7] * padding_size + token_type_ids,
+                        left_padded_token_type_ids,
                     )
 
                 if "attention_mask" in tokenizer.model_input_names:
                     attention_mask = encoded_sequence["attention_mask"]
-                    right_padded_attention_mask = right_padded_sequence["attention_mask"]
+                    right_padded_attention_mask = right_padded_sequence[
+                        "attention_mask"
+                    ]
                     left_padded_attention_mask = left_padded_sequence["attention_mask"]
 
-                    self.assertListEqual(attention_mask + [0] * padding_size, right_padded_attention_mask)
-                    self.assertListEqual([0] * padding_size + attention_mask, left_padded_attention_mask)
+                    self.assertListEqual(
+                        attention_mask + [0] * padding_size, right_padded_attention_mask
+                    )
+                    self.assertListEqual(
+                        [0] * padding_size + attention_mask, left_padded_attention_mask
+                    )
 
     def test_batch_encode_plus_padding(self):
         # Test that padded sequences are equivalent between batch_encode_plus and encode_plus
@@ -702,14 +873,19 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self._check_no_pad_token_padding(tokenizer, sequences)
 
                 encoded_sequences = [
-                    tokenizer.encode_plus(table, sequence, max_length=max_length, padding="max_length")
+                    tokenizer.encode_plus(
+                        table, sequence, max_length=max_length, padding="max_length"
+                    )
                     for sequence in sequences
                 ]
                 encoded_sequences_batch = tokenizer.batch_encode_plus(
                     table, sequences, max_length=max_length, padding="max_length"
                 )
                 self.assertListEqual(
-                    encoded_sequences, self.convert_batch_encode_plus_format_to_encode_plus(encoded_sequences_batch)
+                    encoded_sequences,
+                    self.convert_batch_encode_plus_format_to_encode_plus(
+                        encoded_sequences_batch
+                    ),
                 )
 
         # Left padding tests
@@ -729,14 +905,19 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self._check_no_pad_token_padding(tokenizer, sequences)
 
                 encoded_sequences = [
-                    tokenizer.encode_plus(table, sequence, max_length=max_length, padding="max_length")
+                    tokenizer.encode_plus(
+                        table, sequence, max_length=max_length, padding="max_length"
+                    )
                     for sequence in sequences
                 ]
                 encoded_sequences_batch = tokenizer.batch_encode_plus(
                     table, sequences, max_length=max_length, padding="max_length"
                 )
                 self.assertListEqual(
-                    encoded_sequences, self.convert_batch_encode_plus_format_to_encode_plus(encoded_sequences_batch)
+                    encoded_sequences,
+                    self.convert_batch_encode_plus_format_to_encode_plus(
+                        encoded_sequences_batch
+                    ),
                 )
 
     def test_batch_encode_plus_batch_sequence_length(self):
@@ -751,32 +932,53 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                     "Testing batch encode plus with different sequence lengths correctly pads",
                 ]
 
-                encoded_sequences = [tokenizer.encode_plus(table, sequence) for sequence in sequences]
-                encoded_sequences_batch = tokenizer.batch_encode_plus(table, sequences, padding=False)
+                encoded_sequences = [
+                    tokenizer.encode_plus(table, sequence) for sequence in sequences
+                ]
+                encoded_sequences_batch = tokenizer.batch_encode_plus(
+                    table, sequences, padding=False
+                )
                 self.assertListEqual(
-                    encoded_sequences, self.convert_batch_encode_plus_format_to_encode_plus(encoded_sequences_batch)
+                    encoded_sequences,
+                    self.convert_batch_encode_plus_format_to_encode_plus(
+                        encoded_sequences_batch
+                    ),
                 )
 
                 maximum_length = len(
-                    max([encoded_sequence["input_ids"] for encoded_sequence in encoded_sequences], key=len)
+                    max(
+                        [
+                            encoded_sequence["input_ids"]
+                            for encoded_sequence in encoded_sequences
+                        ],
+                        key=len,
+                    )
                 )
 
                 # check correct behaviour if no pad_token_id exists and add it eventually
                 self._check_no_pad_token_padding(tokenizer, sequences)
 
                 encoded_sequences_padded = [
-                    tokenizer.encode_plus(table, sequence, max_length=maximum_length, padding="max_length")
+                    tokenizer.encode_plus(
+                        table, sequence, max_length=maximum_length, padding="max_length"
+                    )
                     for sequence in sequences
                 ]
 
-                encoded_sequences_batch_padded = tokenizer.batch_encode_plus(table, sequences, padding=True)
+                encoded_sequences_batch_padded = tokenizer.batch_encode_plus(
+                    table, sequences, padding=True
+                )
                 self.assertListEqual(
                     encoded_sequences_padded,
-                    self.convert_batch_encode_plus_format_to_encode_plus(encoded_sequences_batch_padded),
+                    self.convert_batch_encode_plus_format_to_encode_plus(
+                        encoded_sequences_batch_padded
+                    ),
                 )
 
                 # check 'longest' is unsensitive to a max length
-                encoded_sequences_batch_padded_1 = tokenizer.batch_encode_plus(table, sequences, padding=True)
+                encoded_sequences_batch_padded_1 = tokenizer.batch_encode_plus(
+                    table, sequences, padding=True
+                )
                 encoded_sequences_batch_padded_2 = tokenizer.batch_encode_plus(
                     table, sequences, max_length=maximum_length + 10, padding="longest"
                 )
@@ -787,7 +989,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                     )
 
                 # check 'no_padding' is unsensitive to a max length
-                encoded_sequences_batch_padded_1 = tokenizer.batch_encode_plus(table, sequences, padding=False)
+                encoded_sequences_batch_padded_1 = tokenizer.batch_encode_plus(
+                    table, sequences, padding=False
+                )
                 encoded_sequences_batch_padded_2 = tokenizer.batch_encode_plus(
                     table, sequences, max_length=maximum_length + 10, padding=False
                 )
@@ -804,9 +1008,13 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 sequence_0 = "Encode this."
                 empty_table = self.get_table(tokenizer, length=0)
                 table = self.get_table(tokenizer, length=10)
-                encoded_sequence = tokenizer.encode(empty_table, sequence_0, add_special_tokens=False)
+                encoded_sequence = tokenizer.encode(
+                    empty_table, sequence_0, add_special_tokens=False
+                )
                 number_of_tokens = len(encoded_sequence)
-                encoded_sequence += tokenizer.encode(table, "", add_special_tokens=False)
+                encoded_sequence += tokenizer.encode(
+                    table, "", add_special_tokens=False
+                )
                 encoded_sequence_dict = tokenizer.encode_plus(
                     table,
                     sequence_0,
@@ -815,10 +1023,13 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 encoded_sequence_w_special = encoded_sequence_dict["input_ids"]
                 special_tokens_mask = encoded_sequence_dict["special_tokens_mask"]
-                self.assertEqual(len(special_tokens_mask), len(encoded_sequence_w_special))
+                self.assertEqual(
+                    len(special_tokens_mask), len(encoded_sequence_w_special)
+                )
 
                 filtered_sequence = [
-                    (x if not special_tokens_mask[i] else None) for i, x in enumerate(encoded_sequence_w_special)
+                    (x if not special_tokens_mask[i] else None)
+                    for i, x in enumerate(encoded_sequence_w_special)
                 ]
                 # NOTE: as TAPEX adds a space between a table and a sequence, we need to remove it
                 # in order to have equivalent results with encoding an empty table or empty sequence
@@ -845,7 +1056,9 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         table = pd.DataFrame.from_dict(table_dict["rows"])
         table.columns = table_dict["header"]
 
-        tokenizer = TapexTokenizer.from_pretrained("microsoft/tapex-large-finetuned-wtq")
+        tokenizer = TapexTokenizer.from_pretrained(
+            "microsoft/tapex-large-finetuned-wtq"
+        )
         encoding = tokenizer(table, question)
 
         # fmt: off
@@ -864,13 +1077,18 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     @slow
     def test_tokenizer_lower_case(self):
-        cased_tokenizer = TapexTokenizer.from_pretrained("microsoft/tapex-base", do_lower_case=False)
-        uncased_tokenizer = TapexTokenizer.from_pretrained("microsoft/tapex-base", do_lower_case=True)
+        cased_tokenizer = TapexTokenizer.from_pretrained(
+            "microsoft/tapex-base", do_lower_case=False
+        )
+        uncased_tokenizer = TapexTokenizer.from_pretrained(
+            "microsoft/tapex-base", do_lower_case=True
+        )
         answer_text = "Beijing, London, Paris"
         answer_text_lower = "beijing, london, paris"
 
         self.assertNotEqual(
-            cased_tokenizer(answer=answer_text).input_ids, uncased_tokenizer(answer=answer_text).input_ids
+            cased_tokenizer(answer=answer_text).input_ids,
+            uncased_tokenizer(answer=answer_text).input_ids,
         )
         self.assertEqual(
             cased_tokenizer(answer=answer_text_lower).input_ids,
@@ -878,7 +1096,8 @@ class TapexTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         )
         # batched encoding assert
         self.assertNotEqual(
-            cased_tokenizer(answer=[answer_text]).input_ids, uncased_tokenizer(answer=[answer_text]).input_ids
+            cased_tokenizer(answer=[answer_text]).input_ids,
+            uncased_tokenizer(answer=[answer_text]).input_ids,
         )
         self.assertEqual(
             cased_tokenizer(answer=[answer_text_lower]).input_ids,

@@ -2,7 +2,12 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from transformers import AutoConfig, TFAutoModel, is_tensorflow_text_available, is_tf_available
+from transformers import (
+    AutoConfig,
+    TFAutoModel,
+    is_tensorflow_text_available,
+    is_tf_available,
+)
 from transformers.models.bert.tokenization_bert import BertTokenizer
 from transformers.testing_utils import require_tensorflow_text, slow
 
@@ -40,8 +45,14 @@ class BertTokenizationTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
-        self.tokenizers = [BertTokenizer.from_pretrained(checkpoint) for checkpoint in TOKENIZER_CHECKPOINTS]
-        self.tf_tokenizers = [TFBertTokenizer.from_pretrained(checkpoint) for checkpoint in TOKENIZER_CHECKPOINTS]
+        self.tokenizers = [
+            BertTokenizer.from_pretrained(checkpoint)
+            for checkpoint in TOKENIZER_CHECKPOINTS
+        ]
+        self.tf_tokenizers = [
+            TFBertTokenizer.from_pretrained(checkpoint)
+            for checkpoint in TOKENIZER_CHECKPOINTS
+        ]
         self.test_sentences = [
             "This is a straightforward English test sentence.",
             "This one has some weird characters\rto\nsee\r\nif  those\u00E9break things.",
@@ -50,17 +61,29 @@ class BertTokenizationTest(unittest.TestCase):
             "Je vais aussi écrire en français pour tester les accents",
             "Classical Irish also has some unusual characters, so in they go: Gaelaċ, ꝼ",
         ]
-        self.paired_sentences = list(zip(self.test_sentences, self.test_sentences[::-1]))
+        self.paired_sentences = list(
+            zip(self.test_sentences, self.test_sentences[::-1])
+        )
 
     def test_output_equivalence(self):
         for tokenizer, tf_tokenizer in zip(self.tokenizers, self.tf_tokenizers):
             for test_inputs in (self.test_sentences, self.paired_sentences):
-                python_outputs = tokenizer(test_inputs, return_tensors="tf", padding="longest")
+                python_outputs = tokenizer(
+                    test_inputs, return_tensors="tf", padding="longest"
+                )
                 tf_outputs = tf_tokenizer(test_inputs)
 
                 for key in python_outputs.keys():
-                    self.assertTrue(tf.reduce_all(python_outputs[key].shape == tf_outputs[key].shape))
-                    self.assertTrue(tf.reduce_all(tf.cast(python_outputs[key], tf.int64) == tf_outputs[key]))
+                    self.assertTrue(
+                        tf.reduce_all(
+                            python_outputs[key].shape == tf_outputs[key].shape
+                        )
+                    )
+                    self.assertTrue(
+                        tf.reduce_all(
+                            tf.cast(python_outputs[key], tf.int64) == tf_outputs[key]
+                        )
+                    )
 
     @slow
     def test_different_pairing_styles(self):
@@ -71,7 +94,11 @@ class BertTokenizationTest(unittest.TestCase):
                 text_pair=[sentence[1] for sentence in self.paired_sentences],
             )
             for key in merged_outputs.keys():
-                self.assertTrue(tf.reduce_all(tf.cast(merged_outputs[key], tf.int64) == separated_outputs[key]))
+                self.assertTrue(
+                    tf.reduce_all(
+                        tf.cast(merged_outputs[key], tf.int64) == separated_outputs[key]
+                    )
+                )
 
     @slow
     def test_graph_mode(self):
@@ -83,7 +110,9 @@ class BertTokenizationTest(unittest.TestCase):
                 eager_outputs = tf_tokenizer(test_inputs)
 
                 for key in eager_outputs.keys():
-                    self.assertTrue(tf.reduce_all(eager_outputs[key] == compiled_outputs[key]))
+                    self.assertTrue(
+                        tf.reduce_all(eager_outputs[key] == compiled_outputs[key])
+                    )
 
     @slow
     def test_saved_model(self):

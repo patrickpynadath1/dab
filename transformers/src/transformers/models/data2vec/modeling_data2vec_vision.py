@@ -92,7 +92,9 @@ class Data2VecVisionModelOutputWithPooling(BaseModelOutputWithPooling):
 
 
 # Copied from transformers.models.beit.modeling_beit.drop_path
-def drop_path(input: torch.Tensor, drop_prob: float = 0.0, training: bool = False) -> torch.Tensor:
+def drop_path(
+    input: torch.Tensor, drop_prob: float = 0.0, training: bool = False
+) -> torch.Tensor:
     """
     Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
 
@@ -105,8 +107,12 @@ def drop_path(input: torch.Tensor, drop_prob: float = 0.0, training: bool = Fals
     if drop_prob == 0.0 or not training:
         return input
     keep_prob = 1 - drop_prob
-    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + torch.rand(shape, dtype=input.dtype, device=input.device)
+    shape = (input.shape[0],) + (1,) * (
+        input.ndim - 1
+    )  # work with diff dim tensors, not just 2D ConvNets
+    random_tensor = keep_prob + torch.rand(
+        shape, dtype=input.dtype, device=input.device
+    )
     random_tensor.floor_()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
@@ -145,12 +151,18 @@ class Data2VecVisionEmbeddings(nn.Module):
         self.patch_embeddings = Data2VecVisionPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         if config.use_absolute_position_embeddings:
-            self.position_embeddings = nn.Parameter(torch.zeros(1, num_patches + 1, config.hidden_size))
+            self.position_embeddings = nn.Parameter(
+                torch.zeros(1, num_patches + 1, config.hidden_size)
+            )
         else:
             self.position_embeddings = None
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, pixel_values: torch.Tensor, bool_masked_pos: Optional[torch.BoolTensor] = None) -> torch.Tensor:
+    def forward(
+        self,
+        pixel_values: torch.Tensor,
+        bool_masked_pos: Optional[torch.BoolTensor] = None,
+    ) -> torch.Tensor:
 
         embeddings = self.patch_embeddings(pixel_values)
         batch_size, seq_len, _ = embeddings.size()
@@ -183,9 +195,19 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
 
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         patch_shape = (image_size[0] // patch_size[0], image_size[1] // patch_size[1])
         self.image_size = image_size
         self.patch_size = patch_size
@@ -193,7 +215,9 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
         self.patch_shape = patch_shape
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size
+        )
 
     def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -212,9 +236,13 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
 
 # Copied from transformers.models.beit.modeling_beit.BeitSelfAttention with Beit->Data2VecVision
 class Data2VecVisionSelfAttention(nn.Module):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None) -> None:
+    def __init__(
+        self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None
+    ) -> None:
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size {config.hidden_size,} is not a multiple of the number of attention "
                 f"heads {config.num_attention_heads}."
@@ -231,12 +259,17 @@ class Data2VecVisionSelfAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
         if window_size:
-            self.relative_position_bias = Data2VecVisionRelativePositionBias(config, window_size=window_size)
+            self.relative_position_bias = Data2VecVisionRelativePositionBias(
+                config, window_size=window_size
+            )
         else:
             self.relative_position_bias = None
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -260,7 +293,9 @@ class Data2VecVisionSelfAttention(nn.Module):
 
         # Add relative position bias if present.
         if self.relative_position_bias is not None:
-            attention_scores = attention_scores + self.relative_position_bias().unsqueeze(0)
+            attention_scores = (
+                attention_scores + self.relative_position_bias().unsqueeze(0)
+            )
 
         # Add shared relative position bias if provided.
         if relative_position_bias is not None:
@@ -283,7 +318,9 @@ class Data2VecVisionSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
 
         return outputs
 
@@ -300,7 +337,9 @@ class Data2VecVisionSelfOutput(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor, gamma=None) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor, gamma=None
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -309,7 +348,9 @@ class Data2VecVisionSelfOutput(nn.Module):
 
 # Copied from transformers.models.beit.modeling_beit.BeitAttention with Beit->Data2VecVision
 class Data2VecVisionAttention(nn.Module):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None) -> None:
+    def __init__(
+        self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None
+    ) -> None:
         super().__init__()
         self.attention = Data2VecVisionSelfAttention(config, window_size=window_size)
         self.output = Data2VecVisionSelfOutput(config)
@@ -319,7 +360,10 @@ class Data2VecVisionAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.attention.num_attention_heads, self.attention.attention_head_size, self.pruned_heads
+            heads,
+            self.attention.num_attention_heads,
+            self.attention.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
@@ -329,8 +373,12 @@ class Data2VecVisionAttention(nn.Module):
         self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
-        self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
-        self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
+        self.attention.num_attention_heads = self.attention.num_attention_heads - len(
+            heads
+        )
+        self.attention.all_head_size = (
+            self.attention.attention_head_size * self.attention.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
@@ -340,11 +388,15 @@ class Data2VecVisionAttention(nn.Module):
         output_attentions: bool = False,
         relative_position_bias: Optional["Data2VecVisionRelativePositionBias"] = None,
     ) -> Union[Tuple[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
-        self_outputs = self.attention(hidden_states, head_mask, output_attentions, relative_position_bias)
+        self_outputs = self.attention(
+            hidden_states, head_mask, output_attentions, relative_position_bias
+        )
 
         attention_output = self.output(self_outputs[0], hidden_states)
 
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
@@ -384,7 +436,10 @@ class Data2VecVisionLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(
-        self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None, drop_path_rate: float = 0.0
+        self,
+        config: Data2VecVisionConfig,
+        window_size: Optional[tuple] = None,
+        drop_path_rate: float = 0.0,
     ) -> None:
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -392,14 +447,26 @@ class Data2VecVisionLayer(nn.Module):
         self.attention = Data2VecVisionAttention(config, window_size=window_size)
         self.intermediate = Data2VecVisionIntermediate(config)
         self.output = Data2VecVisionOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.drop_path = Data2VecVisionDropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
+        self.drop_path = (
+            Data2VecVisionDropPath(drop_path_rate)
+            if drop_path_rate > 0.0
+            else nn.Identity()
+        )
+        self.layernorm_after = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
 
         init_values = config.layer_scale_init_value
         if init_values > 0:
-            self.lambda_1 = nn.Parameter(init_values * torch.ones((config.hidden_size)), requires_grad=True)
-            self.lambda_2 = nn.Parameter(init_values * torch.ones((config.hidden_size)), requires_grad=True)
+            self.lambda_1 = nn.Parameter(
+                init_values * torch.ones((config.hidden_size)), requires_grad=True
+            )
+            self.lambda_2 = nn.Parameter(
+                init_values * torch.ones((config.hidden_size)), requires_grad=True
+            )
         else:
             self.lambda_1, self.lambda_2 = None, None
 
@@ -411,13 +478,17 @@ class Data2VecVisionLayer(nn.Module):
         relative_position_bias: Optional["Data2VecVisionRelativePositionBias"] = None,
     ) -> Union[Tuple[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
         self_attention_outputs = self.attention(
-            self.layernorm_before(hidden_states),  # in Data2VecVision, layernorm is applied before self-attention
+            self.layernorm_before(
+                hidden_states
+            ),  # in Data2VecVision, layernorm is applied before self-attention
             head_mask,
             output_attentions=output_attentions,
             relative_position_bias=relative_position_bias,
         )
         attention_output = self_attention_outputs[0]
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         # apply lambda_1 if present
         if self.lambda_1 is not None:
@@ -448,7 +519,9 @@ class Data2VecVisionRelativePositionBias(nn.Module):
     def __init__(self, config: Data2VecVisionConfig, window_size: tuple) -> None:
         super().__init__()
         self.window_size = window_size
-        self.num_relative_distance = (2 * window_size[0] - 1) * (2 * window_size[1] - 1) + 3
+        self.num_relative_distance = (2 * window_size[0] - 1) * (
+            2 * window_size[1] - 1
+        ) + 3
         self.relative_position_bias_table = nn.Parameter(
             torch.zeros(self.num_relative_distance, config.num_attention_heads)
         )  # 2*Wh-1 * 2*Ww-1, nH
@@ -459,8 +532,12 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         coords_w = torch.arange(window_size[1])
         coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
         coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
-        relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
+        relative_coords = (
+            coords_flatten[:, :, None] - coords_flatten[:, None, :]
+        )  # 2, Wh*Ww, Wh*Ww
+        relative_coords = relative_coords.permute(
+            1, 2, 0
+        ).contiguous()  # Wh*Ww, Wh*Ww, 2
         relative_coords[:, :, 0] += window_size[0] - 1  # shift to start from 0
         relative_coords[:, :, 1] += window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * window_size[1] - 1
@@ -475,8 +552,12 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         self.register_buffer("relative_position_index", relative_position_index)
 
     def forward(self) -> torch.Tensor:
-        relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
-            self.window_size[0] * self.window_size[1] + 1, self.window_size[0] * self.window_size[1] + 1, -1
+        relative_position_bias = self.relative_position_bias_table[
+            self.relative_position_index.view(-1)
+        ].view(
+            self.window_size[0] * self.window_size[1] + 1,
+            self.window_size[0] * self.window_size[1] + 1,
+            -1,
         )  # Wh*Ww,Wh*Ww,nH
 
         return relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
@@ -484,21 +565,30 @@ class Data2VecVisionRelativePositionBias(nn.Module):
 
 # Copied from transformers.models.beit.modeling_beit.BeitEncoder with Beit->Data2VecVision
 class Data2VecVisionEncoder(nn.Module):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None) -> None:
+    def __init__(
+        self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None
+    ) -> None:
         super().__init__()
         self.config = config
         if config.use_shared_relative_position_bias:
-            self.relative_position_bias = Data2VecVisionRelativePositionBias(config, window_size=window_size)
+            self.relative_position_bias = Data2VecVisionRelativePositionBias(
+                config, window_size=window_size
+            )
         else:
             self.relative_position_bias = None
 
         # stochastic depth decay rule
-        dpr = [x.item() for x in torch.linspace(0, config.drop_path_rate, config.num_hidden_layers)]
+        dpr = [
+            x.item()
+            for x in torch.linspace(0, config.drop_path_rate, config.num_hidden_layers)
+        ]
         self.layer = nn.ModuleList(
             [
                 Data2VecVisionLayer(
                     config,
-                    window_size=window_size if config.use_relative_position_bias else None,
+                    window_size=(
+                        window_size if config.use_relative_position_bias else None
+                    ),
                     drop_path_rate=dpr[i],
                 )
                 for i in range(config.num_hidden_layers)
@@ -538,9 +628,16 @@ class Data2VecVisionEncoder(nn.Module):
                 )
             else:
                 relative_position_bias = (
-                    self.relative_position_bias() if self.relative_position_bias is not None else None
+                    self.relative_position_bias()
+                    if self.relative_position_bias is not None
+                    else None
                 )
-                layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions, relative_position_bias)
+                layer_outputs = layer_module(
+                    hidden_states,
+                    layer_head_mask,
+                    output_attentions,
+                    relative_position_bias,
+                )
 
             hidden_states = layer_outputs[0]
 
@@ -551,7 +648,11 @@ class Data2VecVisionEncoder(nn.Module):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return BaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
@@ -632,15 +733,21 @@ DATA2VEC_VISION_INPUTS_DOCSTRING = r"""
 )
 # Copied from transformers.models.beit.modeling_beit.BeitModel with BEIT->DATA2VEC_VISION,Beit->Data2VecVision,True->False
 class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
-    def __init__(self, config: Data2VecVisionConfig, add_pooling_layer: bool = False) -> None:
+    def __init__(
+        self, config: Data2VecVisionConfig, add_pooling_layer: bool = False
+    ) -> None:
         super().__init__(config)
         self.config = config
 
         self.embeddings = Data2VecVisionEmbeddings(config)
-        self.encoder = Data2VecVisionEncoder(config, window_size=self.embeddings.patch_embeddings.patch_shape)
+        self.encoder = Data2VecVisionEncoder(
+            config, window_size=self.embeddings.patch_embeddings.patch_shape
+        )
 
         self.layernorm = (
-            nn.Identity() if config.use_mean_pooling else nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+            nn.Identity()
+            if config.use_mean_pooling
+            else nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         )
         self.pooler = Data2VecVisionPooler(config) if add_pooling_layer else None
 
@@ -676,11 +783,19 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, Data2VecVisionModelOutputWithPooling]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -703,10 +818,16 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
         )
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(sequence_output) if self.pooler is not None else None
+        )
 
         if not return_dict:
-            head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
+            head_outputs = (
+                (sequence_output, pooled_output)
+                if pooled_output is not None
+                else (sequence_output,)
+            )
             return head_outputs + encoder_outputs[1:]
 
         return Data2VecVisionModelOutputWithPooling(
@@ -722,7 +843,9 @@ class Data2VecVisionPooler(nn.Module):
     def __init__(self, config: Data2VecVisionConfig) -> None:
         super().__init__()
         self.layernorm = (
-            nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps) if config.use_mean_pooling else None
+            nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+            if config.use_mean_pooling
+            else None
         )
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -753,7 +876,11 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
         self.data2vec_vision = Data2VecVisionModel(config, add_pooling_layer=True)
 
         # Classifier head
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = (
+            nn.Linear(config.hidden_size, config.num_labels)
+            if config.num_labels > 0
+            else nn.Identity()
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -781,7 +908,9 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         outputs = self.data2vec_vision(
             pixel_values,
             head_mask=head_mask,
@@ -799,7 +928,9 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (
+                    labels.dtype == torch.long or labels.dtype == torch.int
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -899,7 +1030,13 @@ class Data2VecVisionPyramidPoolingModule(nn.Module):
     Based on OpenMMLab's implementation, found in https://github.com/open-mmlab/mmsegmentation.
     """
 
-    def __init__(self, pool_scales: Tuple[int, ...], in_channels: int, channels: int, align_corners: bool) -> None:
+    def __init__(
+        self,
+        pool_scales: Tuple[int, ...],
+        in_channels: int,
+        channels: int,
+        align_corners: bool,
+    ) -> None:
         super().__init__()
         self.pool_scales = pool_scales
         self.align_corners = align_corners
@@ -918,7 +1055,10 @@ class Data2VecVisionPyramidPoolingModule(nn.Module):
         for ppm in self.blocks:
             ppm_out = ppm(x)
             upsampled_ppm_out = nn.functional.interpolate(
-                ppm_out, size=x.size()[2:], mode="bilinear", align_corners=self.align_corners
+                ppm_out,
+                size=x.size()[2:],
+                mode="bilinear",
+                align_corners=self.align_corners,
             )
             ppm_outs.append(upsampled_ppm_out)
         return ppm_outs
@@ -960,7 +1100,9 @@ class Data2VecVisionUperHead(nn.Module):
         self.fpn_convs = nn.ModuleList()
         for in_channels in self.in_channels[:-1]:  # skip the top layer
             l_conv = Data2VecVisionConvModule(in_channels, self.channels, kernel_size=1)
-            fpn_conv = Data2VecVisionConvModule(self.channels, self.channels, kernel_size=3, padding=1)
+            fpn_conv = Data2VecVisionConvModule(
+                self.channels, self.channels, kernel_size=3, padding=1
+            )
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
 
@@ -982,7 +1124,10 @@ class Data2VecVisionUperHead(nn.Module):
 
     def forward(self, encoder_hidden_states: torch.Tensor) -> torch.Tensor:
         # build laterals
-        laterals = [lateral_conv(encoder_hidden_states[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
+        laterals = [
+            lateral_conv(encoder_hidden_states[i])
+            for i, lateral_conv in enumerate(self.lateral_convs)
+        ]
 
         laterals.append(self.psp_forward(encoder_hidden_states))
 
@@ -991,17 +1136,25 @@ class Data2VecVisionUperHead(nn.Module):
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
             laterals[i - 1] = laterals[i - 1] + nn.functional.interpolate(
-                laterals[i], size=prev_shape, mode="bilinear", align_corners=self.align_corners
+                laterals[i],
+                size=prev_shape,
+                mode="bilinear",
+                align_corners=self.align_corners,
             )
 
         # build outputs
-        fpn_outs = [self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels - 1)]
+        fpn_outs = [
+            self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels - 1)
+        ]
         # append psp feature
         fpn_outs.append(laterals[-1])
 
         for i in range(used_backbone_levels - 1, 0, -1):
             fpn_outs[i] = nn.functional.interpolate(
-                fpn_outs[i], size=fpn_outs[0].shape[2:], mode="bilinear", align_corners=self.align_corners
+                fpn_outs[i],
+                size=fpn_outs[0].shape[2:],
+                mode="bilinear",
+                align_corners=self.align_corners,
             )
         fpn_outs = torch.cat(fpn_outs, dim=1)
         output = self.fpn_bottleneck(fpn_outs)
@@ -1044,13 +1197,21 @@ class Data2VecVisionFCNHead(nn.Module):
         convs = []
         convs.append(
             Data2VecVisionConvModule(
-                self.in_channels, self.channels, kernel_size=kernel_size, padding=conv_padding, dilation=dilation
+                self.in_channels,
+                self.channels,
+                kernel_size=kernel_size,
+                padding=conv_padding,
+                dilation=dilation,
             )
         )
         for i in range(self.num_convs - 1):
             convs.append(
                 Data2VecVisionConvModule(
-                    self.channels, self.channels, kernel_size=kernel_size, padding=conv_padding, dilation=dilation
+                    self.channels,
+                    self.channels,
+                    kernel_size=kernel_size,
+                    padding=conv_padding,
+                    dilation=dilation,
                 )
             )
         if self.num_convs == 0:
@@ -1059,7 +1220,10 @@ class Data2VecVisionFCNHead(nn.Module):
             self.convs = nn.Sequential(*convs)
         if self.concat_input:
             self.conv_cat = Data2VecVisionConvModule(
-                self.in_channels + self.channels, self.channels, kernel_size=kernel_size, padding=kernel_size // 2
+                self.in_channels + self.channels,
+                self.channels,
+                kernel_size=kernel_size,
+                padding=kernel_size // 2,
             )
 
         self.classifier = nn.Conv2d(self.channels, config.num_labels, kernel_size=1)
@@ -1090,20 +1254,28 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
 
         # FPNs
         self.fpn1 = nn.Sequential(
-            nn.ConvTranspose2d(config.hidden_size, config.hidden_size, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(
+                config.hidden_size, config.hidden_size, kernel_size=2, stride=2
+            ),
             nn.BatchNorm2d(config.hidden_size),
             nn.GELU(),
-            nn.ConvTranspose2d(config.hidden_size, config.hidden_size, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(
+                config.hidden_size, config.hidden_size, kernel_size=2, stride=2
+            ),
         )
         self.fpn2 = nn.Sequential(
-            nn.ConvTranspose2d(config.hidden_size, config.hidden_size, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(
+                config.hidden_size, config.hidden_size, kernel_size=2, stride=2
+            ),
         )
         self.fpn3 = nn.Identity()
         self.fpn4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Semantic segmentation head(s)
         self.decode_head = Data2VecVisionUperHead(config)
-        self.auxiliary_head = Data2VecVisionFCNHead(config) if config.use_auxiliary_head else None
+        self.auxiliary_head = (
+            Data2VecVisionFCNHead(config) if config.use_auxiliary_head else None
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1115,7 +1287,10 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
         )
         if auxiliary_logits is not None:
             upsampled_auxiliary_logits = nn.functional.interpolate(
-                auxiliary_logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
+                auxiliary_logits,
+                size=labels.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
             )
         # compute weighted loss
         loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
@@ -1126,7 +1301,9 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
         return loss
 
     @add_start_docstrings_to_model_forward(DATA2VEC_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         pixel_values: Optional[torch.Tensor] = None,
@@ -1161,9 +1338,13 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
         >>> # logits are of shape (batch_size, num_labels, height, width)
         >>> logits = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
 
         outputs = self.data2vec_vision(
@@ -1178,11 +1359,18 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
 
         # only keep certain features, and reshape
         # note that we do +1 as the encoder_hidden_states also includes the initial embeddings
-        features = [feature for idx, feature in enumerate(encoder_hidden_states) if idx + 1 in self.config.out_indices]
+        features = [
+            feature
+            for idx, feature in enumerate(encoder_hidden_states)
+            if idx + 1 in self.config.out_indices
+        ]
         batch_size = pixel_values.shape[0]
         patch_resolution = self.config.image_size // self.config.patch_size
         features = [
-            x[:, 1:, :].permute(0, 2, 1).reshape(batch_size, -1, patch_resolution, patch_resolution) for x in features
+            x[:, 1:, :]
+            .permute(0, 2, 1)
+            .reshape(batch_size, -1, patch_resolution, patch_resolution)
+            for x in features
         ]
 
         # apply FPNs

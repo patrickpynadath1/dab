@@ -19,7 +19,11 @@ import inspect
 import unittest
 
 from transformers import RegNetConfig
-from transformers.file_utils import cached_property, is_torch_available, is_vision_available
+from transformers.file_utils import (
+    cached_property,
+    is_torch_available,
+    is_vision_available,
+)
 from transformers.testing_utils import require_torch, require_vision, slow, torch_device
 
 from ...test_configuration_common import ConfigTester
@@ -31,7 +35,9 @@ if is_torch_available():
     from torch import nn
 
     from transformers import RegNetForImageClassification, RegNetModel
-    from transformers.models.regnet.modeling_regnet import REGNET_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.regnet.modeling_regnet import (
+        REGNET_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -71,7 +77,9 @@ class RegNetModelTester:
         self.num_stages = len(hidden_sizes)
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
@@ -99,7 +107,12 @@ class RegNetModelTester:
         # expected last hidden states: B, C, H // 32, W // 32
         self.parent.assertEqual(
             result.last_hidden_state.shape,
-            (self.batch_size, self.hidden_sizes[-1], self.image_size // 32, self.image_size // 32),
+            (
+                self.batch_size,
+                self.hidden_sizes[-1],
+                self.image_size // 32,
+                self.image_size // 32,
+            ),
         )
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
@@ -124,7 +137,9 @@ class RegNetModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (RegNetModel, RegNetForImageClassification) if is_torch_available() else ()
+    all_model_classes = (
+        (RegNetModel, RegNetForImageClassification) if is_torch_available() else ()
+    )
 
     test_pruning = False
     test_resize_embeddings = False
@@ -133,7 +148,9 @@ class RegNetModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = RegNetModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=RegNetConfig, has_text_modality=False)
+        self.config_tester = ConfigTester(
+            self, config_class=RegNetConfig, has_text_modality=False
+        )
 
     def test_config(self):
         self.create_and_test_config_common_properties()
@@ -200,7 +217,11 @@ class RegNetModelTest(ModelTesterMixin, unittest.TestCase):
             with torch.no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
-            hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
+            hidden_states = (
+                outputs.encoder_hidden_states
+                if config.is_encoder_decoder
+                else outputs.hidden_states
+            )
 
             expected_num_stages = self.model_tester.num_stages
             self.assertEqual(len(hidden_states), expected_num_stages + 1)
@@ -248,14 +269,18 @@ class RegNetModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
         return (
-            AutoFeatureExtractor.from_pretrained(REGNET_PRETRAINED_MODEL_ARCHIVE_LIST[0])
+            AutoFeatureExtractor.from_pretrained(
+                REGNET_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+            )
             if is_vision_available()
             else None
         )
 
     @slow
     def test_inference_image_classification_head(self):
-        model = RegNetForImageClassification.from_pretrained(REGNET_PRETRAINED_MODEL_ARCHIVE_LIST[0]).to(torch_device)
+        model = RegNetForImageClassification.from_pretrained(
+            REGNET_PRETRAINED_MODEL_ARCHIVE_LIST[0]
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -271,4 +296,6 @@ class RegNetModelIntegrationTest(unittest.TestCase):
 
         expected_slice = torch.tensor([-0.4180, -1.5051, -3.4836]).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4)
+        )

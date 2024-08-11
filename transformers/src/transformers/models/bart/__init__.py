@@ -28,7 +28,11 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_bart": ["BART_PRETRAINED_CONFIG_ARCHIVE_MAP", "BartConfig", "BartOnnxConfig"],
+    "configuration_bart": [
+        "BART_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "BartConfig",
+        "BartOnnxConfig",
+    ],
     "tokenization_bart": ["BartTokenizer"],
 }
 
@@ -63,7 +67,11 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["modeling_tf_bart"] = ["TFBartForConditionalGeneration", "TFBartModel", "TFBartPretrainedModel"]
+    _import_structure["modeling_tf_bart"] = [
+        "TFBartForConditionalGeneration",
+        "TFBartModel",
+        "TFBartPretrainedModel",
+    ]
 
 try:
     if not is_flax_available():
@@ -82,7 +90,11 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_bart import BART_PRETRAINED_CONFIG_ARCHIVE_MAP, BartConfig, BartOnnxConfig
+    from .configuration_bart import (
+        BART_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        BartConfig,
+        BartOnnxConfig,
+    )
     from .tokenization_bart import BartTokenizer
 
     try:
@@ -116,7 +128,11 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_tf_bart import TFBartForConditionalGeneration, TFBartModel, TFBartPretrainedModel
+        from .modeling_tf_bart import (
+            TFBartForConditionalGeneration,
+            TFBartModel,
+            TFBartPretrainedModel,
+        )
 
     try:
         if not is_flax_available():
@@ -137,4 +153,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )
