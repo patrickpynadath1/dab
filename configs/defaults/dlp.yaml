@@ -1,7 +1,7 @@
 weight_val: .5 
 k_val: 250 
 proposal_temp: .1
-initialization: random_disc
+initialization: zero 
 min_weight: 1.0
 max_weight: 1.0
 disc_weight: .1
