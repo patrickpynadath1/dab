@@ -3812,12 +3812,18 @@ class GenerationMixin:
                     weight = trainable_weights[cur_len]
                 else:
                     weight = 1
+            if use_scale_weigths:
+                logit_norms = next_tokens_scores.norm(dim=-1, p=2) 
+                bias_norms = biases[:, bias_idx, :].norm(dim=-1, p=2)
+                scaling_ratio = logit_norms / bias_norms
+            else: 
+                scaling_ratio = 1
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
             if not use_hidden_states_biases:
                 if is_dlp:
                     next_tokens_scores = (
-                        next_tokens_scores + weight * biases[:, bias_idx, :]
+                        next_tokens_scores + weight * biases[:, bias_idx, :] * scaling_ratio
                     )
                 else:
                     next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]

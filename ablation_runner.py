@@ -65,11 +65,14 @@ def construct_all_configs(
     return configs_to_run
 
 
-def worker_writing_data(data_queue):
+def worker_writing_data(ablation_save_dir, data_queue):
     (save_dir, data) = data_queue.get()
     with open(save_dir, "wb") as f:
         pickle.dump(data, f)
     print(f"dumped data for {save_dir}")
+    with open(f"{ablation_save_dir}/run_names.txt", "a") as f:
+        f.write(f"{save_dir}\n")
+    print("recorded run name")
     return
 
 
@@ -108,7 +111,11 @@ def worker_run_exp(run_dir, total_conf, gpu_queue, to_save_queue):
     return
 
 
-def run_ablations(all_conf, avail_gpus, jobs_per_gpu):
+def run_ablations(all_conf, avail_gpus, jobs_per_gpu, ablation_save_dir):
+    # first, save the ablation conf in its own folder 
+    # all the run res will be stored normally, 
+    # but there will also be a txt file with all 
+    # the run names and the ablation conf
     m = Manager()
     gpu_queue = m.Queue()
     jobs_queue = m.Queue()
@@ -126,7 +133,7 @@ def run_ablations(all_conf, avail_gpus, jobs_per_gpu):
         if to_save_queue.empty() and jobs_queue.empty():
             break
         if not to_save_queue.empty():
-            pool.apply_async(worker_writing_data, args=(to_save_queue,))
+            pool.apply_async(worker_writing_data, args=(ablation_save_dir, to_save_queue,))
 
         # if there are gpus and jobs, run the job
         if not jobs_queue.empty() and not gpu_queue.empty():
@@ -159,7 +166,8 @@ if __name__ == "__main__":
     base_conf = {**base_conf, **exp_conf}
     base_conf["exp"] = args.exp
     base_conf["save_dir"] = args.save_dir
+    ablation_dir = initialize_metric_storing(base_conf, f"{args.save_dir}/ablation", check_existing=False)
     all_configs = construct_all_configs(
         ablation_conf, base_conf, args.sampler, experiments=args.exp
     )
-    run_ablations(all_configs, args.gpu_ids, args.jobs_per_gpu)
+    run_ablations(all_configs, args.gpu_ids, args.jobs_per_gpu, ablation_dir)

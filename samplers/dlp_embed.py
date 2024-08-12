@@ -22,6 +22,7 @@ class LangevinSampler(nn.Module):
         use_scale_weights=True,
         initialization="random_disc",
         initialization_noise_rate=0.5,
+        use_ar_grad=True,
         **kwargs
     ):
         super().__init__()
@@ -42,6 +43,7 @@ class LangevinSampler(nn.Module):
         self.use_bolt_weights = use_bolt_weights
         self.initialization = initialization
         self.initialization_noise_rate = initialization_noise_rate
+        self.use_ar_grad = use_ar_grad
 
         # initializing sampling metrics to track
         self.sampled_tokens = []

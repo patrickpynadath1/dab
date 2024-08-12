@@ -35,9 +35,11 @@ def sentiment_exp_loop(
     if total_conf["sampler"] == "bolt":
         sampler = BoltSampler(**total_conf)
         bias_dim = model.get_input_embeddings().weight.shape[0]
+        use_ar_grad = True
     elif total_conf["sampler"] == "dlp":
         sampler = LangevinSampler(**total_conf)
         bias_dim = model.get_input_embeddings().weight.shape[0]
+        use_ar_grad = sampler.use_ar_grad
     times = []
     prompts = [line.strip() for line in open(total_conf["sentiment_prompts"], "r")]
     output_file = open(f"{save_dir}/output.txt", "w")
@@ -56,6 +58,7 @@ def sentiment_exp_loop(
                 biases=x_full,
                 bias_rep_space="logit",
                 weight=total_conf["weight_val"],
+                use_ar_grad=use_ar_grad,
             )
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses

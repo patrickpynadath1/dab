@@ -187,6 +187,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         biases=None,
         bias_rep_space="logit",
         weight=1,
+        use_ar_grad=True,
         **kwargs,
     ):
         if bias_rep_space == "logit":
@@ -314,6 +315,11 @@ class GPTPromptTuningWithbiasesModelMixin:
                     use_scale_weights=self.use_scale_weights,
                 )
 
+        # what happens if i detach from autoregressive generation?
+        # essentially COLD version of DLP
+        if not use_ar_grad: 
+            onehot_generates = onehot_generates.detach()
+            onehot_generates.requires_grad = True
         dis_embs = torch.matmul(
             onehot_generates, self.discriminator.get_input_embeddings().weight
         )
