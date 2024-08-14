@@ -60,7 +60,7 @@ def sentiment_exp_loop(
         )
         return loss, output_ids, onehot_generates, gpt_logit, senti_losses
 
-    for prompt in prompts:
+    for prompt in prompts[: total_conf["num_prompts"]]:
         prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
