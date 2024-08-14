@@ -125,7 +125,7 @@ def keywords_loop(
             if all([idx != -1 for idx in success_idx]) and total_conf["early_stop"]:
                 # print("success")
                 break
-        print(sentences)
+        print(stored_sentence)
         stored_sentence = [sent for sent in stored_sentence if sent != ""]
         ### Freeing CUDA space
         del inputs

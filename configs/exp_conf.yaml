@@ -20,3 +20,5 @@ keywords_dict:
   space : ["meteor", "planet", "satellite", "astronaut"]
 keyword: computer
 abductive_reasoning_file: prompts/anli/test.jsonl
+kw_preprompt: true
+early_stop: false

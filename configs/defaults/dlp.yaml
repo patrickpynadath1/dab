@@ -1,10 +1,10 @@
-weight_val: .5 
+weight_val: 1.0
 k_val: 250 
 proposal_temp: .1
 initialization: zero 
 min_weight: 1.0
 max_weight: 1.0
 disc_weight: .1
-use_bolt_weights: false
-use_scale_weights: true
+use_bolt_weights: true
+use_scale_weights: false 
 initialization_noise_rate: .5
