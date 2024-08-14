@@ -21,4 +21,4 @@ keywords_dict:
 keyword: computer
 abductive_reasoning_file: prompts/anli/test.jsonl
 kw_preprompt: true
-early_stop: false
+early_stop: true
