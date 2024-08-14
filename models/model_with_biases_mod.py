@@ -328,11 +328,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         ).logits
         senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
         senti_loss = torch.sum(senti_losses)
-
-        lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
-        ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
-        labels = torch.argmax(onehot_generates, dim=-1)
-        loss = self.disc_weight * senti_loss + (1 - self.disc_weight) * ppl_loss
+        loss = senti_loss 
 
         # print("senti_loss:", senti_loss)
         # print("ppl_loss:", ppl_loss)

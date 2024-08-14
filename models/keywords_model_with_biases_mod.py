@@ -278,15 +278,12 @@ class GPTPromptTuningWithBiasesModelMixin:
                     )
                 )
 
-        lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
-        ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
-        loss = ppl_loss
         # print("ppl_loss:", ppl_loss)
         # ste trick to make sure they have the same gradients
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_losses = batch_log_bleulosscnn_ae(logits, keywords, 1)
         keywords_loss = torch.mean(keywords_losses)
-        loss = (1 - self.disc_weight) * ppl_loss + self.disc_weight * keywords_loss
+        loss =  keywords_loss
         return loss, output_ids, onehot_generates, logits, keywords_losses
 
 
