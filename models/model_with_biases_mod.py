@@ -330,9 +330,6 @@ class GPTPromptTuningWithbiasesModelMixin:
         senti_loss = torch.sum(senti_losses)
         loss = senti_loss 
 
-        # print("senti_loss:", senti_loss)
-        # print("ppl_loss:", ppl_loss)
-
         return (loss, output_ids, onehot_generates, gpt_logit, senti_losses)
 
     def soft_forward_without_decoding(
