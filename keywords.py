@@ -56,6 +56,7 @@ def keywords_loop(
     output_file = open(f"{save_dir}/output.txt", "w")
     keywords_list = total_conf["keywords_dict"][total_conf["keyword"]]
     keywords_string = " ".join(keywords_list)
+    keywords_preprompt = "include the following keywords: " + keywords_string + ". "
     keywords_token = tokenizer(
         [keywords_string] * total_conf["batch_size"], return_tensors="pt"
     )["input_ids"].to(total_conf["device"])
@@ -78,7 +79,10 @@ def keywords_loop(
         return loss, output_ids, onehot_generates, gpt_logit, kw_losses
 
     for prompt in prompts:
-        prefixs = [prompt] * total_conf["batch_size"]
+        if total_conf["kw_preprompt"]: 
+            prefixs = [keywords_preprompt + prompt] * total_conf["batch_size"]
+        else: 
+            prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
         inputs, cur_batch = sampler.initialize_batch(
@@ -106,20 +110,23 @@ def keywords_loop(
                 cur_iter=i,
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+            if total_conf['kw_preprompt']:
+                sentences_to_eval = [sent[len(keywords_preprompt):] for sent in sentences]
+            else: 
+                sentences_to_eval = sentences
             updating_best_keywords(
                 cur_iter=i,
                 batch_size=total_conf["batch_size"],
-                sentences=sentences,
+                sentences=sentences_to_eval,
                 success_idx=success_idx,
                 keywords_word=keywords_list,
                 stored_sentence_list=stored_sentence,
             )
-            if all([idx != -1 for idx in success_idx]):
+            if all([idx != -1 for idx in success_idx]) and total_conf["early_stop"]:
                 # print("success")
                 break
         print(sentences)
-        if stored_sentence == [""] * total_conf["batch_size"]:
-            stored_sentence = sentences
+        stored_sentence = [sent for sent in stored_sentence if sent != ""]
         ### Freeing CUDA space
         del inputs
         del cur_batch
