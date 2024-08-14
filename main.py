@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_on_fin", action="store_true")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--conf_file", type=str, default=None)
+    parser.add_argument("--num_prompts", type=int, default=15)
     api_eval.add_argument("--rate_limit", type=int, default=60)
     conf_subparser(parser, "exp")
     conf_subparser(dlp_sampler, "dlp")
