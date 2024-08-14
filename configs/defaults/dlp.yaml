@@ -4,7 +4,6 @@ proposal_temp: .1
 initialization: random_disc
 min_weight: 1.0
 max_weight: 1.0
-disc_weight: .9
 use_bolt_weights: true
 use_scale_weights: true
 initialization_noise_rate: .5
