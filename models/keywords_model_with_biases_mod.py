@@ -282,14 +282,14 @@ class GPTPromptTuningWithBiasesModelMixin:
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_losses = batch_log_bleulosscnn_ae(logits, keywords, 1)
         keywords_loss = torch.mean(keywords_losses)
-        ppl_loss = torch.nn.functional.cross_entropy(
-            logits.transpose(1, 2), output_ids
-        ).mean()
-        loss = .1 * ppl_loss + .9 *  keywords_loss
+        ppl_losses = torch.nn.functional.cross_entropy(
+            logits.transpose(1, 2), output_ids, reduction="none"
+        ).mean(dim=-1)
+        loss = keywords_loss
 
         # lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight).detach()
         # loss = keywords_loss
-        return loss, output_ids, onehot_generates, logits, keywords_losses
+        return loss, output_ids, onehot_generates, logits, keywords_losses, ppl_losses
 
 
 class FullPrompt(nn.Module):

@@ -67,7 +67,7 @@ def keywords_loop(
             total_conf["device"]
         )
         x_full = torch.concat([prompt_bias, x], dim=1)
-        loss, output_ids, onehot_generates, gpt_logit, kw_losses = model.soft_forward(
+        loss, output_ids, onehot_generates, gpt_logit, kw_losses, ppl_losses = model.soft_forward(
             **inputs,
             labels=inputs.input_ids,
             use_full_prompt=False,
@@ -77,7 +77,7 @@ def keywords_loop(
             bias_rep_space="logit",
             weight=total_conf["weight_val"],
         )
-        return loss, output_ids, onehot_generates, gpt_logit, kw_losses
+        return loss, output_ids, onehot_generates, gpt_logit, kw_losses, ppl_losses
 
     for prompt in prompts:
         if total_conf["kw_preprompt"]: 
@@ -100,6 +100,7 @@ def keywords_loop(
         success_idx, stored_sentence = initialize_best_loss(
             total_conf["batch_size"], use_senti=False
         )
+        best_losses = [100000] * total_conf["batch_size"]
         for i in range(total_conf["num_steps"]):
             cur_batch, loss, output_ids, otheroutputs = sampler.step(
                 x=cur_batch,
@@ -122,6 +123,8 @@ def keywords_loop(
                 success_idx=success_idx,
                 keywords_word=keywords_list,
                 stored_sentence_list=stored_sentence,
+                best_losses=best_losses,
+                cur_losses=otheroutputs[-1]
             )
             if all([idx != -1 for idx in success_idx]) and total_conf["early_stop"]:
                 # print("success")

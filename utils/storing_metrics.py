@@ -58,14 +58,15 @@ def updating_best_keywords(
     success_idx, 
     keywords_word, 
     stored_sentence_list, 
-    # best_losses, 
-    # cur_losses
+    best_losses, 
+    cur_losses
 ):
     for idx in range(batch_size):
         if success_idx[idx] == -1:
             if any([keyword in sentences[idx] for keyword in keywords_word]):
-                # if best_losses[idx] > cur_losses[idx]:
-                success_idx[idx] = cur_iter
-                stored_sentence_list[idx] = sentences[idx]
-                    # best_losses[idx] = cur_losses[idx]
+
+                if best_losses[idx] > cur_losses[idx]:
+                    success_idx[idx] = cur_iter
+                    stored_sentence_list[idx] = sentences[idx]
+                    best_losses[idx] = cur_losses[idx]
     return

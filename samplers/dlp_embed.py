@@ -181,7 +181,7 @@ class LangevinSampler(nn.Module):
 
     # performs the actual sampling of the bias tokens for hard constraints
     def compute_p_lm_hard(self, cur_bias, energy_fn, kw_tokens, cur_iter):
-        loss, output_ids, onehot, logits, kw_losses = energy_fn(cur_bias)
+        loss, output_ids, onehot, logits, kw_losses, ppl_losses = energy_fn(cur_bias)
         self.cur_disc_loss.append(kw_losses.mean().detach().cpu().numpy())
         unfiltered_dist, topk_ids = self.get_dlp_dist(loss, onehot, output_ids, logits)
         # ideally, this should capture the kw tokens + those that are semantically similar
@@ -192,7 +192,7 @@ class LangevinSampler(nn.Module):
         )
         sampled_indices = proposal_dist.sample()
         sampled_tokens = self._topk_to_tokens(topk_ids, sampled_indices)
-        return loss, output_ids, sampled_tokens, kw_losses.detach().cpu().numpy()
+        return loss, output_ids, sampled_tokens, kw_losses.detach().cpu().numpy(), ppl_losses.detach().cpu().numpy()
 
     # computes the l2 penalty bias, given the sampled embeddings
     def compute_bias_l2_pen(self, sampled_ids, kw_token=None):
@@ -234,12 +234,12 @@ class LangevinSampler(nn.Module):
     # cur_iter = current iteration of the sampler
     def step_hard(self, x, energy_fn, kw_tokens, cur_iter, **kwargs):
         cur_bias = x
-        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
+        loss, output_ids, sampled_ids, kw_losses, ppl_losses = self.compute_p_lm_hard(
             cur_bias, energy_fn, kw_tokens, cur_iter
         )
         bias = self.compute_bias_l2_pen(sampled_ids, kw_tokens)
         bias = bias * self.weight_val
-        return bias, loss, output_ids, [kw_losses]
+        return bias, loss, output_ids, [kw_losses, ppl_losses]
 
     # returns object for storing metrics for the sampling process
     def get_sampling_metrics(self):
