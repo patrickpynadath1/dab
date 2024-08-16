@@ -30,6 +30,19 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     ext_senti_clf.to(total_conf["device"])
     ext_toxic_clf.to(total_conf["device"])
     metrics["perp"] = compute_perplexity(generated_sentences)
+    if total_conf["exp"] == "keywords":
+        keywords = total_conf['keywords_dict'][total_conf['keyword']]
+        prompts = open("prompts/keywords_prompts_15.txt", "r").readlines()
+        total_rouge = []
+        for p_idx, p in enumerate(tqdm(prompts)):
+            prompt_to_use = p.replace("\n", "") 
+            prompt_rouge = []
+            prompt_generations = get_prompt_generations(generated_sentences, prompt_to_use)
+            ref_text = load_ref_texts(prompt_to_use, p_idx, total_conf["keyword"], keywords)
+            for gen in prompt_generations:
+                prompt_rouge.append(calc_rouge([gen], ref_text ))
+            total_rouge.append(prompt_rouge)
+        metrics["rouge"] = total_rouge
     while cur_idx < len(generated_sentences):
         print(cur_idx)
         batch = generated_sentences[cur_idx : cur_idx + batch_size]

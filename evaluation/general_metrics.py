@@ -18,6 +18,7 @@ from evaluate import load
 from tqdm import tqdm
 from .perspective_api import PerspectiveAPI
 import json
+import random 
 
 perplexity = load("perplexity", module_type="metric")
 
@@ -105,6 +106,24 @@ def get_unique_ngram(sentence_batch, n):
             total_n_grams += len(list(n_grams))
     return len(unique_n_grams) / total_n_grams
 
+def calc_bleu(sentence_batch, topic):
+    ref_text = open(f"keyword_ref_text/gpt4sig_{topic}.txt", "r").readlines()
+    from evaluate import load
+    bleu = load("bleu", module_type="metric")
+    results = bleu.compute(
+        predictions=sentence_batch,
+        references=ref_text,
+    )
+    return results
+
+def calc_rouge(sentence_batch, ref_text):
+    from evaluate import load
+    rouge = load("rouge", module_type="metric")
+    results = rouge.compute(
+        predictions=sentence_batch,
+        references=[ref_text],
+    )
+    return results
 
 def compute_perplexity(sentence_batch):
     results = perplexity.compute(
@@ -140,3 +159,22 @@ def clean_for_eval(sentences):
         if sent != "\n":
             cleaned.append(sent.replace("\n", ""))
     return cleaned
+
+def load_ref_texts(prompt, prompt_idx, topic, keywords):
+    total_sentences = []
+    for kw in keywords:
+        ref_text = open(f"keyword_ref_text/{topic}/{kw}_{prompt_idx}.txt", "r").readlines()
+        for line in ref_text:
+            begin_index = line.find(prompt)
+            if begin_index == -1: 
+                continue
+            total_sentences.append(line[begin_index:])
+    return total_sentences
+
+def get_prompt_generations(total_sentences, prompt):
+    prompt_generations = []
+    for j in range(len(total_sentences)):
+        cur_sent = total_sentences[j]
+        if prompt in cur_sent: 
+            prompt_generations.append(cur_sent)
+    return prompt_generations

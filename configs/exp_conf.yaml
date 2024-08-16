@@ -18,7 +18,7 @@ keywords_dict:
   religion : ["Bible", "church", "priest", "saint"]
   science : ["microscope", "mass", "mineral", "scientist"]
   space : ["meteor", "planet", "satellite", "astronaut"]
-keyword: computer
+keyword: science 
 abductive_reasoning_file: prompts/anli/test.jsonl
 kw_preprompt: true
 early_stop: true

@@ -57,7 +57,7 @@ def keywords_loop(
     output_file = open(f"{save_dir}/output.txt", "w")
     keywords_list = total_conf["keywords_dict"][total_conf["keyword"]]
     keywords_string = " ".join(keywords_list)
-    keywords_preprompt = "include the following keywords: " + keywords_string + ". "
+    keywords_preprompt = "include the following keywords: " + keywords_string + f" relevant to {total_conf['keyword']}. "
     keywords_token = tokenizer(
         [keywords_string] * total_conf["batch_size"], return_tensors="pt"
     )["input_ids"].to(total_conf["device"])
