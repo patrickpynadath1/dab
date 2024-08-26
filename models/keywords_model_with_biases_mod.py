@@ -62,8 +62,10 @@ class GPTPromptTuningWithBiasesModelMixin:
         use_bolt_weights,
         device="cpu",
         disc_weight=0.9,
+        use_soft_disc=False,
         **kwargs,
     ):
+        self.use_soft_disc = use_soft_disc
         self.seq_len = seq_len
 
         self.trainable_weights = None
@@ -282,6 +284,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_losses = batch_log_bleulosscnn_ae(logits, keywords, 1)
         keywords_loss = torch.mean(keywords_losses)
+        
         loss = keywords_loss
         return loss, output_ids, onehot_generates, logits, keywords_losses
 

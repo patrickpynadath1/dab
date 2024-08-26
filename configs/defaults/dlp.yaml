@@ -1,4 +1,4 @@
-weight_val: .1 
+weight_val: 1.15 
 k_val: 250 
 proposal_temp: .1
 initialization: zero 

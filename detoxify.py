@@ -93,6 +93,8 @@ def detoxify_loop(total_conf):
         del inputs
         del cur_batch
         del output_ids
+        del loss
+        torch.cuda.empty_cache()
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence))
         output_file.flush()

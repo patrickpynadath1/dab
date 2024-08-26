@@ -49,13 +49,16 @@ if __name__ == "__main__":
     initial_mode = args.sampler
     initial_prev_run_dir = args.prev_run_dir
     if args.prev_run_dir != None:
+        cur_device = args.device
         args.__dict__.update(
             yaml.safe_load(open(f"{args.prev_run_dir}/conf.yaml", "r"))
         )
+        args.device = cur_device
     if args.conf_file != None:
         args.__dict__.update(yaml.safe_load(open(args.conf_file, "r")))
     total_conf = args.__dict__
     if initial_mode == "bolt" or initial_mode == "dlp":
+        print(args.exp)
         if args.exp == "sentiment":
             res = sentiment_exp_loop(total_conf)
         elif args.exp == "detoxify":
@@ -69,6 +72,7 @@ if __name__ == "__main__":
         if args.eval_on_fin:
             eval_loop(total_conf, generated_sentences)
     elif initial_mode == "eval_only":
+        print(args.device)
         gen_sentences = clean_for_eval(
             open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
         )

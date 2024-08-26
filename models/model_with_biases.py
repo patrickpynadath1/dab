@@ -295,21 +295,27 @@ class GPTPromptTuningWithbiasesModelMixin:
         dis_embs = torch.matmul(
             onehot_generates, self.discriminator.get_input_embeddings().weight
         )
+        print(f"logits shape: {logits.shape}")
+        print(f"gpt_logit shape: {gpt_logit.shape}")
+        print(f"onehot_generates shape: {onehot_generates.shape}")
+        print(f"soft generates shape: {soft_generates.shape}")
+        logits = logits + onehot_generates.detach() - onehot_generates
+
         senti_logits = self.discriminator(
             inputs_embeds=dis_embs, labels=self.labels.repeat(dis_embs.shape[0])
         ).logits
         senti_losses = torch.nn.functional.cross_entropy(
             senti_logits, self.labels.repeat(dis_embs.shape[0]), reduce=False
         )
-        senti_loss = torch.mean(senti_losses)
-
+        senti_loss = senti_losses.mean()
+        # ppl_loss = (logits.log_softmax(-1) * onehot_generates).sum(-1).mean()
         lm_embs = torch.matmul(onehot_generates, self.get_input_embeddings().weight)
         ppl_loss = self(inputs_embeds=lm_embs, labels=output_ids).loss
         labels = torch.argmax(onehot_generates, dim=-1)
         loss = 1 * senti_loss + 0.1 * ppl_loss
 
-        # print("senti_loss:", senti_loss)
-        # print("ppl_loss:", ppl_loss)
+        print("senti_loss:", senti_loss)
+        print("ppl_loss:", ppl_loss)
 
         return loss, output_ids, gpt_logit, senti_losses
 

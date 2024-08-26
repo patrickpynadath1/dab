@@ -25,14 +25,14 @@ def load_tokenizer(model="gpt2-large"):
 
 def load_sentiment_discriminator():
     discriminator = AutoModelForSequenceClassification.from_pretrained(
-        "./checkpoints/replaced_vocab_roberta_for_yelp_polarity"
+        "./checkpoints/BOLT_models/replaced_vocab_roberta_for_yelp_polarity"
     )
     return discriminator
 
 
 def load_toxicity_discriminator():
     discriminator = AutoModelForSequenceClassification.from_pretrained(
-        "./checkpoints/replaced_vocab_roberta_for_jigsaw"
+        "./checkpoints/BOLT_models/replaced_vocab_roberta_for_jigsaw"
     )
     return discriminator
 

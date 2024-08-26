@@ -3,12 +3,12 @@ base_model_args:
   initialize_from_vocab: true 
   use_full_prompt: false
   pretrained_model_name_or_path: gpt2-large
-sentiment_prompts: prompts/gpt4_gen_prompts_200.txt 
+sentiment_prompts: prompts/sentiment_prompts_15.txt 
 detoxic_prompts: prompts/detoxic_prompts_1k.txt
 keyword_prompts: prompts/keywords_prompts_15.txt
 batch_size: 20
 seq_len: 20
-num_steps: 8
+num_steps: 20
 sentiment: pos
 keywords_dict:
   computer : ["router", "Linux", "keyboard", "server"]
