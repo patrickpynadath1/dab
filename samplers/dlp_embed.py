@@ -22,6 +22,7 @@ class LangevinSampler(nn.Module):
         use_scale_weights=True,
         initialization="random_disc",
         initialization_noise_rate=0.5,
+        use_soft_disc = False,
         **kwargs
     ):
         super().__init__()
@@ -36,6 +37,7 @@ class LangevinSampler(nn.Module):
         self.min_weight = min_weight
         self.weight_strat = weight_strat
         self.disc_weight = disc_weight
+        self.use_soft_disc = use_soft_disc
 
         # weighting args
         self.use_scale_weights = use_scale_weights
@@ -48,6 +50,7 @@ class LangevinSampler(nn.Module):
         self.max_unnorm = []
         self.disc_loss = []
         self.cur_disc_loss = None
+        losses_order = ['hard', 'soft']
 
     def initialize_batch(
         self,
@@ -73,6 +76,7 @@ class LangevinSampler(nn.Module):
             disc_weight=self.weight_val,
             use_scale_weights=self.use_scale_weights,
             use_bolt_weights=self.use_bolt_weights,
+            use_soft_disc=self.use_soft_disc,
         )
         if keyword_tokens is not None:
             self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(
@@ -167,9 +171,7 @@ class LangevinSampler(nn.Module):
         )
 
     # performs the actual sampling of the bias tokens for soft constraints
-    def compute_p_lm_soft(self, cur_bias, energy_fn):
-
-        loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
+    def compute_p_lm_soft(self, loss, output_ids, onehot, logits, senti_losses):
         unfiltered_dist, topk_ids = self.get_dlp_dist(loss, onehot, output_ids, logits)
         dist_logits = self._apply_filter(unfiltered_dist, topk_ids)
         proposal_dist = torch.distributions.Categorical(logits=dist_logits / self.temp)
@@ -178,8 +180,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, sampled_tokens, senti_losses.detach().cpu().numpy()
 
     # performs the actual sampling of the bias tokens for hard constraints
-    def compute_p_lm_hard(self, cur_bias, energy_fn, kw_tokens, cur_iter):
-        loss, output_ids, onehot, logits, kw_losses = energy_fn(cur_bias)
+    def compute_p_lm_hard(self, loss, output_ids, onehot, logits, kw_losses):
         self.cur_disc_loss.append(kw_losses.mean().detach().cpu().numpy())
         unfiltered_dist, topk_ids = self.get_dlp_dist(loss, onehot, output_ids, logits)
         # ideally, this should capture the kw tokens + those that are semantically similar
@@ -193,7 +194,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, sampled_tokens, kw_losses.detach().cpu().numpy()
 
     # computes the l2 penalty bias, given the sampled embeddings
-    def compute_bias_l2_pen(self, sampled_ids, kw_token=None):
+    def compute_bias_l2_pen(self, sampled_ids):
         with torch.no_grad():
             # this is batch x seq_len x embed_dim
             cur_embeds = self.embed_map(sampled_ids)
@@ -208,11 +209,17 @@ class LangevinSampler(nn.Module):
     # wrapper for step -- just controls whether we
     # use step_soft or step_hard
     # determined by is_kw
-    def step(self, **kwargs):
-        if self.is_kw:
-            return self.step_hard(**kwargs)
+    def step(self, x, energy_fn, **kwargs):
+        loss, output_ids, onehot, logits, attr_losses = energy_fn(x)
+        if type(loss) == list: 
+            for l in loss: 
+                pass 
         else:
-            return self.step_soft(**kwargs)
+            if self.is_kw:
+                return self.step_hard(loss, output_ids, onehot, logits, attr_losses)
+            else: 
+                return self.step_soft(loss, output_ids, onehot, logits, attr_losses) 
+            
 
     # Step function for soft constraints
     # x = the current bias embeddings (not the l2 penalty)
@@ -230,7 +237,16 @@ class LangevinSampler(nn.Module):
     # energy_fn = wrapper for the hard_forward function
     # kw_tokens = keyword tokens to be used for the hard constraint, dim  batch * num kw
     # cur_iter = current iteration of the sampler
-    def step_hard(self, x, energy_fn, kw_tokens, cur_iter, **kwargs):
+    def step_hard(self, x, energy_fn, **kwargs):
+        cur_bias = x
+        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
+            cur_bias, energy_fn
+        )
+        bias = self.compute_bias_l2_pen(sampled_ids)
+        bias = bias * self.weight_val
+        return bias, loss, output_ids, [kw_losses]
+    
+    def step_multi(self, x, energy_fn, kw_tokens, cur_iter, **kwargs):
         cur_bias = x
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
             cur_bias, energy_fn, kw_tokens, cur_iter
