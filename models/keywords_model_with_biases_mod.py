@@ -295,7 +295,7 @@ class GPTPromptTuningWithBiasesModelMixin:
             senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
             senti_loss = torch.sum(senti_losses)
         if self.use_soft_disc:
-            return [keywords_loss, senti_loss], output_ids, onehot_generates, logits
+            return [keywords_loss, senti_loss], output_ids, onehot_generates, logits, senti_losses.detach()
         else:
             return keywords_loss, output_ids, onehot_generates, logits, keywords_losses
 

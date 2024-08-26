@@ -23,9 +23,11 @@ class LangevinSampler(nn.Module):
         initialization="random_disc",
         initialization_noise_rate=0.5,
         use_soft_disc = False,
+        is_multi=False,
         **kwargs
     ):
         super().__init__()
+        self.is_multi = is_multi
         self.weight_val = weight_val
         self.a_s = []
         self.hops = []
@@ -50,7 +52,7 @@ class LangevinSampler(nn.Module):
         self.max_unnorm = []
         self.disc_loss = []
         self.cur_disc_loss = None
-        losses_order = ['hard', 'soft']
+        self.losses_order = ['hard', 'soft']
 
     def initialize_batch(
         self,
@@ -206,10 +208,29 @@ class LangevinSampler(nn.Module):
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
         return bias
 
+    def step_multi(self, x, energy_fn, **kwargs):
+        losses, output_ids, onehot, logits, attr_losses = energy_fn(x)
+        biases = []
+        for loss_idx, loss in enumerate(losses): 
+            if self.losses_order[loss_idx] == 'hard':
+                bias, loss, output_ids, [senti_losses] = self.step_hard(
+                    loss, output_ids, onehot, logits, attr_losses
+                )
+            else: 
+                bias, loss, output_ids, [kw_losses] = self.step_soft(
+                    loss, output_ids, onehot, logits, attr_losses
+                )
+            biases.append(bias.detach())
+        final_bias = .25 * biases[0] + .75 * biases[1]
+        return final_bias, loss, output_ids, attr_losses
+
     # wrapper for step -- just controls whether we
     # use step_soft or step_hard
     # determined by is_kw
     def step(self, x, energy_fn, **kwargs):
+        if self.is_multi: 
+            return self.step_multi(x, energy_fn, **kwargs)
+
         loss, output_ids, onehot, logits, attr_losses = energy_fn(x)
         if self.is_kw:
             return self.step_hard(loss, output_ids, onehot, logits, attr_losses)

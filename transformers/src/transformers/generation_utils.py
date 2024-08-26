@@ -3825,7 +3825,7 @@ class GenerationMixin:
             if not use_hidden_states_biases:
                 if is_dlp:
                     next_tokens_scores = (
-                        next_tokens_scores + disc_weight * weight * biases[:, bias_idx, :]
+                        next_tokens_scores + disc_weight * weight * scaling_ratio * biases[:, bias_idx, :]
                     )
                 else:
                     next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]
