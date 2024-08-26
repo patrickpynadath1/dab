@@ -285,19 +285,8 @@ class GPTPromptTuningWithBiasesModelMixin:
         keywords_losses = batch_log_bleulosscnn_ae(logits, keywords, 1)
         keywords_loss = torch.mean(keywords_losses)
         
-        if self.use_soft_disc:
-            dis_embs = torch.matmul(
-                onehot_generates, self.discriminator.get_input_embeddings().weight
-            )
-            senti_logits = self.discriminator(
-                inputs_embeds=dis_embs, labels=self.labels.repeat(dis_embs.shape[0])
-            ).logits
-            senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
-            senti_loss = torch.sum(senti_losses)
-        if self.use_soft_disc:
-            return [keywords_loss, senti_loss], output_ids, onehot_generates, logits, senti_losses.detach()
-        else:
-            return keywords_loss, output_ids, onehot_generates, logits, keywords_losses
+        loss = keywords_loss
+        return loss, output_ids, onehot_generates, logits, keywords_losses
 
 
 class FullPrompt(nn.Module):

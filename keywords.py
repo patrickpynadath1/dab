@@ -59,8 +59,7 @@ def keywords_loop(
     keywords_token = tokenizer(
         [keywords_string] * total_conf["batch_size"], return_tensors="pt"
     )["input_ids"].to(total_conf["device"])
-    topic = total_conf["keyword"]
-    keywords_preprompt = f"Given the topic {topic}, include the following keywords: " + keywords_string + ". "
+
     def energy_fn_wrapper(x, inputs):
         prompt_bias = torch.zeros(x.size(0), inputs.input_ids.shape[1], bias_dim).to(
             total_conf["device"]
@@ -79,7 +78,7 @@ def keywords_loop(
         return loss, output_ids, onehot_generates, gpt_logit, kw_losses
 
     for prompt in prompts:
-        prefixs = [keywords_preprompt + prompt] * total_conf["batch_size"]
+        prefixs = [prompt] * total_conf["batch_size"]
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to(total_conf["device"])
         inputs, cur_batch = sampler.initialize_batch(
@@ -107,15 +106,10 @@ def keywords_loop(
                 cur_iter=i,
             )
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-            sentences_to_eval = []
-            for sent in sentences:
-                sentences_to_eval.append(sent.replace(keywords_preprompt, ""))
-
-    
             updating_best_keywords(
                 cur_iter=i,
                 batch_size=total_conf["batch_size"],
-                sentences=sentences_to_eval,
+                sentences=sentences,
                 success_idx=success_idx,
                 keywords_word=keywords_list,
                 stored_sentence_list=stored_sentence,
@@ -123,7 +117,7 @@ def keywords_loop(
             if all([idx != -1 for idx in success_idx]):
                 # print("success")
                 break
-        print(sentences_to_eval)
+        print(sentences)
         if stored_sentence == [""] * total_conf["batch_size"]:
             stored_sentence = sentences
         ### Freeing CUDA space

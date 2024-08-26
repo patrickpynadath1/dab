@@ -22,12 +22,9 @@ class LangevinSampler(nn.Module):
         use_scale_weights=True,
         initialization="random_disc",
         initialization_noise_rate=0.5,
-        use_soft_disc = False,
-        is_multi=False,
         **kwargs
     ):
         super().__init__()
-        self.is_multi = is_multi
         self.weight_val = weight_val
         self.a_s = []
         self.hops = []
@@ -39,7 +36,6 @@ class LangevinSampler(nn.Module):
         self.min_weight = min_weight
         self.weight_strat = weight_strat
         self.disc_weight = disc_weight
-        self.use_soft_disc = use_soft_disc
 
         # weighting args
         self.use_scale_weights = use_scale_weights
@@ -52,7 +48,6 @@ class LangevinSampler(nn.Module):
         self.max_unnorm = []
         self.disc_loss = []
         self.cur_disc_loss = None
-        self.losses_order = ['hard', 'soft']
 
     def initialize_batch(
         self,
@@ -78,7 +73,6 @@ class LangevinSampler(nn.Module):
             disc_weight=self.weight_val,
             use_scale_weights=self.use_scale_weights,
             use_bolt_weights=self.use_bolt_weights,
-            use_soft_disc=self.use_soft_disc,
         )
         if keyword_tokens is not None:
             self.keyword_tokens = keyword_tokens.unsqueeze(dim=1).repeat(
@@ -196,7 +190,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, sampled_tokens, kw_losses.detach().cpu().numpy()
 
     # computes the l2 penalty bias, given the sampled embeddings
-    def compute_bias_l2_pen(self, sampled_ids):
+    def compute_bias_l2_pen(self, sampled_ids, kw_token=None):
         with torch.no_grad():
             # this is batch x seq_len x embed_dim
             cur_embeds = self.embed_map(sampled_ids)
@@ -208,29 +202,10 @@ class LangevinSampler(nn.Module):
             bias = -1 * self.weight_val * (t1 - 2 * t2 + t3)
         return bias
 
-    def step_multi(self, x, energy_fn, **kwargs):
-        losses, output_ids, onehot, logits, attr_losses = energy_fn(x)
-        biases = []
-        for loss_idx, loss in enumerate(losses): 
-            if self.losses_order[loss_idx] == 'hard':
-                bias, loss, output_ids, [senti_losses] = self.step_hard(
-                    loss, output_ids, onehot, logits, attr_losses
-                )
-            else: 
-                bias, loss, output_ids, [kw_losses] = self.step_soft(
-                    loss, output_ids, onehot, logits, attr_losses
-                )
-            biases.append(bias.detach())
-        final_bias = .25 * biases[0] + .75 * biases[1]
-        return final_bias, loss, output_ids, attr_losses
-
     # wrapper for step -- just controls whether we
     # use step_soft or step_hard
     # determined by is_kw
     def step(self, x, energy_fn, **kwargs):
-        if self.is_multi: 
-            return self.step_multi(x, energy_fn, **kwargs)
-
         loss, output_ids, onehot, logits, attr_losses = energy_fn(x)
         if self.is_kw:
             return self.step_hard(loss, output_ids, onehot, logits, attr_losses)

@@ -8,7 +8,7 @@ from evaluation import *
 
 
 def exp_specific_metrics(exp, batch, **kwargs):
-    if exp == "sentiment" or exp == "multi_constraint":
+    if exp == "sentiment":
         return compute_classifier_attribute(batch, **kwargs)
     elif exp == "keywords":
         return []
