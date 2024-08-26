@@ -167,9 +167,7 @@ class LangevinSampler(nn.Module):
         )
 
     # performs the actual sampling of the bias tokens for soft constraints
-    def compute_p_lm_soft(self, cur_bias, energy_fn):
-
-        loss, output_ids, onehot, logits, senti_losses = energy_fn(cur_bias)
+    def compute_p_lm_soft(self, loss, output_ids, onehot, logits, senti_losses):
         unfiltered_dist, topk_ids = self.get_dlp_dist(loss, onehot, output_ids, logits)
         dist_logits = self._apply_filter(unfiltered_dist, topk_ids)
         proposal_dist = torch.distributions.Categorical(logits=dist_logits / self.temp)
@@ -178,8 +176,7 @@ class LangevinSampler(nn.Module):
         return loss, output_ids, sampled_tokens, senti_losses.detach().cpu().numpy()
 
     # performs the actual sampling of the bias tokens for hard constraints
-    def compute_p_lm_hard(self, cur_bias, energy_fn, kw_tokens, cur_iter):
-        loss, output_ids, onehot, logits, kw_losses = energy_fn(cur_bias)
+    def compute_p_lm_hard(self, loss, output_ids, onehot, logits, kw_losses):
         self.cur_disc_loss.append(kw_losses.mean().detach().cpu().numpy())
         unfiltered_dist, topk_ids = self.get_dlp_dist(loss, onehot, output_ids, logits)
         # ideally, this should capture the kw tokens + those that are semantically similar
@@ -208,19 +205,19 @@ class LangevinSampler(nn.Module):
     # wrapper for step -- just controls whether we
     # use step_soft or step_hard
     # determined by is_kw
-    def step(self, **kwargs):
+    def step(self, x, energy_fn, **kwargs):
+        loss, output_ids, onehot, logits, attr_losses = energy_fn(x)
         if self.is_kw:
-            return self.step_hard(**kwargs)
+            return self.step_hard(loss, output_ids, onehot, logits, attr_losses)
         else:
-            return self.step_soft(**kwargs)
+            return self.step_soft(loss, output_ids, onehot, logits, attr_losses)
 
     # Step function for soft constraints
     # x = the current bias embeddings (not the l2 penalty)
     # energy_fn = wrapper for the soft_forward function
-    def step_soft(self, x, energy_fn, **kwargs):
-        cur_bias = x
+    def step_soft(self, loss, output_ids, onehot, logits, senti_losses):
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_soft(
-            cur_bias, energy_fn
+            loss, output_ids, onehot, logits, senti_losses
         )
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
@@ -230,12 +227,11 @@ class LangevinSampler(nn.Module):
     # energy_fn = wrapper for the hard_forward function
     # kw_tokens = keyword tokens to be used for the hard constraint, dim  batch * num kw
     # cur_iter = current iteration of the sampler
-    def step_hard(self, x, energy_fn, kw_tokens, cur_iter, **kwargs):
-        cur_bias = x
+    def step_hard(self, loss, output_ids, onehot, logits, kw_losses):
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
-            cur_bias, energy_fn, kw_tokens, cur_iter
+            loss, output_ids, onehot, logits, kw_losses
         )
-        bias = self.compute_bias_l2_pen(sampled_ids, kw_tokens)
+        bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [kw_losses]
 
     # returns object for storing metrics for the sampling process
