@@ -211,23 +211,17 @@ class LangevinSampler(nn.Module):
     # determined by is_kw
     def step(self, x, energy_fn, **kwargs):
         loss, output_ids, onehot, logits, attr_losses = energy_fn(x)
-        if type(loss) == list: 
-            for l in loss: 
-                pass 
+        if self.is_kw:
+            return self.step_hard(loss, output_ids, onehot, logits, attr_losses)
         else:
-            if self.is_kw:
-                return self.step_hard(loss, output_ids, onehot, logits, attr_losses)
-            else: 
-                return self.step_soft(loss, output_ids, onehot, logits, attr_losses) 
-            
+            return self.step_soft(loss, output_ids, onehot, logits, attr_losses)
 
     # Step function for soft constraints
     # x = the current bias embeddings (not the l2 penalty)
     # energy_fn = wrapper for the soft_forward function
-    def step_soft(self, x, energy_fn, **kwargs):
-        cur_bias = x
+    def step_soft(self, loss, output_ids, onehot, logits, senti_losses):
         loss, output_ids, sampled_ids, senti_losses = self.compute_p_lm_soft(
-            cur_bias, energy_fn
+            loss, output_ids, onehot, logits, senti_losses
         )
         bias = self.compute_bias_l2_pen(sampled_ids)
         return bias, loss, output_ids, [senti_losses]
@@ -237,21 +231,11 @@ class LangevinSampler(nn.Module):
     # energy_fn = wrapper for the hard_forward function
     # kw_tokens = keyword tokens to be used for the hard constraint, dim  batch * num kw
     # cur_iter = current iteration of the sampler
-    def step_hard(self, x, energy_fn, **kwargs):
-        cur_bias = x
+    def step_hard(self, loss, output_ids, onehot, logits, kw_losses):
         loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
-            cur_bias, energy_fn
+            loss, output_ids, onehot, logits, kw_losses
         )
         bias = self.compute_bias_l2_pen(sampled_ids)
-        bias = bias * self.weight_val
-        return bias, loss, output_ids, [kw_losses]
-    
-    def step_multi(self, x, energy_fn, kw_tokens, cur_iter, **kwargs):
-        cur_bias = x
-        loss, output_ids, sampled_ids, kw_losses = self.compute_p_lm_hard(
-            cur_bias, energy_fn, kw_tokens, cur_iter
-        )
-        bias = self.compute_bias_l2_pen(sampled_ids, kw_tokens)
         return bias, loss, output_ids, [kw_losses]
 
     # returns object for storing metrics for the sampling process
