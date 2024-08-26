@@ -70,7 +70,7 @@ class LangevinSampler(nn.Module):
             prompt_length=prompt_length,
             attribute=sentiment,
             device=self.device,
-            disc_weight=self.disc_weight,
+            disc_weight=self.weight_val,
             use_scale_weights=self.use_scale_weights,
             use_bolt_weights=self.use_bolt_weights,
         )
@@ -236,7 +236,6 @@ class LangevinSampler(nn.Module):
             cur_bias, energy_fn, kw_tokens, cur_iter
         )
         bias = self.compute_bias_l2_pen(sampled_ids, kw_tokens)
-        bias = bias * self.weight_val
         return bias, loss, output_ids, [kw_losses]
 
     # returns object for storing metrics for the sampling process

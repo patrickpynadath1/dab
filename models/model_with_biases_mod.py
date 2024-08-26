@@ -227,6 +227,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     weight=weight,
                     use_bolt_weights=self.use_bolt_weights,
                     use_scale_weights=self.use_scale_weights,
+                    disc_weight=self.disc_weight,
                 )
             else:
                 (
@@ -254,6 +255,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     weight=weight,
                     use_bolt_weights=self.use_bolt_weights,
                     use_scale_weights=self.use_scale_weights,
+                    disc_weight=self.disc_weight,
                 )
         else:
             if use_full_prompt:
@@ -284,6 +286,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     weight=weight,
                     use_bolt_weights=self.use_bolt_weights,
                     use_scale_weights=self.use_scale_weights,
+                    disc_weight=self.disc_weight,
                 )
             else:
                 (
@@ -312,6 +315,7 @@ class GPTPromptTuningWithbiasesModelMixin:
                     weight=weight,
                     use_bolt_weights=self.use_bolt_weights,
                     use_scale_weights=self.use_scale_weights,
+                    disc_weight=self.disc_weight,
                 )
 
         dis_embs = torch.matmul(
