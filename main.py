@@ -88,7 +88,7 @@ if __name__ == "__main__":
             open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
         )
         print(f"num of sentences {len(gen_sentences)}")
-        cur_batch = gen_sentences[args.start_idx : args.end_idx]
+        cur_batch = gen_sentences
         if args.exp == "detoxify":
             compute_perspective_scores(
                 cur_batch,

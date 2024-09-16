@@ -19,7 +19,7 @@ def detoxify_loop(total_conf):
     ).to(total_conf["device"])
     discriminator = load_toxicity_discriminator().to(total_conf["device"])
     tokenizer = load_tokenizer()
-    model.init_discriminator(discriminator)
+    model.init_discriminator(discriminator, is_detoxic=True)
 
     # ### ADDITIONAL CONFIGS
     # total_conf['sentiment'] = "non_toxic"
@@ -97,5 +97,6 @@ def detoxify_loop(total_conf):
         torch.cuda.empty_cache()
         total_sentences.extend(stored_sentence)
         output_file.write("\n".join(stored_sentence))
+        output_file.write("\n\n")
         output_file.flush()
     return total_conf, total_sentences

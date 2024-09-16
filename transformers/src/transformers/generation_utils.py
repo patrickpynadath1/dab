@@ -3570,7 +3570,7 @@ class GenerationMixin:
         seq_len=50,
         is_dlp=False,
         use_bolt_weights=True,
-        use_scale_weigths=False,
+        use_scale_weights=False,
         disc_weight=1,
         **model_kwargs,
     ) -> Union[GreedySearchOutput, torch.LongTensor]:
@@ -3798,10 +3798,6 @@ class GenerationMixin:
             )
             next_tokens_scores = len_logits_processor(input_ids, next_tokens_scores)
 
-            # diable \n
-            next_tokens_scores[:, 198] = -float("inf")
-            next_tokens_scores[:, 628] = -float("inf")
-
             logits_before_adding_seq = torch.cat(
                 (logits_before_adding_seq, next_tokens_scores.unsqueeze(1)), dim=1
             )
@@ -3813,19 +3809,23 @@ class GenerationMixin:
                     weight = trainable_weights[cur_len]
                 else:
                     weight = 1
+            # diable \n
+            next_tokens_scores[:, 198] = -float("inf")
+            next_tokens_scores[:, 628] = -float("inf")
+
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
-            if use_scale_weigths:
-                logit_norms = next_tokens_scores.norm(dim=-1, p=2) 
-                bias_norms = biases[:, bias_idx, :].norm(dim=-1, p=2)
-                scaling_ratio = logit_norms / bias_norms
+            if use_scale_weights and biases.mean().item() != 0:
+                logit_norms = outputs.logits[:, -1, :].detach().norm(dim=-1, p=2) 
+                bias_norms = biases[:, bias_idx, :].detach().norm(dim=-1, p=2)
+                scaling_ratio = (logit_norms / bias_norms).unsqueeze(-1)
             else: 
                 scaling_ratio = 1
 
             if not use_hidden_states_biases:
                 if is_dlp:
                     next_tokens_scores = (
-                        next_tokens_scores + disc_weight * weight * biases[:, bias_idx, :]
+                        next_tokens_scores + disc_weight * weight * scaling_ratio * biases[:, bias_idx, :]
                     )
                 else:
                     next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]

@@ -19,94 +19,75 @@ from tqdm import tqdm
 from .perspective_api import PerspectiveAPI
 import json
 from torch.nn import CrossEntropyLoss
-
+import json 
+import pandas as pd
 perplexity = load("perplexity", module_type="metric")
 
+def convert_to_json(sentences, prompts, outfile): 
+    res = []
+    for p_idx, prompt in enumerate(prompts):
+        prompt_to_use = prompt.replace("\n", "")
+        cur_prompt_dct = {'prompt': {"text": prompt_to_use}, 'generations': []}
+        for s_idx, sentence in enumerate(sentences):
+            if prompt_to_use in sentence: 
+                sentence_to_use = sentence.replace("\n", "").replace(prompt_to_use, "")
+                cur_prompt_dct['generations'].append({"text": sentence_to_use})
+        res.append(cur_prompt_dct)
 
-def compute_perplexity_explicit(
-    predictions, batch_size: int = 16, add_start_token: bool = True, device='cuda', max_length=None
-):
+    with open(outfile, 'w') as f: 
+        for d in res: 
+            f.write(json.dumps(d) + "\n")
+    print("Reformatted text to json")
+            
 
 
-    model = GPT2LMHeadModel.from_pretrained('gpt2-xl')
-    model = model.to(device)
-    print(model.num_parameters())
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2-xl')
+def conditional_perplexity(loc_to_read, 
+                           model, 
+                           tokenizer, 
+                           device='cuda'):
+    perplexities = []
+    goodperplexities = []
+    total_nll = 0
+    total_tokens = 0
+    g = 0
+    ct = 0
+    generations_df = pd.read_json(open(loc_to_read, 'r'), lines=True)
 
-    # if batch_size > 1 (which generally leads to padding being required), and
-    # if there is not an already assigned pad_token, assign an existing
-    # special token to also be the padding token
-    if tokenizer.pad_token is None and batch_size > 1:
-        existing_special_tokens = list(tokenizer.special_tokens_map_extended.values())
-        # check that the model already has at least one special token defined
-        assert (
-            len(existing_special_tokens) > 0
-        ), "If batch_size > 1, model must have at least one special token to use for padding. Please use a different model or set batch_size=1."
-        # assign one of the special tokens to also be the pad token
-        tokenizer.add_special_tokens({"pad_token": existing_special_tokens[0]})
+    # for every prompt
+    for i, row in tqdm(generations_df.iterrows(), total=len(generations_df.index), desc='Evaluating PPL'):
+        # prompt_input_ids = torch.LongTensor([row.prompt['tokens']]).to(device)
+        prompt = row.prompt['text']
+        prompt_input_ids = tokenizer.encode(row.prompt['text'], return_tensors='pt').to(device)
+        if not (prompt_input_ids.shape[1] == 1 and prompt_input_ids[0].tolist()[0] == tokenizer.bos_token_id): # this means unconditional, prompt is BOS token (verify)
+            prompt_loss = model(prompt_input_ids, labels=prompt_input_ids)[0] * (prompt_input_ids.shape[1]-1)
+            # print("in")
+        else:
+            prompt_loss = 0
+            # print("out")
+        # for every generation conditioned on the prompt
+        generations = [gen['text'] for gen in row['generations']]
+        # for gen_ids in generations:
+        for gen in generations:
 
-    if add_start_token and max_length:
-        # leave room for <BOS> token to be added:
-        assert (
-            tokenizer.bos_token is not None
-        ), "Input model must already have a BOS token if using add_start_token=True. Please use a different model, or set add_start_token=False"
-        max_tokenized_len = max_length - 1
-    else:
-        max_tokenized_len = max_length
+            # full_input_ids = torch.LongTensor([row.prompt['tokens'] + gen_ids]).to(device)
+            full_input_ids = tokenizer.encode(f'{prompt}{gen}', return_tensors='pt').to(device)
+            # print(f'{prompt}{gen}')
+            # print(full_input_ids)
+            full_loss = model(full_input_ids, labels=full_input_ids)[0] * (full_input_ids.shape[1]-1)
+            loss = (full_loss - prompt_loss) / (full_input_ids.shape[1] - prompt_input_ids.shape[1])
 
-    encodings = tokenizer(
-        predictions,
-        add_special_tokens=False,
-        padding=True,
-        truncation=True if max_tokenized_len else False,
-        max_length=max_tokenized_len,
-        return_tensors="pt",
-        return_attention_mask=True,
-    ).to(device)
+            ppl = np.exp(loss.item())
+            # print(ppl)
+            # input()
+            if ppl < 100:   # for sanity
+                goodperplexities.append(ppl)
+                g += 1
 
-    encoded_texts = encodings["input_ids"]
-    attn_masks = encodings["attention_mask"]
-
-    # check that each input is long enough:
-    if add_start_token:
-        assert torch.all(torch.ge(attn_masks.sum(1), 1)), "Each input text must be at least one token long."
-    else:
-        assert torch.all(
-            torch.ge(attn_masks.sum(1), 2)
-        ), "When add_start_token=False, each input text must be at least two tokens long. Run with add_start_token=True if inputting strings of only one token, and remove all empty input strings."
-
-    ppls = []
-    loss_fct = CrossEntropyLoss(reduction="none")
-
-    for start_index in tqdm(range(0, len(encoded_texts), batch_size)):
-        end_index = min(start_index + batch_size, len(encoded_texts))
-        encoded_batch = encoded_texts[start_index:end_index]
-        attn_mask = attn_masks[start_index:end_index]
-
-        if add_start_token:
-            bos_tokens_tensor = torch.tensor([[tokenizer.bos_token_id]] * encoded_batch.size(dim=0)).to(device)
-            encoded_batch = torch.cat([bos_tokens_tensor, encoded_batch], dim=1)
-            attn_mask = torch.cat(
-                [torch.ones(bos_tokens_tensor.size(), dtype=torch.int64).to(device), attn_mask], dim=1
-            )
-
-        labels = encoded_batch
-
-        with torch.no_grad():
-            out_logits = model(encoded_batch, attention_mask=attn_mask).logits
-
-        shift_logits = out_logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        shift_attention_mask_batch = attn_mask[..., 1:].contiguous()
-
-        perplexity_batch = torch.exp(
-            (loss_fct(shift_logits.transpose(1, 2), shift_labels) * shift_attention_mask_batch).sum(1)
-            / shift_attention_mask_batch.sum(1)
-        )
-
-        ppls += perplexity_batch.tolist()
-
-    return {"perplexities": ppls, "mean_perplexity": np.mean(ppls)}
+            if ppl < 1e4:
+                perplexities.append(ppl)
+            total_nll += (full_loss - prompt_loss).item()
+            total_tokens += (full_input_ids.shape[1] - prompt_input_ids.shape[1])
+    return perplexities
 
 def load_cola_model(cola_model="textattack/roberta-base-CoLA"):
     print(cola_model)
@@ -215,7 +196,7 @@ def compute_perspective_scores(sentences, save_dir, start_idx, rate_limit):
     api = PerspectiveAPI(rate_limit=rate_limit)
     print(len(sentences))
     api.request_bulk(
-        sentences, output_file=f"{save_dir}/toxicity_scores_{start_idx}.json"
+        sentences, output_file=f"{save_dir}/toxicity_scores_{start_idx}.jsonl"
     )
     return
 

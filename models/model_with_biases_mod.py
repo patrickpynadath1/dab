@@ -70,6 +70,7 @@ class GPTPromptTuningWithbiasesModelMixin:
         self.disc_weight = disc_weight
         self.use_scale_weights = use_scale_weights
         self.use_bolt_weights = use_bolt_weights
+        self.attribute = attribute
         self.trainable_weights = nn.ParameterList(
             [nn.Parameter(torch.ones(1)) for i in range(seq_len + 5)]
         ).to(device)
@@ -121,10 +122,11 @@ class GPTPromptTuningWithbiasesModelMixin:
             dim=1,
         )
 
-    def init_discriminator(self, discriminator: nn.Module):
+    def init_discriminator(self, discriminator: nn.Module, is_detoxic=False):
         self.discriminator = discriminator
         self.discriminator.eval()
         self.sim_count = None
+        self.is_detoxic = is_detoxic
 
     def init_discriminator2(self, discriminator: nn.Module):
         self.discriminator2 = discriminator
@@ -324,7 +326,13 @@ class GPTPromptTuningWithbiasesModelMixin:
         senti_logits = self.discriminator(
             inputs_embeds=dis_embs, labels=self.labels.repeat(dis_embs.shape[0])
         ).logits
-        senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
+        if self.is_detoxic:
+            senti_losses = -(senti_logits[:, 0] - senti_logits[:, 1])
+        else:
+            if self.attribute == 'pos': 
+                senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
+            else: 
+                senti_losses = -(senti_logits[:, 0] - senti_logits[:, 1])
         senti_loss = torch.sum(senti_losses)
         loss = senti_loss 
 
