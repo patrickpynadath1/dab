@@ -72,6 +72,7 @@ if __name__ == "__main__":
         if args.eval_on_fin:
             eval_loop(total_conf, generated_sentences)
     elif initial_mode == "eval_only":
+        print(total_conf['keyword'])
         print(args.device)
         gen_sentences = clean_for_eval(
             open(f"{initial_prev_run_dir}/output.txt", "r").readlines()

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.distributions as dists
 import numpy as np
-
+import time 
 EPS = 1e-10
 
 
@@ -149,7 +149,6 @@ class LangevinSampler(nn.Module):
         ]
         return actual_ids
 
-    # wrapper class for getting the dlp logits over the top k tokens
     # takes care of filtering the logits
     def get_dlp_dist(self, loss, onehot, cur_token_ids, logits):
         gx = self.calc_grad(loss, onehot)

@@ -7,6 +7,7 @@ import pickle
 from evaluation import *
 from models import load_sentiment_discriminator, load_tokenizer
 
+
 def exp_specific_metrics(exp, batch, **kwargs):
     if exp == "sentiment":
         return compute_classifier_attribute(batch, **kwargs)
@@ -19,6 +20,7 @@ def exp_specific_metrics(exp, batch, **kwargs):
 
 def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=True):
     torch.cuda.set_device(total_conf["device"])
+    print(f"run dir {total_conf['prev_run_dir']}")
     cur_idx = 0
     # batch_size = total_conf['batch_size']
     batch_size = 300
@@ -29,10 +31,6 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     internal_sentiment_tokenizer = load_tokenizer()
     internal_sentiment_clf = load_sentiment_discriminator()
     sst_tok, sst_clf = load_external_sentiment("textattack/roberta-base-SST-2")
-    print(sst_tok)
-    print(sst_clf)
-    print(internal_sentiment_clf)
-    print(internal_sentiment_tokenizer)
     internal_sentiment_tokenizer.pad_token = internal_sentiment_tokenizer.eos_token
     # internal_sentiment_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # sst_tok.add_special_tokens({'pad_token': '[PAD]'})
@@ -42,6 +40,12 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     internal_sentiment_clf.to(total_conf["device"])
     sst_clf.to(total_conf["device"])
     metrics["perp"] = compute_perplexity(generated_sentences)
+    if total_conf["exp"] == "keywords":
+        prompts = open("prompts/keywords_prompts_15.txt", "r").readlines()
+        prompts = [p.replace("\n", "") for p in prompts]
+        metrics["keywords"] = bertscore_loop(generated_sentences, prompts, 
+                                             base_dir=f"keyword_ref_text", 
+                                             topic=total_conf["keyword"])
     while cur_idx < len(generated_sentences):
         print(cur_idx)
         batch = generated_sentences[cur_idx : cur_idx + batch_size]
@@ -51,34 +55,26 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
                                             ext_tokenizer=cola_tokenizer,
                                             ext_clf=cola_model)
                                 )
-        if total_conf["exp"] != "detoxify":
-            metrics[total_conf["exp"]].append(
+
+        if total_conf["exp"] == "sentiment":
+
+            metrics['internal_senti'].append(
                 exp_specific_metrics(
                     total_conf["exp"],
                     batch,
-                    ext_tokenizer=ext_senti_tokenizer,
-                    ext_clf=ext_senti_clf,
-                )
+                    ext_tokenizer=internal_sentiment_tokenizer,
+                    ext_clf=internal_sentiment_clf,
+                )            
             )
-            if total_conf["exp"] == "sentiment":
-
-                metrics['internal_senti'].append(
-                    exp_specific_metrics(
-                        total_conf["exp"],
-                        batch,
-                        ext_tokenizer=internal_sentiment_tokenizer,
-                        ext_clf=internal_sentiment_clf,
-                    )            
-                )
-                metrics['sst_senti'].append(
-                    exp_specific_metrics(
-                        total_conf["exp"],
-                        batch,
-                        ext_tokenizer=sst_tok,
-                        ext_clf=sst_clf,
-                    )            
-                )
-        else:
+            metrics['sst_senti'].append(
+                exp_specific_metrics(
+                    total_conf["exp"],
+                    batch,
+                    ext_tokenizer=sst_tok,
+                    ext_clf=sst_clf,
+                )            
+            )
+        elif total_conf["exp"] == "detoxify":
             metrics[total_conf["exp"]].append(
                 exp_specific_metrics(
                     total_conf["exp"],

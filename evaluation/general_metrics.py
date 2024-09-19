@@ -40,55 +40,6 @@ def convert_to_json(sentences, prompts, outfile):
     print("Reformatted text to json")
             
 
-
-def conditional_perplexity(loc_to_read, 
-                           model, 
-                           tokenizer, 
-                           device='cuda'):
-    perplexities = []
-    goodperplexities = []
-    total_nll = 0
-    total_tokens = 0
-    g = 0
-    ct = 0
-    generations_df = pd.read_json(open(loc_to_read, 'r'), lines=True)
-
-    # for every prompt
-    for i, row in tqdm(generations_df.iterrows(), total=len(generations_df.index), desc='Evaluating PPL'):
-        # prompt_input_ids = torch.LongTensor([row.prompt['tokens']]).to(device)
-        prompt = row.prompt['text']
-        prompt_input_ids = tokenizer.encode(row.prompt['text'], return_tensors='pt').to(device)
-        if not (prompt_input_ids.shape[1] == 1 and prompt_input_ids[0].tolist()[0] == tokenizer.bos_token_id): # this means unconditional, prompt is BOS token (verify)
-            prompt_loss = model(prompt_input_ids, labels=prompt_input_ids)[0] * (prompt_input_ids.shape[1]-1)
-            # print("in")
-        else:
-            prompt_loss = 0
-            # print("out")
-        # for every generation conditioned on the prompt
-        generations = [gen['text'] for gen in row['generations']]
-        # for gen_ids in generations:
-        for gen in generations:
-
-            # full_input_ids = torch.LongTensor([row.prompt['tokens'] + gen_ids]).to(device)
-            full_input_ids = tokenizer.encode(f'{prompt}{gen}', return_tensors='pt').to(device)
-            # print(f'{prompt}{gen}')
-            # print(full_input_ids)
-            full_loss = model(full_input_ids, labels=full_input_ids)[0] * (full_input_ids.shape[1]-1)
-            loss = (full_loss - prompt_loss) / (full_input_ids.shape[1] - prompt_input_ids.shape[1])
-
-            ppl = np.exp(loss.item())
-            # print(ppl)
-            # input()
-            if ppl < 100:   # for sanity
-                goodperplexities.append(ppl)
-                g += 1
-
-            if ppl < 1e4:
-                perplexities.append(ppl)
-            total_nll += (full_loss - prompt_loss).item()
-            total_tokens += (full_input_ids.shape[1] - prompt_input_ids.shape[1])
-    return perplexities
-
 def load_cola_model(cola_model="textattack/roberta-base-CoLA"):
     print(cola_model)
     tokenizer = RobertaTokenizerFast.from_pretrained(cola_model)

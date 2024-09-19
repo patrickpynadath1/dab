@@ -92,8 +92,8 @@ def sentiment_exp_loop(
                     x=cur_batch, model=model, energy_fn=energy_fn, inputs=inputs
                 )
                 losses_to_eval = otheroutputs[-1]
-                if i != 0: 
-                    print(f"{((new_output_ids != output_ids) * 1.0).sum()}")
+                # if i != 0: 
+                #     print(f"{((new_output_ids != output_ids) * 1.0).sum()}")
                 output_ids = new_output_ids
                 cur_prompt_output_ids.append(output_ids.tolist())
                 sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
