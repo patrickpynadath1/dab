@@ -320,6 +320,8 @@ class GPTPromptTuningWithbiasesModelMixin:
                     disc_weight=self.disc_weight,
                 )
 
+        onehot_generates = onehot_generates.detach()
+        onehot_generates.requires_grad = True
         dis_embs = torch.matmul(
             onehot_generates, self.discriminator.get_input_embeddings().weight
         )
