@@ -10,7 +10,7 @@ from utils import initialize_metric_storing
 import time
 import pickle
 import torch
-
+import itertools
 
 def load_default_conf(sampler, conf_path="configs/defaults"):
     with open(f"{conf_path}/{sampler}.yaml", "r") as f:
@@ -30,6 +30,47 @@ def load_ablation_conf(ablation_conf_path):
     return ablation_conf
 
 
+def construct_all_configs_comb(ablation_conf, base_conf, sampler, experiments, base_dir="results"):
+    # if we want to run all possible combinations
+    configs_to_run = []
+    # configuring default setting
+    for k, v in ablation_conf["default"].items():
+        base_conf[k] = v
+    
+    values_to_combined = []
+    keys_being_combined = []
+    for k, v in ablation_conf.items(): 
+        if k == "default":
+            continue
+        keys_being_combined.append(k)
+        values_to_combined.append(v["values"])
+    
+    all_combs = list(itertools.product(*values_to_combined))
+    all_keys = [tuple(keys_being_combined) for _ in range(len(all_combs))]
+    num_keys = len(keys_being_combined)
+    for exp in experiments:
+        for i, (keys, comb) in enumerate(zip(all_keys, all_combs)):
+            conf = deepcopy(base_conf)
+            conf["exp"] = exp
+            conf["sampler"] = sampler
+            if exp == "keywords":
+                conf["num_steps"] = 50
+            else:
+                conf["num_steps"] = 8
+            for i in range(num_keys):
+                conf[keys[i]] = comb[i]
+            if exp == "sentiment":
+                save_dir = initialize_metric_storing(
+                    conf, f"{base_dir}/{exp}_pos/{sampler}"
+                )
+            else:
+                save_dir = initialize_metric_storing(
+                    conf, f"{base_dir}/{exp}/{sampler}"
+                )
+            conf["prev_run_dir"] = save_dir
+            configs_to_run.append((save_dir, conf))
+    return configs_to_run
+
 # should also include making all the directories in this function
 def construct_all_configs(
     ablation_conf, base_conf, sampler, experiments, base_dir="results"
@@ -38,6 +79,8 @@ def construct_all_configs(
     # configuring default setting
     for k, v in ablation_conf["default"].items():
         base_conf[k] = v
+
+         
     # configuring params to ablate over
     for exp in experiments:
         for ablation_k, ablation_v in ablation_conf.items():
@@ -65,11 +108,12 @@ def construct_all_configs(
     return configs_to_run
 
 
-def worker_writing_data(data_queue):
+def worker_writing_data(data_queue, done_queue):
     (save_dir, data) = data_queue.get()
     with open(save_dir, "wb") as f:
         pickle.dump(data, f)
     print(f"dumped data for {save_dir}")
+    done_queue.put(1)
     return
 
 
@@ -113,6 +157,7 @@ def run_ablations(all_conf, avail_gpus, jobs_per_gpu):
     gpu_queue = m.Queue()
     jobs_queue = m.Queue()
     to_save_queue = m.Queue()
+    done_queue = m.Queue()
     for gpu_id in avail_gpus:
         for _ in range(jobs_per_gpu):
             gpu_queue.put(int(gpu_id))
@@ -124,9 +169,12 @@ def run_ablations(all_conf, avail_gpus, jobs_per_gpu):
         # the only break condition -- we only want to break
         # once all the metrics are stored and there are no more jobs
         if to_save_queue.empty() and jobs_queue.empty():
-            break
+            if done_queue.qsize() == len(all_conf):
+                break
+            else: 
+                time.sleep(5)
         if not to_save_queue.empty():
-            pool.apply_async(worker_writing_data, args=(to_save_queue,))
+            pool.apply_async(worker_writing_data, args=(to_save_queue,done_queue))
 
         # if there are gpus and jobs, run the job
         if not jobs_queue.empty() and not gpu_queue.empty():
@@ -138,6 +186,7 @@ def run_ablations(all_conf, avail_gpus, jobs_per_gpu):
             time.sleep(0.1)
         if not jobs_queue.empty() and gpu_queue.empty():
             time.sleep(5)
+        
     pool.close()
     # res = pool.map(run_exp, [(c[0], c[1], gpu_queue) for c in all_conf])
     return
@@ -151,6 +200,8 @@ if __name__ == "__main__":
     parser.add_argument("--sampler", type=str, required=True)
     parser.add_argument("--save_dir", type=str, required=False, default="results")
     parser.add_argument("--jobs_per_gpu", type=int, default=1)
+    parser.add_argument("--do_all_combs", action="store_true") # argument for performing 
+    # every single permutation of the ablation config
     args = parser.parse_args()
 
     ablation_conf = load_ablation_conf(args.ablation_conf)
@@ -159,7 +210,14 @@ if __name__ == "__main__":
     base_conf = {**base_conf, **exp_conf}
     base_conf["exp"] = args.exp
     base_conf["save_dir"] = args.save_dir
-    all_configs = construct_all_configs(
-        ablation_conf, base_conf, args.sampler, experiments=args.exp
-    )
+    base_conf["num_prompts"] = 15
+    if args.do_all_combs: 
+        all_configs = construct_all_configs_comb(
+            ablation_conf, base_conf, args.sampler, args.exp, base_dir=args.save_dir
+        )
+    else: 
+        all_configs = construct_all_configs(
+            ablation_conf, base_conf, args.sampler, experiments=args.exp, base_dir=args.save_dir
+        )
+        print("Total Configs: ", len(all_configs))
     run_ablations(all_configs, args.gpu_ids, args.jobs_per_gpu)

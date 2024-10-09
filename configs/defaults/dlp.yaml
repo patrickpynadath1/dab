@@ -7,3 +7,4 @@ max_weight: 1.0
 use_bolt_weights: false 
 use_scale_weights: true
 initialization_noise_rate: .5
+stoch: false

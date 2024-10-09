@@ -3815,17 +3815,18 @@ class GenerationMixin:
 
 
             bias_idx = cur_len if not reverse else seq_len - cur_len
-            if use_scale_weights and biases.mean().item() != 0:
+            if use_scale_weights:
                 logit_norms = outputs.logits[:, -1, :].detach().norm(dim=-1, p=2) 
                 bias_norms = biases[:, bias_idx, :].detach().norm(dim=-1, p=2)
                 scaling_ratio = (logit_norms / bias_norms).unsqueeze(-1)
+                biases_scaled_weighted = torch.nan_to_num(biases[:, bias_idx, :] * scaling_ratio * weight, nan=0)
             else: 
                 scaling_ratio = 1
 
             if not use_hidden_states_biases:
                 if is_dlp:
                     next_tokens_scores = (
-                        next_tokens_scores + disc_weight * weight * scaling_ratio * biases[:, bias_idx, :]
+                        next_tokens_scores + disc_weight * biases_scaled_weighted
                     )
                 else:
                     next_tokens_scores = next_tokens_scores + weight * biases[bias_idx]

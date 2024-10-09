@@ -29,10 +29,6 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     internal_sentiment_tokenizer = load_tokenizer()
     internal_sentiment_clf = load_sentiment_discriminator()
     sst_tok, sst_clf = load_external_sentiment("textattack/roberta-base-SST-2")
-    print(sst_tok)
-    print(sst_clf)
-    print(internal_sentiment_clf)
-    print(internal_sentiment_tokenizer)
     internal_sentiment_tokenizer.pad_token = internal_sentiment_tokenizer.eos_token
     # internal_sentiment_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     # sst_tok.add_special_tokens({'pad_token': '[PAD]'})
@@ -42,6 +38,19 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     internal_sentiment_clf.to(total_conf["device"])
     sst_clf.to(total_conf["device"])
     metrics["perp"] = compute_perplexity(generated_sentences)
+    exp = total_conf["exp"]
+
+    prompts = open(total_conf[f"{exp}_prompts"], "r").readlines()
+    prompts = [p.replace("\n", "") for p in prompts]
+    grouped_gens = group_gens_by_prompt(clean_for_eval(generated_sentences), prompts)
+    # for p_idx, prompt in enumerate(prompts):
+    #     cur_gens = grouped_gens[p_idx]
+    #     # first, need to remove prompt from each gen
+    #     cur_gens = [gen.replace(prompt, "") for gen in cur_gens]
+    #     cur_gens = [gen.replace("\n", "") for gen in cur_gens]
+
+    #     # pass to self bleu 
+    #     metrics["self_bleu"].append(calc_self_bleu(cur_gens))
     while cur_idx < len(generated_sentences):
         print(cur_idx)
         batch = generated_sentences[cur_idx : cur_idx + batch_size]

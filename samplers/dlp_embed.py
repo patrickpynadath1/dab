@@ -48,6 +48,7 @@ class LangevinSampler(nn.Module):
         self.max_unnorm = []
         self.disc_loss = []
         self.cur_disc_loss = None
+        self.stoch = kwargs.get("stoch", None)
 
     def initialize_batch(
         self,
@@ -112,6 +113,7 @@ class LangevinSampler(nn.Module):
         self.weights = self.weight_val
         initial_bias = initial_bias.detach()
         initial_bias.requires_grad = True
+    
         return inputs, initial_bias
 
     def calc_grad(self, loss, onehot):

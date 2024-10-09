@@ -5,6 +5,7 @@ from abductive_reasoning import abductive_reasoning_loop
 from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
+import pandas as pd
 
 
 DEFAULT_PATHS = {
@@ -40,6 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--conf_file", type=str, default=None)
     parser.add_argument("--num_prompts", type=int, default=15)
     api_eval.add_argument("--rate_limit", type=int, default=60)
+    eval_only.add_argument("--file_type", type=str, default="txt")
     conf_subparser(parser, "exp")
     conf_subparser(dlp_sampler, "dlp")
     conf_subparser(bolt_sampler, "bolt")
@@ -73,9 +75,18 @@ if __name__ == "__main__":
             eval_loop(total_conf, generated_sentences)
     elif initial_mode == "eval_only":
         print(args.device)
-        gen_sentences = clean_for_eval(
-            open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
-        )
+        if args.file_type == "txt":
+            gen_sentences = clean_for_eval(
+                open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
+            )
+        else: 
+            gen_sentences = []
+            gens_df = pd.read_json(f"{initial_prev_run_dir}/output.jsonl", lines=True)
+            for i in range(len(gens_df)):
+                cur_prompt = gens_df.iloc[i]['prompt']['text']
+                for j in range(len(gens_df.iloc[i]['generations'])):
+                    gen_sentences.append(cur_prompt + gens_df.iloc[i]['generations'][j]['text'])
+            
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx : args.end_idx]
         total_conf["prev_run_dir"] = initial_prev_run_dir
