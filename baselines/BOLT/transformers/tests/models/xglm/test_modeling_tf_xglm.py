@@ -19,7 +19,12 @@ from transformers import XGLMConfig, XGLMTokenizer, is_tf_available
 from transformers.testing_utils import require_tf, slow
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_tf_common import TFModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_tf_common import (
+    TFModelTesterMixin,
+    floats_tensor,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_tf_available():
@@ -83,7 +88,9 @@ class TFXGLMModelTester:
 
     def prepare_config_and_inputs(self):
         input_ids = tf.clip_by_value(
-            ids_tensor([self.batch_size, self.seq_length], self.vocab_size), clip_value_min=0, clip_value_max=3
+            ids_tensor([self.batch_size, self.seq_length], self.vocab_size),
+            clip_value_min=0,
+            clip_value_max=3,
         )
 
         input_mask = None
@@ -187,20 +194,28 @@ class TFXGLMModelTest(TFModelTesterMixin, unittest.TestCase):
 
         inputs = tokenizer(sentences, return_tensors="tf", padding=True)
 
-        outputs = model.generate(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
+        outputs = model.generate(
+            input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]
+        )
 
         inputs_non_padded = tokenizer(sentences[0], return_tensors="tf").input_ids
         output_non_padded = model.generate(input_ids=inputs_non_padded)
 
         num_paddings = (
             inputs_non_padded.shape[-1]
-            - tf.math.reduce_sum(tf.cast(inputs["attention_mask"][-1], dtype=tf.int64)).numpy()
+            - tf.math.reduce_sum(
+                tf.cast(inputs["attention_mask"][-1], dtype=tf.int64)
+            ).numpy()
         )
         inputs_padded = tokenizer(sentences[1], return_tensors="tf").input_ids
-        output_padded = model.generate(input_ids=inputs_padded, max_length=model.config.max_length - num_paddings)
+        output_padded = model.generate(
+            input_ids=inputs_padded, max_length=model.config.max_length - num_paddings
+        )
 
         batch_out_sentence = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        non_padded_sentence = tokenizer.decode(output_non_padded[0], skip_special_tokens=True)
+        non_padded_sentence = tokenizer.decode(
+            output_non_padded[0], skip_special_tokens=True
+        )
         padded_sentence = tokenizer.decode(output_padded[0], skip_special_tokens=True)
 
         expected_output_sentence = [
@@ -208,7 +223,9 @@ class TFXGLMModelTest(TFModelTesterMixin, unittest.TestCase):
             "Today, I am going to share with you a few of my favorite things",
         ]
         self.assertListEqual(expected_output_sentence, batch_out_sentence)
-        self.assertListEqual(expected_output_sentence, [non_padded_sentence, padded_sentence])
+        self.assertListEqual(
+            expected_output_sentence, [non_padded_sentence, padded_sentence]
+        )
 
     @slow
     def test_model_from_pretrained(self):
@@ -216,7 +233,9 @@ class TFXGLMModelTest(TFModelTesterMixin, unittest.TestCase):
             model = TFXGLMModel.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
-    @unittest.skip(reason="Currently, model embeddings are going to undergo a major refactor.")
+    @unittest.skip(
+        reason="Currently, model embeddings are going to undergo a major refactor."
+    )
     def test_resize_token_embeddings(self):
         super().test_resize_token_embeddings()
 
@@ -246,9 +265,7 @@ class TFXGLMModelLanguageGenerationTest(unittest.TestCase):
         output_ids = model.generate(input_ids, do_sample=True, seed=[7, 0])
         output_str = tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
-        EXPECTED_OUTPUT_STR = (
-            "Today is a nice day and warm evening here over Southern Alberta!! Today when they closed schools due"
-        )
+        EXPECTED_OUTPUT_STR = "Today is a nice day and warm evening here over Southern Alberta!! Today when they closed schools due"
         self.assertEqual(output_str, EXPECTED_OUTPUT_STR)
 
     @slow
@@ -260,14 +277,15 @@ class TFXGLMModelLanguageGenerationTest(unittest.TestCase):
         tokenizer.padding_side = "left"
 
         generation_kwargs = {
-            "bad_words_ids": [tokenizer("is").input_ids, tokenizer("angry about").input_ids],
+            "bad_words_ids": [
+                tokenizer("is").input_ids,
+                tokenizer("angry about").input_ids,
+            ],
             "no_repeat_ngram_size": 2,
             "do_sample": False,
             "repetition_penalty": 1.3,
         }
-        expected_output_string = (
-            "Today is a beautiful day and I am so glad that we have the opportunity to spend time with"
-        )
+        expected_output_string = "Today is a beautiful day and I am so glad that we have the opportunity to spend time with"
 
         sentences = ["Today is a beautiful day and"]
         input_ids = tokenizer(sentences, return_tensors="tf", padding=True)
@@ -276,7 +294,10 @@ class TFXGLMModelLanguageGenerationTest(unittest.TestCase):
         output_strings = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
         self.assertEqual(output_strings[0], expected_output_string)
 
-        sentences = ["Today is a beautiful day and", "This is a very long input that we absolutely don't care about"]
+        sentences = [
+            "Today is a beautiful day and",
+            "This is a very long input that we absolutely don't care about",
+        ]
         input_ids = tokenizer(sentences, return_tensors="tf", padding=True)
         # longer max length to capture the full length (remember: it is left padded)
         output_ids = model.generate(**input_ids, **generation_kwargs, max_length=28)

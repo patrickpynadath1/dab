@@ -57,10 +57,19 @@ class FlavaMaskingGenerator:
         self.total_mask_patches = total_mask_patches
 
         self.mask_group_min_patches = mask_group_min_patches
-        self.mask_group_max_patches = total_mask_patches if mask_group_max_patches is None else mask_group_max_patches
+        self.mask_group_max_patches = (
+            total_mask_patches
+            if mask_group_max_patches is None
+            else mask_group_max_patches
+        )
 
-        mask_group_max_aspect_ratio = mask_group_max_aspect_ratio or 1 / mask_group_min_aspect_ratio
-        self.log_aspect_ratio = (math.log(mask_group_min_aspect_ratio), math.log(mask_group_max_aspect_ratio))
+        mask_group_max_aspect_ratio = (
+            mask_group_max_aspect_ratio or 1 / mask_group_min_aspect_ratio
+        )
+        self.log_aspect_ratio = (
+            math.log(mask_group_min_aspect_ratio),
+            math.log(mask_group_max_aspect_ratio),
+        )
 
     def __repr__(self):
         repr_str = "MaskingGenerator(%d, %d -> [%d ~ %d], max = %d, %.3f ~ %.3f)" % (
@@ -254,12 +263,17 @@ class FlavaFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
     def __call__(
         self,
         images: Union[
-            Image.Image, np.ndarray, "torch.Tensor", List[Image.Image], List[np.ndarray], List["torch.Tensor"]  # noqa
+            Image.Image,
+            np.ndarray,
+            "torch.Tensor",
+            List[Image.Image],
+            List[np.ndarray],
+            List["torch.Tensor"],  # noqa
         ],
         return_image_mask: Optional[bool] = None,
         return_codebook_pixels: Optional[bool] = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -305,7 +319,10 @@ class FlavaFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -315,26 +332,46 @@ class FlavaFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin)
 
         # transformations (resizing + center cropping + normalization)
         if self.do_resize and self.size is not None and self.resample is not None:
-            images = [self.resize(image=image, size=self.size, resample=self.resample) for image in images]
+            images = [
+                self.resize(image=image, size=self.size, resample=self.resample)
+                for image in images
+            ]
         if self.do_center_crop and self.crop_size is not None:
             images = [self.center_crop(image, self.crop_size) for image in images]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
         # return as BatchFeature
         data = {"pixel_values": images}
 
         if return_codebook_pixels:
             images = images_for_codebook
-            if self.codebook_do_resize and self.codebook_size is not None and self.codebook_resample is not None:
+            if (
+                self.codebook_do_resize
+                and self.codebook_size is not None
+                and self.codebook_resample is not None
+            ):
                 images = [
-                    self.resize(image=image, size=self.codebook_size, resample=self.codebook_resample)
+                    self.resize(
+                        image=image,
+                        size=self.codebook_size,
+                        resample=self.codebook_resample,
+                    )
                     for image in images
                 ]
             if self.codebook_do_center_crop and self.codebook_crop_size is not None:
-                images = [self.center_crop(image, self.codebook_crop_size) for image in images]
+                images = [
+                    self.center_crop(image, self.codebook_crop_size) for image in images
+                ]
             if self.codebook_do_normalize:
                 images = [
-                    self.normalize(image=image, mean=self.codebook_image_mean, std=self.codebook_image_std)
+                    self.normalize(
+                        image=image,
+                        mean=self.codebook_image_mean,
+                        std=self.codebook_image_std,
+                    )
                     for image in images
                 ]
             if self.codebook_do_map_pixels:

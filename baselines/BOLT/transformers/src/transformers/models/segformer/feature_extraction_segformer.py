@@ -85,7 +85,9 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         self.size = size
         self.resample = resample
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_DEFAULT_STD
         self.reduce_labels = reduce_labels
 
@@ -138,7 +140,11 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -149,7 +155,9 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
         # Check that segmentation maps has a valid type
         if segmentation_maps is not None:
-            if isinstance(segmentation_maps, (Image.Image, np.ndarray)) or is_torch_tensor(segmentation_maps):
+            if isinstance(
+                segmentation_maps, (Image.Image, np.ndarray)
+            ) or is_torch_tensor(segmentation_maps):
                 valid_segmentation_maps = True
             elif isinstance(segmentation_maps, (list, tuple)):
                 if (
@@ -168,7 +176,10 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -190,14 +201,21 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
         # transformations (resizing + normalization)
         if self.do_resize and self.size is not None:
-            images = [self.resize(image=image, size=self.size, resample=self.resample) for image in images]
+            images = [
+                self.resize(image=image, size=self.size, resample=self.resample)
+                for image in images
+            ]
             if segmentation_maps is not None:
                 segmentation_maps = [
-                    self.resize(map, size=self.size, resample=Image.NEAREST) for map in segmentation_maps
+                    self.resize(map, size=self.size, resample=Image.NEAREST)
+                    for map in segmentation_maps
                 ]
 
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}
@@ -215,7 +233,9 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
         return encoded_inputs
 
-    def post_process_semantic_segmentation(self, outputs, target_sizes: List[Tuple] = None):
+    def post_process_semantic_segmentation(
+        self, outputs, target_sizes: List[Tuple] = None
+    ):
         """
         Converts the output of [`SegformerForSemanticSegmentation`] into semantic segmentation maps. Only supports
         PyTorch.
@@ -247,12 +267,17 @@ class SegformerFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
             for idx in range(len(logits)):
                 resized_logits = torch.nn.functional.interpolate(
-                    logits[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
+                    logits[idx].unsqueeze(dim=0),
+                    size=target_sizes[idx],
+                    mode="bilinear",
+                    align_corners=False,
                 )
                 semantic_map = resized_logits[0].argmax(dim=0)
                 semantic_segmentation.append(semantic_map)
         else:
             semantic_segmentation = logits.argmax(dim=1)
-            semantic_segmentation = [semantic_segmentation[i] for i in range(semantic_segmentation.shape[0])]
+            semantic_segmentation = [
+                semantic_segmentation[i] for i in range(semantic_segmentation.shape[0])
+            ]
 
         return semantic_segmentation

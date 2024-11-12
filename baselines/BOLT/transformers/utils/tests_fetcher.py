@@ -79,12 +79,19 @@ def get_all_tests():
     # test folders/files directly under `tests` folder
     tests = os.listdir(test_root_dir)
     tests = sorted(
-        list(filter(lambda x: os.path.isdir(x) or x.startswith("tests/test_"), [f"tests/{x}" for x in tests]))
+        list(
+            filter(
+                lambda x: os.path.isdir(x) or x.startswith("tests/test_"),
+                [f"tests/{x}" for x in tests],
+            )
+        )
     )
 
     # model specific test folders
     model_tests_folders = os.listdir(os.path.join(test_root_dir, "models"))
-    model_test_folders = sorted(list(filter(os.path.isdir, [f"tests/models/{x}" for x in model_tests_folders])))
+    model_test_folders = sorted(
+        list(filter(os.path.isdir, [f"tests/models/{x}" for x in model_tests_folders]))
+    )
 
     tests.remove("tests/models")
     tests = model_test_folders + tests
@@ -156,7 +163,9 @@ def get_diff(repo, base_commit, commits):
                 else:
                     # Otherwise, we check modifications are in code and not docstrings.
                     if diff_is_docstring_only(repo, commit, diff_obj.b_path):
-                        print(f"Ignoring diff in {diff_obj.b_path} as it only concerns docstrings or comments.")
+                        print(
+                            f"Ignoring diff in {diff_obj.b_path} as it only concerns docstrings or comments."
+                        )
                     else:
                         code_diff.append(diff_obj.a_path)
 
@@ -167,7 +176,9 @@ def get_module_dependencies(module_fname):
     """
     Get the dependencies of a module.
     """
-    with open(os.path.join(PATH_TO_TRANFORMERS, module_fname), "r", encoding="utf-8") as f:
+    with open(
+        os.path.join(PATH_TO_TRANFORMERS, module_fname), "r", encoding="utf-8"
+    ) as f:
         content = f.read()
 
     module_parts = module_fname.split(os.path.sep)
@@ -175,7 +186,9 @@ def get_module_dependencies(module_fname):
 
     # Let's start with relative imports
     relative_imports = re.findall(r"from\s+(\.+\S+)\s+import\s+([^\n]+)\n", content)
-    relative_imports = [mod for mod, imp in relative_imports if "# tests_ignore" not in imp]
+    relative_imports = [
+        mod for mod, imp in relative_imports if "# tests_ignore" not in imp
+    ]
     for imp in relative_imports:
         level = 0
         while imp.startswith("."):
@@ -195,7 +208,9 @@ def get_module_dependencies(module_fname):
     # Let's continue with direct imports
     # The import from the transformers module are ignored for the same reason we ignored the
     # main init before.
-    direct_imports = re.findall(r"from\s+transformers\.(\S+)\s+import\s+([^\n]+)\n", content)
+    direct_imports = re.findall(
+        r"from\s+transformers\.(\S+)\s+import\s+([^\n]+)\n", content
+    )
     direct_imports = [mod for mod, imp in direct_imports if "# tests_ignore" not in imp]
     for imp in direct_imports:
         import_parts = imp.split(".")
@@ -207,7 +222,9 @@ def get_module_dependencies(module_fname):
     for imported_module in imported_modules:
         if os.path.isfile(os.path.join(PATH_TO_TRANFORMERS, f"{imported_module}.py")):
             dependencies.append(f"{imported_module}.py")
-        elif os.path.isdir(os.path.join(PATH_TO_TRANFORMERS, imported_module)) and os.path.isfile(
+        elif os.path.isdir(
+            os.path.join(PATH_TO_TRANFORMERS, imported_module)
+        ) and os.path.isfile(
             os.path.sep.join([PATH_TO_TRANFORMERS, imported_module, "__init__.py"])
         ):
             dependencies.append(os.path.sep.join([imported_module, "__init__.py"]))
@@ -218,13 +235,17 @@ def get_test_dependencies(test_fname):
     """
     Get the dependencies of a test file.
     """
-    with open(os.path.join(PATH_TO_TRANFORMERS, test_fname), "r", encoding="utf-8") as f:
+    with open(
+        os.path.join(PATH_TO_TRANFORMERS, test_fname), "r", encoding="utf-8"
+    ) as f:
         content = f.read()
 
     # Tests only have relative imports for other test files
     # TODO Sylvain: handle relative imports cleanly
     relative_imports = re.findall(r"from\s+(\.\S+)\s+import\s+([^\n]+)\n", content)
-    relative_imports = [test for test, imp in relative_imports if "# tests_ignore" not in imp]
+    relative_imports = [
+        test for test, imp in relative_imports if "# tests_ignore" not in imp
+    ]
 
     def _convert_relative_import_to_file(relative_import):
         level = 0
@@ -233,10 +254,17 @@ def get_test_dependencies(test_fname):
             relative_import = relative_import[1:]
 
         directory = os.path.sep.join(test_fname.split(os.path.sep)[:-level])
-        return os.path.join(directory, f"{relative_import.replace('.', os.path.sep)}.py")
+        return os.path.join(
+            directory, f"{relative_import.replace('.', os.path.sep)}.py"
+        )
 
-    dependencies = [_convert_relative_import_to_file(relative_import) for relative_import in relative_imports]
-    return [f for f in dependencies if os.path.isfile(os.path.join(PATH_TO_TRANFORMERS, f))]
+    dependencies = [
+        _convert_relative_import_to_file(relative_import)
+        for relative_import in relative_imports
+    ]
+    return [
+        f for f in dependencies if os.path.isfile(os.path.join(PATH_TO_TRANFORMERS, f))
+    ]
 
 
 def create_reverse_dependency_tree():
@@ -249,7 +277,10 @@ def create_reverse_dependency_tree():
     ]
     module_edges = [(d, m) for m in modules for d in get_module_dependencies(m)]
 
-    tests = [str(f.relative_to(PATH_TO_TRANFORMERS)) for f in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/*.py")]
+    tests = [
+        str(f.relative_to(PATH_TO_TRANFORMERS))
+        for f in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/*.py")
+    ]
     test_edges = [(d, t) for t in tests for d in get_test_dependencies(t)]
 
     return module_edges + test_edges
@@ -267,7 +298,11 @@ def get_tree_starting_at(module, edges):
         tree.append(new_edges)
         final_vertices = list(set(edge[1] for edge in new_edges))
         vertices_seen.extend(final_vertices)
-        new_edges = [edge for edge in edges if edge[0] in final_vertices and edge[1] not in vertices_seen]
+        new_edges = [
+            edge
+            for edge in edges
+            if edge[0] in final_vertices and edge[1] not in vertices_seen
+        ]
 
     return tree
 
@@ -293,7 +328,11 @@ def print_tree_deps_of(module, all_edges=None):
             pos = 0
             while lines[pos][1] != start:
                 pos += 1
-            lines = lines[: pos + 1] + [(" " * (2 * index) + end, end) for end in end_edges] + lines[pos + 1 :]
+            lines = (
+                lines[: pos + 1]
+                + [(" " * (2 * index) + end, end) for end in end_edges]
+                + lines[pos + 1 :]
+            )
 
     for line in lines:
         # We don't print the refs that where just here to help build lines.
@@ -313,7 +352,10 @@ def create_reverse_dependency_map():
     direct_deps = {m: get_module_dependencies(m) for m in modules}
 
     # We add all the dependencies of each test file
-    tests = [str(f.relative_to(PATH_TO_TRANFORMERS)) for f in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/*.py")]
+    tests = [
+        str(f.relative_to(PATH_TO_TRANFORMERS))
+        for f in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/*.py")
+    ]
     direct_deps.update({t: get_test_dependencies(t) for t in tests})
 
     all_files = modules + tests
@@ -353,11 +395,18 @@ SPECIAL_MODULE_TO_TEST_MAP = {
     "feature_extraction_sequence_utils.py": "test_sequence_feature_extraction_common.py",
     "feature_extraction_utils.py": "test_feature_extraction_common.py",
     "file_utils.py": ["utils/test_file_utils.py", "utils/test_model_output.py"],
-    "utils/generic.py": ["utils/test_file_utils.py", "utils/test_model_output.py", "utils/test_generic.py"],
+    "utils/generic.py": [
+        "utils/test_file_utils.py",
+        "utils/test_model_output.py",
+        "utils/test_generic.py",
+    ],
     "utils/hub.py": "utils/test_file_utils.py",
     "modelcard.py": "utils/test_model_card.py",
     "modeling_flax_utils.py": "test_modeling_flax_common.py",
-    "modeling_tf_utils.py": ["test_modeling_tf_common.py", "utils/test_modeling_tf_core.py"],
+    "modeling_tf_utils.py": [
+        "test_modeling_tf_common.py",
+        "utils/test_modeling_tf_core.py",
+    ],
     "modeling_utils.py": ["test_modeling_common.py", "utils/test_offline.py"],
     "models/auto/modeling_auto.py": [
         "models/auto/test_modeling_auto.py",
@@ -386,8 +435,14 @@ SPECIAL_MODULE_TO_TEST_MAP = {
     ],
     "pipelines/zero_shot_classification.py": "pipelines/test_pipelines_zero_shot.py",
     "testing_utils.py": "utils/test_skip_decorators.py",
-    "tokenization_utils.py": ["test_tokenization_common.py", "tokenization/test_tokenization_utils.py"],
-    "tokenization_utils_base.py": ["test_tokenization_common.py", "tokenization/test_tokenization_utils.py"],
+    "tokenization_utils.py": [
+        "test_tokenization_common.py",
+        "tokenization/test_tokenization_utils.py",
+    ],
+    "tokenization_utils_base.py": [
+        "test_tokenization_common.py",
+        "tokenization/test_tokenization_utils.py",
+    ],
     "tokenization_utils_fast.py": [
         "test_tokenization_common.py",
         "tokenization/test_tokenization_utils.py",
@@ -428,13 +483,20 @@ def module_to_test_file(module_fname):
         default_test_file = f"tests/pipelines/test_pipelines_{module_name}"
     # Special case for benchmarks submodules
     elif len(splits) >= 2 and splits[-2] == "benchmark":
-        return ["tests/benchmark/test_benchmark.py", "tests/benchmark/test_benchmark_tf.py"]
+        return [
+            "tests/benchmark/test_benchmark.py",
+            "tests/benchmark/test_benchmark_tf.py",
+        ]
     # Special case for commands submodules
     elif len(splits) >= 2 and splits[-2] == "commands":
         return "tests/utils/test_cli.py"
     # Special case for onnx submodules
     elif len(splits) >= 2 and splits[-2] == "onnx":
-        return ["tests/onnx/test_features.py", "tests/onnx/test_onnx.py", "tests/onnx/test_onnx_v2.py"]
+        return [
+            "tests/onnx/test_features.py",
+            "tests/onnx/test_onnx.py",
+            "tests/onnx/test_onnx_v2.py",
+        ]
     # Special case for utils (not the one in src/transformers, the ones at the root of the repo).
     elif len(splits) > 0 and splits[0] == "utils":
         default_test_file = f"tests/repo_utils/test_{module_name}"
@@ -484,7 +546,8 @@ def sanity_check():
         for p in (Path(PATH_TO_TRANFORMERS) / "src/transformers").glob("**/*.py")
     ]
     all_files += [
-        str(p.relative_to(PATH_TO_TRANFORMERS)) for p in (Path(PATH_TO_TRANFORMERS) / "utils").glob("**/*.py")
+        str(p.relative_to(PATH_TO_TRANFORMERS))
+        for p in (Path(PATH_TO_TRANFORMERS) / "utils").glob("**/*.py")
     ]
 
     # Compute all the test files we get from those.
@@ -512,11 +575,14 @@ def sanity_check():
 
     # Compare to existing test files
     existing_test_files = [
-        str(p.relative_to(PATH_TO_TRANFORMERS)) for p in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/test*.py")
+        str(p.relative_to(PATH_TO_TRANFORMERS))
+        for p in (Path(PATH_TO_TRANFORMERS) / "tests").glob("**/test*.py")
     ]
     not_touched_test_files = [f for f in existing_test_files if f not in test_files]
 
-    should_be_tested = set(not_touched_test_files) - set(EXPECTED_TEST_FILES_NEVER_TOUCHED)
+    should_be_tested = set(not_touched_test_files) - set(
+        EXPECTED_TEST_FILES_NEVER_TOUCHED
+    )
     if len(should_be_tested) > 0:
         raise ValueError(
             "The following test files are not currently associated with any module or utils files, which means they "
@@ -528,8 +594,12 @@ def sanity_check():
         )
 
 
-def infer_tests_to_run(output_file, diff_with_last_commit=False, filters=None, json_output_file=None):
-    modified_files = get_modified_python_files(diff_with_last_commit=diff_with_last_commit)
+def infer_tests_to_run(
+    output_file, diff_with_last_commit=False, filters=None, json_output_file=None
+):
+    modified_files = get_modified_python_files(
+        diff_with_last_commit=diff_with_last_commit
+    )
     print(f"\n### MODIFIED FILES ###\n{_print_list(modified_files)}")
 
     # Create the map that will give us all impacted modules.
@@ -570,11 +640,15 @@ def infer_tests_to_run(output_file, diff_with_last_commit=False, filters=None, j
         # Remove duplicates
         test_files_to_run = sorted(list(set(test_files_to_run)))
         # Make sure we did not end up with a test file that was removed
-        test_files_to_run = [f for f in test_files_to_run if os.path.isfile(f) or os.path.isdir(f)]
+        test_files_to_run = [
+            f for f in test_files_to_run if os.path.isfile(f) or os.path.isdir(f)
+        ]
         if filters is not None:
             filtered_files = []
             for filter in filters:
-                filtered_files.extend([f for f in test_files_to_run if f.startswith(filter)])
+                filtered_files.extend(
+                    [f for f in test_files_to_run if f.startswith(filter)]
+                )
             test_files_to_run = filtered_files
 
     print(f"\n### TEST TO RUN ###\n{_print_list(test_files_to_run)}")
@@ -622,10 +696,15 @@ def infer_tests_to_run(output_file, diff_with_last_commit=False, filters=None, j
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--sanity_check", action="store_true", help="Only test that all tests and modules are accounted for."
+        "--sanity_check",
+        action="store_true",
+        help="Only test that all tests and modules are accounted for.",
     )
     parser.add_argument(
-        "--output_file", type=str, default="test_list.txt", help="Where to store the list of tests to run"
+        "--output_file",
+        type=str,
+        default="test_list.txt",
+        help="Where to store the list of tests to run",
     )
     parser.add_argument(
         "--json_output_file",
@@ -660,7 +739,11 @@ if __name__ == "__main__":
         repo = Repo(PATH_TO_TRANFORMERS)
 
         diff_with_last_commit = args.diff_with_last_commit
-        if not diff_with_last_commit and not repo.head.is_detached and repo.head.ref == repo.refs.main:
+        if (
+            not diff_with_last_commit
+            and not repo.head.is_detached
+            and repo.head.ref == repo.refs.main
+        ):
             print("main branch detected, fetching tests against last commit.")
             diff_with_last_commit = True
 
@@ -672,7 +755,9 @@ if __name__ == "__main__":
                 json_output_file=args.json_output_file,
             )
         except Exception as e:
-            print(f"\nError when trying to grab the relevant tests: {e}\n\nRunning all tests.")
+            print(
+                f"\nError when trying to grab the relevant tests: {e}\n\nRunning all tests."
+            )
             with open(args.output_file, "w", encoding="utf-8") as f:
                 if args.filters is None:
                     f.write("./tests/")

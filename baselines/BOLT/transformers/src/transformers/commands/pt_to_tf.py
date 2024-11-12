@@ -109,7 +109,9 @@ class PTtoTFCommand(BaseTransformersCLICommand):
             help="Optional flag to create new TensorFlow weights, even if they already exist.",
         )
         train_parser.add_argument(
-            "--no-pr", action="store_true", help="Optional flag to NOT open a PR with converted weights."
+            "--no-pr",
+            action="store_true",
+            help="Optional flag to NOT open a PR with converted weights.",
         )
         train_parser.add_argument(
             "--push",
@@ -157,7 +159,9 @@ class PTtoTFCommand(BaseTransformersCLICommand):
                     else:
                         branch_name = root_name + f"[{i}]"
                         tf_item = tf_out[i]
-                    differences = _find_pt_tf_differences(pt_item, tf_item, differences, branch_name)
+                    differences = _find_pt_tf_differences(
+                        pt_item, tf_item, differences, branch_name
+                    )
 
             return differences
 
@@ -172,7 +176,7 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         no_pr: bool,
         push: bool,
         extra_commit_description: str,
-        *args
+        *args,
     ):
         self._logger = logging.get_logger("transformers-cli/pt_to_tf")
         self._model_name = model_name
@@ -189,23 +193,32 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         """
 
         def _get_audio_input():
-            ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            ds = load_dataset(
+                "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+            )
             speech_samples = ds.sort("id").select(range(2))[:2]["audio"]
             raw_samples = [x["array"] for x in speech_samples]
             return raw_samples
 
-        model_forward_signature = set(inspect.signature(pt_model.forward).parameters.keys())
+        model_forward_signature = set(
+            inspect.signature(pt_model.forward).parameters.keys()
+        )
         processor_inputs = {}
         if "input_ids" in model_forward_signature:
             processor_inputs.update(
                 {
-                    "text": ["Hi there!", "I am a batch with more than one row and different input lengths."],
+                    "text": [
+                        "Hi there!",
+                        "I am a batch with more than one row and different input lengths.",
+                    ],
                     "padding": True,
                     "truncation": True,
                 }
             )
         if "pixel_values" in model_forward_signature:
-            sample_images = load_dataset("cifar10", "plain_text", split="test")[:2]["img"]
+            sample_images = load_dataset("cifar10", "plain_text", split="test")[:2][
+                "img"
+            ]
             processor_inputs.update({"images": sample_images})
         if "input_features" in model_forward_signature:
             processor_inputs.update({"raw_speech": _get_audio_input(), "padding": True})
@@ -215,7 +228,10 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         model_config_class = type(pt_model.config)
         if model_config_class in PROCESSOR_MAPPING:
             processor = AutoProcessor.from_pretrained(self._local_dir)
-            if model_config_class in TOKENIZER_MAPPING and processor.tokenizer.pad_token is None:
+            if (
+                model_config_class in TOKENIZER_MAPPING
+                and processor.tokenizer.pad_token is None
+            ):
                 processor.tokenizer.pad_token = processor.tokenizer.eos_token
         elif model_config_class in FEATURE_EXTRACTOR_MAPPING:
             processor = AutoFeatureExtractor.from_pretrained(self._local_dir)
@@ -224,16 +240,24 @@ class PTtoTFCommand(BaseTransformersCLICommand):
             if processor.pad_token is None:
                 processor.pad_token = processor.eos_token
         else:
-            raise ValueError(f"Unknown data processing type (model config type: {model_config_class})")
+            raise ValueError(
+                f"Unknown data processing type (model config type: {model_config_class})"
+            )
 
         pt_input = processor(**processor_inputs, return_tensors="pt")
         tf_input = processor(**processor_inputs, return_tensors="tf")
 
         # Extra input requirements, in addition to the input modality
-        if config.is_encoder_decoder or (hasattr(pt_model, "encoder") and hasattr(pt_model, "decoder")):
-            decoder_input_ids = np.asarray([[1], [1]], dtype=int) * (pt_model.config.decoder_start_token_id or 0)
+        if config.is_encoder_decoder or (
+            hasattr(pt_model, "encoder") and hasattr(pt_model, "decoder")
+        ):
+            decoder_input_ids = np.asarray([[1], [1]], dtype=int) * (
+                pt_model.config.decoder_start_token_id or 0
+            )
             pt_input.update({"decoder_input_ids": torch.tensor(decoder_input_ids)})
-            tf_input.update({"decoder_input_ids": tf.convert_to_tensor(decoder_input_ids)})
+            tf_input.update(
+                {"decoder_input_ids": tf.convert_to_tensor(decoder_input_ids)}
+            )
 
         return pt_input, tf_input
 
@@ -257,16 +281,24 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         if architectures is None:  # No architecture defined -- use auto classes
             pt_class = getattr(import_module("transformers"), "AutoModel")
             tf_class = getattr(import_module("transformers"), "TFAutoModel")
-            self._logger.warning("No detected architecture, using AutoModel/TFAutoModel")
+            self._logger.warning(
+                "No detected architecture, using AutoModel/TFAutoModel"
+            )
         else:  # Architecture defined -- use it
             if len(architectures) > 1:
-                raise ValueError(f"More than one architecture was found, aborting. (architectures = {architectures})")
+                raise ValueError(
+                    f"More than one architecture was found, aborting. (architectures = {architectures})"
+                )
             self._logger.warning(f"Detected architecture: {architectures[0]}")
             pt_class = getattr(import_module("transformers"), architectures[0])
             try:
-                tf_class = getattr(import_module("transformers"), "TF" + architectures[0])
+                tf_class = getattr(
+                    import_module("transformers"), "TF" + architectures[0]
+                )
             except AttributeError:
-                raise AttributeError(f"The TensorFlow equivalent of {architectures[0]} doesn't exist in transformers.")
+                raise AttributeError(
+                    f"The TensorFlow equivalent of {architectures[0]} doesn't exist in transformers."
+                )
 
         # Load models and acquire a basic input compatible with the model.
         pt_model = pt_class.from_pretrained(self._local_dir)
@@ -283,29 +315,55 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         tf_from_pt_outputs = tf_from_pt_model(**tf_input, output_hidden_states=True)
 
         # Confirms that cross loading PT weights into TF worked.
-        crossload_differences = self.find_pt_tf_differences(pt_outputs, tf_from_pt_outputs)
-        output_differences = {k: v for k, v in crossload_differences.items() if "hidden" not in k}
-        hidden_differences = {k: v for k, v in crossload_differences.items() if "hidden" in k}
+        crossload_differences = self.find_pt_tf_differences(
+            pt_outputs, tf_from_pt_outputs
+        )
+        output_differences = {
+            k: v for k, v in crossload_differences.items() if "hidden" not in k
+        }
+        hidden_differences = {
+            k: v for k, v in crossload_differences.items() if "hidden" in k
+        }
         if len(output_differences) == 0 and architectures is not None:
             raise ValueError(
                 f"Something went wrong -- the config file has architectures ({architectures}), but no model head"
                 " output was found. All outputs start with 'hidden'"
             )
-        max_crossload_output_diff = max(output_differences.values()) if output_differences else 0.0
+        max_crossload_output_diff = (
+            max(output_differences.values()) if output_differences else 0.0
+        )
         max_crossload_hidden_diff = max(hidden_differences.values())
-        if max_crossload_output_diff > self._max_error or max_crossload_hidden_diff > self._max_error:
+        if (
+            max_crossload_output_diff > self._max_error
+            or max_crossload_hidden_diff > self._max_error
+        ):
             raise ValueError(
                 "The cross-loaded TensorFlow model has different outputs, something went wrong!\n"
                 + f"\nList of maximum output differences above the threshold ({self._max_error}):\n"
-                + "\n".join([f"{k}: {v:.3e}" for k, v in output_differences.items() if v > self._max_error])
+                + "\n".join(
+                    [
+                        f"{k}: {v:.3e}"
+                        for k, v in output_differences.items()
+                        if v > self._max_error
+                    ]
+                )
                 + f"\n\nList of maximum hidden layer differences above the threshold ({self._max_error}):\n"
-                + "\n".join([f"{k}: {v:.3e}" for k, v in hidden_differences.items() if v > self._max_error])
+                + "\n".join(
+                    [
+                        f"{k}: {v:.3e}"
+                        for k, v in hidden_differences.items()
+                        if v > self._max_error
+                    ]
+                )
             )
 
         # Save the weights in a TF format (if needed) and confirms that the results are still good
         tf_weights_path = os.path.join(self._local_dir, TF2_WEIGHTS_NAME)
         tf_weights_index_path = os.path.join(self._local_dir, TF2_WEIGHTS_INDEX_NAME)
-        if (not os.path.exists(tf_weights_path) and not os.path.exists(tf_weights_index_path)) or self._new_weights:
+        if (
+            not os.path.exists(tf_weights_path)
+            and not os.path.exists(tf_weights_index_path)
+        ) or self._new_weights:
             tf_from_pt_model.save_pretrained(self._local_dir)
         del tf_from_pt_model  # will no longer be used, and may have a large memory footprint
 
@@ -313,22 +371,43 @@ class PTtoTFCommand(BaseTransformersCLICommand):
         tf_outputs = tf_model(**tf_input, output_hidden_states=True)
 
         conversion_differences = self.find_pt_tf_differences(pt_outputs, tf_outputs)
-        output_differences = {k: v for k, v in conversion_differences.items() if "hidden" not in k}
-        hidden_differences = {k: v for k, v in conversion_differences.items() if "hidden" in k}
+        output_differences = {
+            k: v for k, v in conversion_differences.items() if "hidden" not in k
+        }
+        hidden_differences = {
+            k: v for k, v in conversion_differences.items() if "hidden" in k
+        }
         if len(output_differences) == 0 and architectures is not None:
             raise ValueError(
                 f"Something went wrong -- the config file has architectures ({architectures}), but no model head"
                 " output was found. All outputs start with 'hidden'"
             )
-        max_conversion_output_diff = max(output_differences.values()) if output_differences else 0.0
+        max_conversion_output_diff = (
+            max(output_differences.values()) if output_differences else 0.0
+        )
         max_conversion_hidden_diff = max(hidden_differences.values())
-        if max_conversion_output_diff > self._max_error or max_conversion_hidden_diff > self._max_error:
+        if (
+            max_conversion_output_diff > self._max_error
+            or max_conversion_hidden_diff > self._max_error
+        ):
             raise ValueError(
                 "The converted TensorFlow model has different outputs, something went wrong!\n"
                 + f"\nList of maximum output differences above the threshold ({self._max_error}):\n"
-                + "\n".join([f"{k}: {v:.3e}" for k, v in output_differences.items() if v > self._max_error])
+                + "\n".join(
+                    [
+                        f"{k}: {v:.3e}"
+                        for k, v in output_differences.items()
+                        if v > self._max_error
+                    ]
+                )
                 + f"\n\nList of maximum hidden layer differences above the threshold ({self._max_error}):\n"
-                + "\n".join([f"{k}: {v:.3e}" for k, v in hidden_differences.items() if v > self._max_error])
+                + "\n".join(
+                    [
+                        f"{k}: {v:.3e}"
+                        for k, v in hidden_differences.items()
+                        if v > self._max_error
+                    ]
+                )
             )
 
         commit_message = "Update TF weights" if self._new_weights else "Add TF weights"
@@ -349,23 +428,31 @@ class PTtoTFCommand(BaseTransformersCLICommand):
                 f"Maximum conversion hidden layer difference={max_conversion_hidden_diff:.3e};\n"
             )
             if self._max_error > MAX_ERROR:
-                commit_descrition += (
-                    f"\n\nCAUTION: The maximum admissible error was manually increased to {self._max_error}!"
-                )
+                commit_descrition += f"\n\nCAUTION: The maximum admissible error was manually increased to {self._max_error}!"
             if self._extra_commit_description:
                 commit_descrition += "\n\n" + self._extra_commit_description
 
             # sharded model -> adds all related files (index and .h5 shards)
             if os.path.exists(tf_weights_index_path):
                 operations = [
-                    CommitOperationAdd(path_in_repo=TF2_WEIGHTS_INDEX_NAME, path_or_fileobj=tf_weights_index_path)
+                    CommitOperationAdd(
+                        path_in_repo=TF2_WEIGHTS_INDEX_NAME,
+                        path_or_fileobj=tf_weights_index_path,
+                    )
                 ]
                 for shard_path in tf.io.gfile.glob(self._local_dir + "/tf_model-*.h5"):
                     operations += [
-                        CommitOperationAdd(path_in_repo=os.path.basename(shard_path), path_or_fileobj=shard_path)
+                        CommitOperationAdd(
+                            path_in_repo=os.path.basename(shard_path),
+                            path_or_fileobj=shard_path,
+                        )
                     ]
             else:
-                operations = [CommitOperationAdd(path_in_repo=TF2_WEIGHTS_NAME, path_or_fileobj=tf_weights_path)]
+                operations = [
+                    CommitOperationAdd(
+                        path_in_repo=TF2_WEIGHTS_NAME, path_or_fileobj=tf_weights_path
+                    )
+                ]
 
             hub_pr_url = create_commit(
                 repo_id=self._model_name,

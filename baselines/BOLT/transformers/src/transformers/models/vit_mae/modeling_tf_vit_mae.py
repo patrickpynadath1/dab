@@ -213,7 +213,9 @@ class TFViTMAEEmbeddings(tf.keras.layers.Layer):
     def build(self, input_shape: tf.TensorShape):
         self.cls_token = self.add_weight(
             shape=(1, 1, self.config.hidden_size),
-            initializer=tf.random_normal_initializer(stddev=self.config.initializer_range),
+            initializer=tf.random_normal_initializer(
+                stddev=self.config.initializer_range
+            ),
             trainable=True,
             name="cls_token",
         )
@@ -246,10 +248,14 @@ class TFViTMAEEmbeddings(tf.keras.layers.Layer):
         len_keep = int(seq_length * (1 - self.config.mask_ratio))
 
         if noise is None:
-            noise = tf.random.uniform(shape=(batch_size, seq_length), minval=0.0, maxval=1.0)  # noise in [0, 1)
+            noise = tf.random.uniform(
+                shape=(batch_size, seq_length), minval=0.0, maxval=1.0
+            )  # noise in [0, 1)
 
         # sort noise for each sample
-        ids_shuffle = tf.argsort(noise, axis=1)  # ascend: small is keep, large is remove
+        ids_shuffle = tf.argsort(
+            noise, axis=1
+        )  # ascend: small is keep, large is remove
         ids_restore = tf.argsort(ids_shuffle, axis=1)
 
         # keep the first subset
@@ -301,9 +307,19 @@ class TFViTMAEPatchEmbeddings(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_patches = num_patches
@@ -367,19 +383,28 @@ class TFViTMAESelfAttention(tf.keras.layers.Layer):
         self.sqrt_att_head_size = math.sqrt(self.attention_head_size)
 
         self.query = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="query",
         )
         self.key = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="key"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="key",
         )
         self.value = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="value",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, tensor: tf.Tensor, batch_size: int) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size] to [batch_size, seq_length, num_attention_heads, attention_head_size]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size] to [batch_size, num_attention_heads, seq_length, attention_head_size]
         return tf.transpose(tensor, perm=[0, 2, 1, 3])
@@ -420,8 +445,14 @@ class TFViTMAESelfAttention(tf.keras.layers.Layer):
         attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
 
         # (batch_size, seq_len_q, all_head_size)
-        attention_output = tf.reshape(tensor=attention_output, shape=(batch_size, -1, self.all_head_size))
-        outputs = (attention_output, attention_probs) if output_attentions else (attention_output,)
+        attention_output = tf.reshape(
+            tensor=attention_output, shape=(batch_size, -1, self.all_head_size)
+        )
+        outputs = (
+            (attention_output, attention_probs)
+            if output_attentions
+            else (attention_output,)
+        )
 
         return outputs
 
@@ -437,11 +468,15 @@ class TFViTMAESelfOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
 
@@ -467,12 +502,17 @@ class TFViTMAEAttention(tf.keras.layers.Layer):
         training: bool = False,
     ) -> Tuple[tf.Tensor]:
         self_outputs = self.self_attention(
-            hidden_states=input_tensor, head_mask=head_mask, output_attentions=output_attentions, training=training
+            hidden_states=input_tensor,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
+            training=training,
         )
         attention_output = self.dense_output(
             hidden_states=self_outputs[0], input_tensor=input_tensor, training=training
         )
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
 
         return outputs
 
@@ -483,7 +523,9 @@ class TFViTMAEIntermediate(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.intermediate_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
 
         if isinstance(config.hidden_act, str):
@@ -504,11 +546,15 @@ class TFViTMAEOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
         hidden_states = hidden_states + input_tensor
@@ -560,9 +606,13 @@ class TFViTMAELayer(tf.keras.layers.Layer):
 
         # second residual connection is done here
         layer_output = self.vit_output(
-            hidden_states=intermediate_output, input_tensor=hidden_states, training=training
+            hidden_states=intermediate_output,
+            input_tensor=hidden_states,
+            training=training,
         )
-        outputs = (layer_output,) + attention_outputs[1:]  # add attentions if we output them
+        outputs = (layer_output,) + attention_outputs[
+            1:
+        ]  # add attentions if we output them
 
         return outputs
 
@@ -572,7 +622,10 @@ class TFViTMAEEncoder(tf.keras.layers.Layer):
     def __init__(self, config: ViTMAEConfig, **kwargs):
         super().__init__(**kwargs)
 
-        self.layer = [TFViTMAELayer(config, name=f"layer_._{i}") for i in range(config.num_hidden_layers)]
+        self.layer = [
+            TFViTMAELayer(config, name=f"layer_._{i}")
+            for i in range(config.num_hidden_layers)
+        ]
 
     def call(
         self,
@@ -606,10 +659,16 @@ class TFViTMAEEncoder(tf.keras.layers.Layer):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_attentions]
+                if v is not None
+            )
 
         return TFBaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_attentions,
         )
 
 
@@ -624,7 +683,9 @@ class TFViTMAEMainLayer(tf.keras.layers.Layer):
 
         self.embeddings = TFViTMAEEmbeddings(config, name="embeddings")
         self.encoder = TFViTMAEEncoder(config, name="encoder")
-        self.layernorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layernorm")
+        self.layernorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layernorm"
+        )
 
     def get_input_embeddings(self) -> tf.keras.layers.Layer:
         return self.embeddings.patch_embeddings
@@ -702,7 +763,12 @@ class TFViTMAEPreTrainedModel(TFPreTrainedModel):
             `Dict[str, tf.Tensor]`: The dummy inputs.
         """
         VISION_DUMMY_INPUTS = tf.random.uniform(
-            shape=(3, self.config.num_channels, self.config.image_size, self.config.image_size),
+            shape=(
+                3,
+                self.config.num_channels,
+                self.config.image_size,
+                self.config.image_size,
+            ),
             dtype=tf.float32,
         )
         return {"pixel_values": tf.constant(VISION_DUMMY_INPUTS)}
@@ -710,7 +776,9 @@ class TFViTMAEPreTrainedModel(TFPreTrainedModel):
     @tf.function(
         input_signature=[
             {
-                "pixel_values": tf.TensorSpec((None, None, None, None), tf.float32, name="pixel_values"),
+                "pixel_values": tf.TensorSpec(
+                    (None, None, None, None), tf.float32, name="pixel_values"
+                ),
             }
         ]
     )
@@ -813,7 +881,9 @@ class TFViTMAEModel(TFViTMAEPreTrainedModel):
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(VIT_MAE_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFViTMAEModelOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFViTMAEModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         pixel_values: Optional[TFModelInputType] = None,
@@ -857,8 +927,16 @@ class TFViTMAEModel(TFViTMAEPreTrainedModel):
         return outputs
 
     def serving_output(self, output: TFViTMAEModelOutput) -> TFViTMAEModelOutput:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFViTMAEModelOutput(
             last_hidden_state=output.last_hidden_state,
@@ -872,7 +950,9 @@ class TFViTMAEModel(TFViTMAEPreTrainedModel):
 class TFViTMAEDecoder(tf.keras.layers.Layer):
     def __init__(self, config, num_patches, **kwargs):
         super().__init__(**kwargs)
-        self.decoder_embed = tf.keras.layers.Dense(config.decoder_hidden_size, name="decoder_embed")
+        self.decoder_embed = tf.keras.layers.Dense(
+            config.decoder_hidden_size, name="decoder_embed"
+        )
 
         decoder_config = deepcopy(config)
         decoder_config.hidden_size = config.decoder_hidden_size
@@ -880,10 +960,13 @@ class TFViTMAEDecoder(tf.keras.layers.Layer):
         decoder_config.num_attention_heads = config.decoder_num_attention_heads
         decoder_config.intermediate_size = config.decoder_intermediate_size
         self.decoder_layers = [
-            TFViTMAELayer(decoder_config, name=f"decoder_layers.{j}") for j in range(config.decoder_num_hidden_layers)
+            TFViTMAELayer(decoder_config, name=f"decoder_layers.{j}")
+            for j in range(config.decoder_num_hidden_layers)
         ]
 
-        self.decoder_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="decoder_norm")
+        self.decoder_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="decoder_norm"
+        )
         self.decoder_pred = tf.keras.layers.Dense(
             config.patch_size**2 * config.num_channels,
             kernel_initializer=get_initializer(config.initializer_range),
@@ -895,7 +978,9 @@ class TFViTMAEDecoder(tf.keras.layers.Layer):
     def build(self, input_shape: tf.TensorShape):
         self.mask_token = self.add_weight(
             shape=(1, 1, self.config.decoder_hidden_size),
-            initializer=tf.random_normal_initializer(stddev=self.config.initializer_range),
+            initializer=tf.random_normal_initializer(
+                stddev=self.config.initializer_range
+            ),
             trainable=True,
             name="mask_token",
         )
@@ -967,8 +1052,16 @@ class TFViTMAEDecoder(tf.keras.layers.Layer):
         logits = logits[:, 1:, :]
 
         if not return_dict:
-            return tuple(v for v in [logits, all_hidden_states, all_self_attentions] if v is not None)
-        return TFViTMAEDecoderOutput(logits=logits, hidden_states=all_hidden_states, attentions=all_self_attentions)
+            return tuple(
+                v
+                for v in [logits, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
+        return TFViTMAEDecoderOutput(
+            logits=logits,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
+        )
 
 
 @add_start_docstrings(
@@ -1035,12 +1128,23 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
         num_patches_one_direction = shape_list(pixel_values)[2] // patch_size
         patchified_pixel_values = tf.reshape(
             pixel_values,
-            (batch_size, num_patches_one_direction, patch_size, num_patches_one_direction, patch_size, num_channels),
+            (
+                batch_size,
+                num_patches_one_direction,
+                patch_size,
+                num_patches_one_direction,
+                patch_size,
+                num_channels,
+            ),
         )
         patchified_pixel_values = tf.einsum("nhpwqc->nhwpqc", patchified_pixel_values)
         patchified_pixel_values = tf.reshape(
             patchified_pixel_values,
-            (batch_size, num_patches_one_direction * num_patches_one_direction, patch_size**2 * num_channels),
+            (
+                batch_size,
+                num_patches_one_direction * num_patches_one_direction,
+                patch_size**2 * num_channels,
+            ),
         )
         return patchified_pixel_values
 
@@ -1067,12 +1171,24 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
         batch_size = shape_list(patchified_pixel_values)[0]
         patchified_pixel_values = tf.reshape(
             patchified_pixel_values,
-            (batch_size, num_patches_one_direction, num_patches_one_direction, patch_size, patch_size, num_channels),
+            (
+                batch_size,
+                num_patches_one_direction,
+                num_patches_one_direction,
+                patch_size,
+                patch_size,
+                num_channels,
+            ),
         )
         patchified_pixel_values = tf.einsum("nhwpqc->nhpwqc", patchified_pixel_values)
         pixel_values = tf.reshape(
             patchified_pixel_values,
-            (batch_size, num_patches_one_direction * patch_size, num_patches_one_direction * patch_size, num_channels),
+            (
+                batch_size,
+                num_patches_one_direction * patch_size,
+                num_patches_one_direction * patch_size,
+                num_channels,
+            ),
         )
         return pixel_values
 
@@ -1096,15 +1212,21 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
             target = (target - mean) / (var + 1.0e-6) ** 0.5
 
         loss = (pred - target) ** 2
-        loss = tf.reduce_mean(loss, axis=-1)  # [batch_size, num_patches], mean loss per patch
+        loss = tf.reduce_mean(
+            loss, axis=-1
+        )  # [batch_size, num_patches], mean loss per patch
 
-        loss = tf.reduce_sum(loss * mask) / tf.reduce_sum(mask)  # mean loss on removed patches
+        loss = tf.reduce_sum(loss * mask) / tf.reduce_sum(
+            mask
+        )  # mean loss on removed patches
         loss = tf.reshape(loss, (1,))
         return loss
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(VIT_MAE_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFViTMAEForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFViTMAEForPreTrainingOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         pixel_values: Optional[TFModelInputType] = None,
@@ -1137,7 +1259,9 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
         >>> mask = outputs.mask
         >>> ids_restore = outputs.ids_restore
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.vit(
             pixel_values=pixel_values,
@@ -1153,7 +1277,9 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
         ids_restore = outputs.ids_restore
         mask = outputs.mask
 
-        decoder_outputs = self.decoder(latent, ids_restore)  # [batch_size, num_patches, patch_size**2*3]
+        decoder_outputs = self.decoder(
+            latent, ids_restore
+        )  # [batch_size, num_patches, patch_size**2*3]
         logits = decoder_outputs.logits
 
         loss = self.forward_loss(pixel_values, logits, mask)
@@ -1171,9 +1297,19 @@ class TFViTMAEForPreTraining(TFViTMAEPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFViTMAEForPreTrainingOutput) -> TFViTMAEForPreTrainingOutput:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFViTMAEForPreTrainingOutput
+    ) -> TFViTMAEForPreTrainingOutput:
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFViTMAEForPreTrainingOutput(
             logits=output.logits,

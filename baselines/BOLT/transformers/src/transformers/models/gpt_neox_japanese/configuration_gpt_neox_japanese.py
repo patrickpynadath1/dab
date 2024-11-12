@@ -83,6 +83,7 @@ class GPTNeoXJapaneseConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "gpt_neox_japanese"
 
     def __init__(

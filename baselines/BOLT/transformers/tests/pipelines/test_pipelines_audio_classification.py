@@ -32,11 +32,15 @@ from .test_pipelines_common import ANY, PipelineTestCaseMeta
 
 @is_pipeline_test
 @require_torch
-class AudioClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta):
+class AudioClassificationPipelineTests(
+    unittest.TestCase, metaclass=PipelineTestCaseMeta
+):
     model_mapping = MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
-        audio_classifier = AudioClassificationPipeline(model=model, feature_extractor=feature_extractor)
+        audio_classifier = AudioClassificationPipeline(
+            model=model, feature_extractor=feature_extractor
+        )
 
         # test with a raw waveform
         audio = np.zeros((34000,))
@@ -69,7 +73,9 @@ class AudioClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTest
         import datasets
 
         # test with a local file
-        dataset = datasets.load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        )
         audio = dataset[0]["audio"]["array"]
         output = audio_classifier(audio)
         self.assertEqual(

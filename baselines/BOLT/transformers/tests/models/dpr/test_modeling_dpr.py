@@ -27,7 +27,12 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 if is_torch_available():
     import torch
 
-    from transformers import DPRContextEncoder, DPRQuestionEncoder, DPRReader, DPRReaderTokenizer
+    from transformers import (
+        DPRContextEncoder,
+        DPRQuestionEncoder,
+        DPRReader,
+        DPRReaderTokenizer,
+    )
     from transformers.models.dpr.modeling_dpr import (
         DPR_CONTEXT_ENCODER_PRETRAINED_MODEL_ARCHIVE_LIST,
         DPR_QUESTION_ENCODER_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -95,19 +100,33 @@ class DPRModelTester:
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         sequence_labels = None
         token_labels = None
         choice_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
         config = self.get_config()
 
-        return config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        return (
+            config,
+            input_ids,
+            token_type_ids,
+            input_mask,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+        )
 
     def get_config(self):
         return DPRConfig(
@@ -126,29 +145,60 @@ class DPRModelTester:
         )
 
     def create_and_check_context_encoder(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = DPRContextEncoder(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
+        result = model(
+            input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
+        )
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.projection_dim or self.hidden_size))
+        self.parent.assertEqual(
+            result.pooler_output.shape,
+            (self.batch_size, self.projection_dim or self.hidden_size),
+        )
 
     def create_and_check_question_encoder(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = DPRQuestionEncoder(config=config)
         model.to(torch_device)
         model.eval()
-        result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
+        result = model(
+            input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
+        )
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.projection_dim or self.hidden_size))
+        self.parent.assertEqual(
+            result.pooler_output.shape,
+            (self.batch_size, self.projection_dim or self.hidden_size),
+        )
 
     def create_and_check_reader(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = DPRReader(config=config)
         model.to(torch_device)
@@ -158,8 +208,12 @@ class DPRModelTester:
             attention_mask=input_mask,
         )
 
-        self.parent.assertEqual(result.start_logits.shape, (self.batch_size, self.seq_length))
-        self.parent.assertEqual(result.end_logits.shape, (self.batch_size, self.seq_length))
+        self.parent.assertEqual(
+            result.start_logits.shape, (self.batch_size, self.seq_length)
+        )
+        self.parent.assertEqual(
+            result.end_logits.shape, (self.batch_size, self.seq_length)
+        )
         self.parent.assertEqual(result.relevance_logits.shape, (self.batch_size,))
 
     def prepare_config_and_inputs_for_common(self):
@@ -250,11 +304,15 @@ class DPRModelTest(ModelTesterMixin, unittest.TestCase):
 class DPRModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_no_head(self):
-        model = DPRQuestionEncoder.from_pretrained("facebook/dpr-question_encoder-single-nq-base", return_dict=False)
+        model = DPRQuestionEncoder.from_pretrained(
+            "facebook/dpr-question_encoder-single-nq-base", return_dict=False
+        )
         model.to(torch_device)
 
         input_ids = torch.tensor(
-            [[101, 7592, 1010, 2003, 2026, 3899, 10140, 1029, 102]], dtype=torch.long, device=torch_device
+            [[101, 7592, 1010, 2003, 2026, 3899, 10140, 1029, 102]],
+            dtype=torch.long,
+            device=torch_device,
         )  # [CLS] hello, is my dog cute? [SEP]
         output = model(input_ids)[0]  # embedding shape = (1, 768)
         # compare the actual values for a slice.
@@ -280,7 +338,9 @@ class DPRModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_reader_inference(self):
-        tokenizer = DPRReaderTokenizer.from_pretrained("facebook/dpr-reader-single-nq-base")
+        tokenizer = DPRReaderTokenizer.from_pretrained(
+            "facebook/dpr-reader-single-nq-base"
+        )
         model = DPRReader.from_pretrained("facebook/dpr-reader-single-nq-base")
         model.to(torch_device)
 
@@ -297,15 +357,47 @@ class DPRModelIntegrationTest(unittest.TestCase):
 
         # compare the actual values for a slice.
         expected_start_logits = torch.tensor(
-            [[-10.3005, -10.7765, -11.4872, -11.6841, -11.9312, -10.3002, -9.8544, -11.7378, -12.0821, -10.2975]],
+            [
+                [
+                    -10.3005,
+                    -10.7765,
+                    -11.4872,
+                    -11.6841,
+                    -11.9312,
+                    -10.3002,
+                    -9.8544,
+                    -11.7378,
+                    -12.0821,
+                    -10.2975,
+                ]
+            ],
             dtype=torch.float,
             device=torch_device,
         )
 
         expected_end_logits = torch.tensor(
-            [[-11.0684, -11.7041, -11.5397, -10.3465, -10.8791, -6.8443, -11.9959, -11.0364, -10.0096, -6.8405]],
+            [
+                [
+                    -11.0684,
+                    -11.7041,
+                    -11.5397,
+                    -10.3465,
+                    -10.8791,
+                    -6.8443,
+                    -11.9959,
+                    -11.0364,
+                    -10.0096,
+                    -6.8405,
+                ]
+            ],
             dtype=torch.float,
             device=torch_device,
         )
-        self.assertTrue(torch.allclose(outputs.start_logits[:, :10], expected_start_logits, atol=1e-4))
-        self.assertTrue(torch.allclose(outputs.end_logits[:, :10], expected_end_logits, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.start_logits[:, :10], expected_start_logits, atol=1e-4
+            )
+        )
+        self.assertTrue(
+            torch.allclose(outputs.end_logits[:, :10], expected_end_logits, atol=1e-4)
+        )

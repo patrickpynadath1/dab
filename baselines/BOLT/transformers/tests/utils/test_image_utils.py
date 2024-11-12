@@ -61,7 +61,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         self.assertTrue(np.array_equal(array1, array3.astype(np.float32) * (1 / 255.0)))
 
         # Conversion with no rescale and not channel first
-        array4 = feature_extractor.to_numpy_array(image, rescale=False, channel_first=False)
+        array4 = feature_extractor.to_numpy_array(
+            image, rescale=False, channel_first=False
+        )
         self.assertTrue(array4.dtype, np.uint8)
         self.assertEqual(array4.shape, (16, 32, 3))
         self.assertTrue(np.array_equal(array2, array4.astype(np.float32) * (1 / 255.0)))
@@ -74,7 +76,11 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         array1 = feature_extractor.to_numpy_array(array)
         self.assertTrue(array1.dtype, np.float32)
         self.assertEqual(array1.shape, (3, 16, 32))
-        self.assertTrue(np.array_equal(array1, array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0)))
+        self.assertTrue(
+            np.array_equal(
+                array1, array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0)
+            )
+        )
 
         # Same with no permute
         array2 = feature_extractor.to_numpy_array(array, channel_first=False)
@@ -89,7 +95,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         self.assertTrue(np.array_equal(array3, array.transpose(2, 0, 1)))
 
         # Force rescale to False and no channel permute
-        array4 = feature_extractor.to_numpy_array(array, rescale=False, channel_first=False)
+        array4 = feature_extractor.to_numpy_array(
+            array, rescale=False, channel_first=False
+        )
         self.assertTrue(array4.dtype, np.uint8)
         self.assertEqual(array4.shape, (16, 32, 3))
         self.assertTrue(np.array_equal(array4, array))
@@ -110,7 +118,11 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         array1 = feature_extractor.to_numpy_array(array)
         self.assertTrue(array1.dtype, np.float32)
         self.assertEqual(array1.shape, (3, 16, 32))
-        self.assertTrue(np.array_equal(array1, array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0)))
+        self.assertTrue(
+            np.array_equal(
+                array1, array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0)
+            )
+        )
 
         # Same with no permute
         array2 = feature_extractor.to_numpy_array(array, channel_first=False)
@@ -125,7 +137,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         self.assertTrue(np.array_equal(array3, array.transpose(2, 0, 1)))
 
         # Force rescale to False and no channel permute
-        array4 = feature_extractor.to_numpy_array(array, rescale=False, channel_first=False)
+        array4 = feature_extractor.to_numpy_array(
+            array, rescale=False, channel_first=False
+        )
         self.assertTrue(array4.dtype, np.uint8)
         self.assertEqual(array4.shape, (16, 32, 3))
         self.assertTrue(np.array_equal(array4, array))
@@ -170,7 +184,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         self.assertTrue(np.array_equal(np.array(image4), array))
 
         # And with floats + channel first.
-        image5 = feature_extractor.to_pil_image(array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0))
+        image5 = feature_extractor.to_pil_image(
+            array.transpose(2, 0, 1).astype(np.float32) * (1 / 255.0)
+        )
         self.assertTrue(isinstance(image5, PIL.Image.Image))
         self.assertTrue(np.array_equal(np.array(image5), array))
 
@@ -201,7 +217,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         self.assertTrue(np.array_equal(np.array(image4), array))
 
         # And with floats + channel first.
-        image5 = feature_extractor.to_pil_image(tensor.permute(2, 0, 1).float() * (1 / 255.0))
+        image5 = feature_extractor.to_pil_image(
+            tensor.permute(2, 0, 1).float() * (1 / 255.0)
+        )
         self.assertTrue(isinstance(image5, PIL.Image.Image))
         self.assertTrue(np.array_equal(np.array(image5), array))
 
@@ -223,12 +241,16 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         resized_image2 = feature_extractor.resize(array, 8)
         self.assertTrue(isinstance(resized_image2, PIL.Image.Image))
         self.assertEqual(resized_image2.size, (8, 8))
-        self.assertTrue(np.array_equal(np.array(resized_image), np.array(resized_image2)))
+        self.assertTrue(
+            np.array_equal(np.array(resized_image), np.array(resized_image2))
+        )
 
         resized_image3 = feature_extractor.resize(image, (8, 16))
         self.assertTrue(isinstance(resized_image3, PIL.Image.Image))
         self.assertEqual(resized_image3.size, (8, 16))
-        self.assertTrue(np.array_equal(np.array(resized_image1), np.array(resized_image3)))
+        self.assertTrue(
+            np.array_equal(np.array(resized_image1), np.array(resized_image3))
+        )
 
     def test_resize_image_and_array_non_default_to_square(self):
         feature_extractor = ImageFeatureExtractionMixin()
@@ -271,15 +293,21 @@ class ImageFeatureExtractionTester(unittest.TestCase):
                     if max_size is not None and max_size < size:
                         exp_w, exp_h = max_size, max_size
 
-                resized_image = feature_extractor.resize(image, size=size, default_to_square=False, max_size=max_size)
+                resized_image = feature_extractor.resize(
+                    image, size=size, default_to_square=False, max_size=max_size
+                )
                 self.assertTrue(isinstance(resized_image, PIL.Image.Image))
                 self.assertEqual(resized_image.size, (exp_w, exp_h))
 
                 # Passing an array converts it to a PIL Image.
-                resized_image2 = feature_extractor.resize(array, size=size, default_to_square=False, max_size=max_size)
+                resized_image2 = feature_extractor.resize(
+                    array, size=size, default_to_square=False, max_size=max_size
+                )
                 self.assertTrue(isinstance(resized_image2, PIL.Image.Image))
                 self.assertEqual(resized_image2.size, (exp_w, exp_h))
-                self.assertTrue(np.array_equal(np.array(resized_image), np.array(resized_image2)))
+                self.assertTrue(
+                    np.array_equal(np.array(resized_image), np.array(resized_image2))
+                )
 
     @require_torch
     def test_resize_tensor(self):
@@ -298,10 +326,14 @@ class ImageFeatureExtractionTester(unittest.TestCase):
 
         # Check we get the same results as with NumPy arrays.
         resized_image2 = feature_extractor.resize(array, 8)
-        self.assertTrue(np.array_equal(np.array(resized_image), np.array(resized_image2)))
+        self.assertTrue(
+            np.array_equal(np.array(resized_image), np.array(resized_image2))
+        )
 
         resized_image3 = feature_extractor.resize(array, (8, 16))
-        self.assertTrue(np.array_equal(np.array(resized_image1), np.array(resized_image3)))
+        self.assertTrue(
+            np.array_equal(np.array(resized_image1), np.array(resized_image3))
+        )
 
     def test_normalize_image(self):
         feature_extractor = ImageFeatureExtractionMixin()
@@ -333,16 +365,22 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         normalized_array = feature_extractor.normalize(array, mean, std)
         self.assertTrue(np.array_equal(normalized_array, expected))
 
-        normalized_array = feature_extractor.normalize(array, np.array(mean), np.array(std))
+        normalized_array = feature_extractor.normalize(
+            array, np.array(mean), np.array(std)
+        )
         self.assertTrue(np.array_equal(normalized_array, expected))
 
         # Normalize will detect automatically if channel first or channel last is used.
         array = np.random.random((3, 16, 32))
-        expected = (array - np.array(mean)[:, None, None]) / np.array(std)[:, None, None]
+        expected = (array - np.array(mean)[:, None, None]) / np.array(std)[
+            :, None, None
+        ]
         normalized_array = feature_extractor.normalize(array, mean, std)
         self.assertTrue(np.array_equal(normalized_array, expected))
 
-        normalized_array = feature_extractor.normalize(array, np.array(mean), np.array(std))
+        normalized_array = feature_extractor.normalize(
+            array, np.array(mean), np.array(std)
+        )
         self.assertTrue(np.array_equal(normalized_array, expected))
 
     @require_torch
@@ -357,16 +395,22 @@ class ImageFeatureExtractionTester(unittest.TestCase):
         normalized_tensor = feature_extractor.normalize(tensor, mean, std)
         self.assertTrue(torch.equal(normalized_tensor, expected))
 
-        normalized_tensor = feature_extractor.normalize(tensor, torch.tensor(mean), torch.tensor(std))
+        normalized_tensor = feature_extractor.normalize(
+            tensor, torch.tensor(mean), torch.tensor(std)
+        )
         self.assertTrue(torch.equal(normalized_tensor, expected))
 
         # Normalize will detect automatically if channel first or channel last is used.
         tensor = torch.rand(3, 16, 32)
-        expected = (tensor - torch.tensor(mean)[:, None, None]) / torch.tensor(std)[:, None, None]
+        expected = (tensor - torch.tensor(mean)[:, None, None]) / torch.tensor(std)[
+            :, None, None
+        ]
         normalized_tensor = feature_extractor.normalize(tensor, mean, std)
         self.assertTrue(torch.equal(normalized_tensor, expected))
 
-        normalized_tensor = feature_extractor.normalize(tensor, torch.tensor(mean), torch.tensor(std))
+        normalized_tensor = feature_extractor.normalize(
+            tensor, torch.tensor(mean), torch.tensor(std)
+        )
         self.assertTrue(torch.equal(normalized_tensor, expected))
 
     def test_center_crop_image(self):
@@ -380,7 +424,9 @@ class ImageFeatureExtractionTester(unittest.TestCase):
             self.assertTrue(isinstance(cropped_image, PIL.Image.Image))
 
             # PIL Image.size is transposed compared to NumPy or PyTorch (width first instead of height first).
-            expected_size = (size, size) if isinstance(size, int) else (size[1], size[0])
+            expected_size = (
+                (size, size) if isinstance(size, int) else (size[1], size[0])
+            )
             self.assertEqual(cropped_image.size, expected_size)
 
     def test_center_crop_array(self):
@@ -399,7 +445,11 @@ class ImageFeatureExtractionTester(unittest.TestCase):
 
             # Check result is consistent with PIL.Image.crop
             cropped_image = feature_extractor.center_crop(image, size)
-            self.assertTrue(np.array_equal(cropped_array, feature_extractor.to_numpy_array(cropped_image)))
+            self.assertTrue(
+                np.array_equal(
+                    cropped_array, feature_extractor.to_numpy_array(cropped_image)
+                )
+            )
 
     @require_torch
     def test_center_crop_tensor(self):
@@ -419,7 +469,12 @@ class ImageFeatureExtractionTester(unittest.TestCase):
 
             # Check result is consistent with PIL.Image.crop
             cropped_image = feature_extractor.center_crop(image, size)
-            self.assertTrue(torch.equal(cropped_tensor, torch.tensor(feature_extractor.to_numpy_array(cropped_image))))
+            self.assertTrue(
+                torch.equal(
+                    cropped_tensor,
+                    torch.tensor(feature_extractor.to_numpy_array(cropped_image)),
+                )
+            )
 
 
 @require_vision
@@ -434,7 +489,9 @@ class LoadImageTester(unittest.TestCase):
         )
 
     def test_load_img_rgba(self):
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
 
         img = load_image(dataset[0]["file"])  # img with mode RGBA
         img_arr = np.array(img)
@@ -445,7 +502,9 @@ class LoadImageTester(unittest.TestCase):
         )
 
     def test_load_img_la(self):
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
 
         img = load_image(dataset[1]["file"])  # img with mode LA
         img_arr = np.array(img)
@@ -456,7 +515,9 @@ class LoadImageTester(unittest.TestCase):
         )
 
     def test_load_img_l(self):
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
 
         img = load_image(dataset[2]["file"])  # img with mode L
         img_arr = np.array(img)
@@ -467,7 +528,9 @@ class LoadImageTester(unittest.TestCase):
         )
 
     def test_load_img_exif_transpose(self):
-        dataset = datasets.load_dataset("hf-internal-testing/fixtures_image_utils", "image", split="test")
+        dataset = datasets.load_dataset(
+            "hf-internal-testing/fixtures_image_utils", "image", split="test"
+        )
         img_file = dataset[3]["file"]
 
         img_without_exif_transpose = PIL.Image.open(img_file)

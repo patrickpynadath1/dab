@@ -29,7 +29,9 @@ logger = logging.get_logger(__name__)
 
 # Dynamically import the Transformers module to grab the attribute classes of the processor form their names.
 spec = importlib.util.spec_from_file_location(
-    "transformers", Path(__file__).parent / "__init__.py", submodule_search_locations=[Path(__file__).parent]
+    "transformers",
+    Path(__file__).parent / "__init__.py",
+    submodule_search_locations=[Path(__file__).parent],
 )
 transformers_module = spec.loader.load_module()
 
@@ -75,7 +77,9 @@ class ProcessorMixin(PushToHubMixin):
             # Nothing is ever going to be an instance of "AutoXxx", in that case we check the base class.
             class_name = AUTO_TO_BASE_CLASS_MAPPING.get(class_name, class_name)
             if isinstance(class_name, tuple):
-                proper_class = tuple(getattr(transformers_module, n) for n in class_name if n is not None)
+                proper_class = tuple(
+                    getattr(transformers_module, n) for n in class_name if n is not None
+                )
             else:
                 proper_class = getattr(transformers_module, class_name)
 
@@ -87,7 +91,9 @@ class ProcessorMixin(PushToHubMixin):
             setattr(self, attribute_name, arg)
 
     def __repr__(self):
-        attributes_repr = [f"- {name}: {repr(getattr(self, name))}" for name in self.attributes]
+        attributes_repr = [
+            f"- {name}: {repr(getattr(self, name))}" for name in self.attributes
+        ]
         attributes_repr = "\n".join(attributes_repr)
         return f"{self.__class__.__name__}:\n{attributes_repr}"
 
@@ -125,8 +131,13 @@ class ProcessorMixin(PushToHubMixin):
         # If we have a custom config, we copy the file defining it in the folder and set the attributes so it can be
         # loaded from the Hub.
         if self._auto_class is not None:
-            attrs = [getattr(self, attribute_name) for attribute_name in self.attributes]
-            configs = [(a.init_kwargs if isinstance(a, PreTrainedTokenizerBase) else a) for a in attrs]
+            attrs = [
+                getattr(self, attribute_name) for attribute_name in self.attributes
+            ]
+            configs = [
+                (a.init_kwargs if isinstance(a, PreTrainedTokenizerBase) else a)
+                for a in attrs
+            ]
             custom_object_save(self, save_directory, config=configs)
 
         for attribute_name in self.attributes:
@@ -146,7 +157,11 @@ class ProcessorMixin(PushToHubMixin):
 
         if push_to_hub:
             self._upload_modified_files(
-                save_directory, repo_id, files_timestamps, commit_message=commit_message, token=token
+                save_directory,
+                repo_id,
+                files_timestamps,
+                commit_message=commit_message,
+                token=token,
             )
 
     @classmethod
@@ -179,7 +194,9 @@ class ProcessorMixin(PushToHubMixin):
                 [`~feature_extraction_utils.FeatureExtractionMixin.from_pretrained`] and
                 [`~tokenization_utils_base.PreTrainedTokenizer.from_pretrained`].
         """
-        args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
+        args = cls._get_arguments_from_pretrained(
+            pretrained_model_name_or_path, **kwargs
+        )
         return cls(*args)
 
     @classmethod
@@ -214,7 +231,10 @@ class ProcessorMixin(PushToHubMixin):
         for attribute_name in cls.attributes:
             class_name = getattr(cls, f"{attribute_name}_class")
             if isinstance(class_name, tuple):
-                classes = tuple(getattr(transformers_module, n) if n is not None else None for n in class_name)
+                classes = tuple(
+                    getattr(transformers_module, n) if n is not None else None
+                    for n in class_name
+                )
                 use_fast = kwargs.get("use_fast", True)
                 if use_fast and classes[1] is not None:
                     attribute_class = classes[1]
@@ -223,7 +243,9 @@ class ProcessorMixin(PushToHubMixin):
             else:
                 attribute_class = getattr(transformers_module, class_name)
 
-            args.append(attribute_class.from_pretrained(pretrained_model_name_or_path, **kwargs))
+            args.append(
+                attribute_class.from_pretrained(pretrained_model_name_or_path, **kwargs)
+            )
         return args
 
 

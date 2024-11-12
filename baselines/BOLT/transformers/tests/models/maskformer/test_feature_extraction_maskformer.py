@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -29,7 +32,9 @@ if is_torch_available():
 
     if is_vision_available():
         from transformers import MaskFormerFeatureExtractor
-        from transformers.models.maskformer.modeling_maskformer import MaskFormerForInstanceSegmentationOutput
+        from transformers.models.maskformer.modeling_maskformer import (
+            MaskFormerForInstanceSegmentationOutput,
+        )
 
 if is_vision_available():
     from PIL import Image
@@ -123,16 +128,26 @@ class MaskFormerFeatureExtractionTester(unittest.TestCase):
     def get_fake_maskformer_outputs(self):
         return MaskFormerForInstanceSegmentationOutput(
             # +1 for null class
-            class_queries_logits=torch.randn((self.batch_size, self.num_queries, self.num_classes + 1)),
-            masks_queries_logits=torch.randn((self.batch_size, self.num_queries, self.height, self.width)),
+            class_queries_logits=torch.randn(
+                (self.batch_size, self.num_queries, self.num_classes + 1)
+            ),
+            masks_queries_logits=torch.randn(
+                (self.batch_size, self.num_queries, self.height, self.width)
+            ),
         )
 
 
 @require_torch
 @require_vision
-class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestCase):
+class MaskFormerFeatureExtractionTest(
+    FeatureExtractionSavingTestMixin, unittest.TestCase
+):
 
-    feature_extraction_class = MaskFormerFeatureExtractor if (is_vision_available() and is_torch_available()) else None
+    feature_extraction_class = (
+        MaskFormerFeatureExtractor
+        if (is_vision_available() and is_torch_available())
+        else None
+    )
 
     def setUp(self):
         self.feature_extract_tester = MaskFormerFeatureExtractionTester(self)
@@ -159,24 +174,39 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -191,24 +221,39 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
         self.assertEqual(
             encoded_images.shape,
@@ -224,24 +269,39 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
 
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
 
         self.assertEqual(
             encoded_images.shape,
@@ -257,26 +317,43 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractors
         feature_extractor_1 = self.feature_extraction_class(**self.feat_extract_dict)
         feature_extractor_2 = self.feature_extraction_class(
-            do_resize=False, do_normalize=False, num_labels=self.feature_extract_tester.num_classes
+            do_resize=False,
+            do_normalize=False,
+            num_labels=self.feature_extract_tester.num_classes,
         )
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test whether the method "pad_and_return_pixel_mask" and calling the feature extractor return the same tensors
-        encoded_images_with_method = feature_extractor_1.encode_inputs(image_inputs, return_tensors="pt")
+        encoded_images_with_method = feature_extractor_1.encode_inputs(
+            image_inputs, return_tensors="pt"
+        )
         encoded_images = feature_extractor_2(image_inputs, return_tensors="pt")
 
         self.assertTrue(
-            torch.allclose(encoded_images_with_method["pixel_values"], encoded_images["pixel_values"], atol=1e-4)
+            torch.allclose(
+                encoded_images_with_method["pixel_values"],
+                encoded_images["pixel_values"],
+                atol=1e-4,
+            )
         )
         self.assertTrue(
-            torch.allclose(encoded_images_with_method["pixel_mask"], encoded_images["pixel_mask"], atol=1e-4)
+            torch.allclose(
+                encoded_images_with_method["pixel_mask"],
+                encoded_images["pixel_mask"],
+                atol=1e-4,
+            )
         )
 
     def comm_get_feature_extractor_inputs(
-        self, with_segmentation_maps=False, is_instance_map=False, segmentation_type="np"
+        self,
+        with_segmentation_maps=False,
+        is_instance_map=False,
+        segmentation_type="np",
     ):
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # prepare image and target
@@ -290,13 +367,21 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
                 high * 2
                 labels_expanded = list(range(num_labels)) * 2
                 instance_id_to_semantic_id = {
-                    instance_id: label_id for instance_id, label_id in enumerate(labels_expanded)
+                    instance_id: label_id
+                    for instance_id, label_id in enumerate(labels_expanded)
                 }
-            annotations = [np.random.randint(0, high, (384, 384)).astype(np.uint8) for _ in range(batch_size)]
+            annotations = [
+                np.random.randint(0, high, (384, 384)).astype(np.uint8)
+                for _ in range(batch_size)
+            ]
             if segmentation_type == "pil":
-                annotations = [Image.fromarray(annotation) for annotation in annotations]
+                annotations = [
+                    Image.fromarray(annotation) for annotation in annotations
+                ]
 
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         inputs = feature_extractor(
             image_inputs,
             annotations,
@@ -314,10 +399,15 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         size_divisibilities = [8, 16, 32]
         weird_input_sizes = [(407, 802), (582, 1094)]
         for size_divisibility in size_divisibilities:
-            feat_extract_dict = {**self.feat_extract_dict, **{"size_divisibility": size_divisibility}}
+            feat_extract_dict = {
+                **self.feat_extract_dict,
+                **{"size_divisibility": size_divisibility},
+            }
             feature_extractor = self.feature_extraction_class(**feat_extract_dict)
             for weird_input_size in weird_input_sizes:
-                inputs = feature_extractor([np.ones((3, *weird_input_size))], return_tensors="pt")
+                inputs = feature_extractor(
+                    [np.ones((3, *weird_input_size))], return_tensors="pt"
+                )
                 pixel_values = inputs["pixel_values"]
                 # check if divisible
                 self.assertTrue((pixel_values.shape[-1] % size_divisibility) == 0)
@@ -326,7 +416,9 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
     def test_call_with_segmentation_maps(self):
         def common(is_instance_map=False, segmentation_type=None):
             inputs = self.comm_get_feature_extractor_inputs(
-                with_segmentation_maps=True, is_instance_map=is_instance_map, segmentation_type=segmentation_type
+                with_segmentation_maps=True,
+                is_instance_map=is_instance_map,
+                segmentation_type=segmentation_type,
             )
 
             mask_labels = inputs["mask_labels"]
@@ -345,7 +437,9 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         common(is_instance_map=True, segmentation_type="pil")
 
     def test_post_process_segmentation(self):
-        fature_extractor = self.feature_extraction_class(num_labels=self.feature_extract_tester.num_classes)
+        fature_extractor = self.feature_extraction_class(
+            num_labels=self.feature_extract_tester.num_classes
+        )
         outputs = self.feature_extract_tester.get_fake_maskformer_outputs()
         segmentation = fature_extractor.post_process_segmentation(outputs)
 
@@ -360,15 +454,23 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         )
 
         target_size = (1, 4)
-        segmentation = fature_extractor.post_process_segmentation(outputs, target_size=target_size)
+        segmentation = fature_extractor.post_process_segmentation(
+            outputs, target_size=target_size
+        )
 
         self.assertEqual(
             segmentation.shape,
-            (self.feature_extract_tester.batch_size, self.feature_extract_tester.num_classes, *target_size),
+            (
+                self.feature_extract_tester.batch_size,
+                self.feature_extract_tester.num_classes,
+                *target_size,
+            ),
         )
 
     def test_post_process_semantic_segmentation(self):
-        fature_extractor = self.feature_extraction_class(num_labels=self.feature_extract_tester.num_classes)
+        fature_extractor = self.feature_extraction_class(
+            num_labels=self.feature_extract_tester.num_classes
+        )
         outputs = self.feature_extract_tester.get_fake_maskformer_outputs()
 
         segmentation = fature_extractor.post_process_semantic_segmentation(outputs)
@@ -384,14 +486,22 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
 
         target_size = (1, 4)
 
-        segmentation = fature_extractor.post_process_semantic_segmentation(outputs, target_size=target_size)
+        segmentation = fature_extractor.post_process_semantic_segmentation(
+            outputs, target_size=target_size
+        )
 
-        self.assertEqual(segmentation.shape, (self.feature_extract_tester.batch_size, *target_size))
+        self.assertEqual(
+            segmentation.shape, (self.feature_extract_tester.batch_size, *target_size)
+        )
 
     def test_post_process_panoptic_segmentation(self):
-        fature_extractor = self.feature_extraction_class(num_labels=self.feature_extract_tester.num_classes)
+        fature_extractor = self.feature_extraction_class(
+            num_labels=self.feature_extract_tester.num_classes
+        )
         outputs = self.feature_extract_tester.get_fake_maskformer_outputs()
-        segmentation = fature_extractor.post_process_panoptic_segmentation(outputs, object_mask_threshold=0)
+        segmentation = fature_extractor.post_process_panoptic_segmentation(
+            outputs, object_mask_threshold=0
+        )
 
         self.assertTrue(len(segmentation) == self.feature_extract_tester.batch_size)
         for el in segmentation:
@@ -399,5 +509,6 @@ class MaskFormerFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
             self.assertTrue("segments" in el)
             self.assertEqual(type(el["segments"]), list)
             self.assertEqual(
-                el["segmentation"].shape, (self.feature_extract_tester.height, self.feature_extract_tester.width)
+                el["segmentation"].shape,
+                (self.feature_extract_tester.height, self.feature_extract_tester.width),
             )

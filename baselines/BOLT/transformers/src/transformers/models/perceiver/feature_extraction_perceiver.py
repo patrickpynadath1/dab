@@ -85,7 +85,9 @@ class PerceiverFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         self.size = size
         self.resample = resample
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_DEFAULT_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_DEFAULT_STD
 
     def center_crop(self, image):
@@ -104,21 +106,32 @@ class PerceiverFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         image_height, image_width = image.shape[-2:]
 
         padded_center_crop_size = (
-            (self.size / (self.crop_size)) * np.minimum(image_height, image_width).astype(np.float32)
+            (self.size / (self.crop_size))
+            * np.minimum(image_height, image_width).astype(np.float32)
         ).astype(np.int32)
 
         offset_height = ((image_height - padded_center_crop_size) + 1) // 2
         offset_width = ((image_width - padded_center_crop_size) + 1) // 2
-        crop_window = [offset_height, offset_width, padded_center_crop_size, padded_center_crop_size]
+        crop_window = [
+            offset_height,
+            offset_width,
+            padded_center_crop_size,
+            padded_center_crop_size,
+        ]
 
         image = image[
-            :, crop_window[0] : crop_window[0] + crop_window[2], crop_window[1] : crop_window[1] + crop_window[3]
+            :,
+            crop_window[0] : crop_window[0] + crop_window[2],
+            crop_window[1] : crop_window[1] + crop_window[3],
         ]
 
         return image
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -157,7 +170,11 @@ class PerceiverFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -168,7 +185,10 @@ class PerceiverFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -178,9 +198,15 @@ class PerceiverFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMi
         if self.do_center_crop and self.crop_size is not None:
             images = [self.center_crop(image) for image in images]
         if self.do_resize and self.size is not None and self.resample is not None:
-            images = [self.resize(image=image, size=self.size, resample=self.resample) for image in images]
+            images = [
+                self.resize(image=image, size=self.size, resample=self.resample)
+                for image in images
+            ]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         # return as BatchFeature
         data = {"pixel_values": images}

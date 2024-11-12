@@ -41,7 +41,10 @@ class SageMakerTestEnvironment:
             return [
                 {"Name": "train_runtime", "Regex": "train_runtime.*=\D*(.*?)$"},
                 {"Name": "eval_accuracy", "Regex": "loss.*=\D*(.*?)]?$"},
-                {"Name": "eval_loss", "Regex": "sparse_categorical_accuracy.*=\D*(.*?)]?$"},
+                {
+                    "Name": "eval_loss",
+                    "Regex": "sparse_categorical_accuracy.*=\D*(.*?)]?$",
+                },
             ]
 
     @property

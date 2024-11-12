@@ -23,7 +23,12 @@ import tensorflow as tf
 
 from ...activations_tf import get_tf_activation
 from ...modeling_tf_outputs import TFBaseModelOutput, TFCausalLMOutput
-from ...modeling_tf_utils import TFPreTrainedModel, booleans_processing, get_initializer, keras_serializable
+from ...modeling_tf_utils import (
+    TFPreTrainedModel,
+    booleans_processing,
+    get_initializer,
+    keras_serializable,
+)
 from ...tf_utils import shape_list, stable_softmax
 from ...utils import (
     ModelOutput,
@@ -77,7 +82,9 @@ def input_values_processing(func, config, input_values, **kwargs):
         if isinstance(v, allowed_types) or v is None:
             output[k] = v
         else:
-            raise ValueError(f"Data of type {type(v)} is not allowed only {allowed_types} is accepted for {k}.")
+            raise ValueError(
+                f"Data of type {type(v)} is not allowed only {allowed_types} is accepted for {k}."
+            )
 
     if isinstance(input_values, (tuple, list)):
         for i, input in enumerate(input_values):
@@ -125,7 +132,9 @@ def input_values_processing(func, config, input_values, **kwargs):
                 )
                 continue
             else:
-                raise ValueError(f"Data of type {type(v)} is not allowed only {allowed_types} is accepted for {k}.")
+                raise ValueError(
+                    f"Data of type {type(v)} is not allowed only {allowed_types} is accepted for {k}."
+                )
     else:
         if isinstance(input_values, tf.Tensor) or input_values is None:
             output[parameter_names[0]] = input_values
@@ -157,7 +166,8 @@ def input_values_processing(func, config, input_values, **kwargs):
     boolean_dict = {
         k: v
         for k, v in output.items()
-        if k in ["return_dict", "output_attentions", "output_hidden_states", "use_cache"]
+        if k
+        in ["return_dict", "output_attentions", "output_hidden_states", "use_cache"]
     }
 
     output.update(booleans_processing(config=config, **boolean_dict))
@@ -184,10 +194,15 @@ def _scatter_values_on_batch_indices(values, batch_indices, output_shape):
     indices_shape = shape_list(batch_indices)
     # broadcast batch dim to indices_shape
     broad_casted_batch_dims = tf.reshape(
-        tf.broadcast_to(tf.expand_dims(tf.range(indices_shape[0]), axis=-1), indices_shape), [1, -1]
+        tf.broadcast_to(
+            tf.expand_dims(tf.range(indices_shape[0]), axis=-1), indices_shape
+        ),
+        [1, -1],
     )
     # transform batch_indices to pair_indices
-    pair_indices = tf.transpose(tf.concat([broad_casted_batch_dims, tf.reshape(batch_indices, [1, -1])], 0))
+    pair_indices = tf.transpose(
+        tf.concat([broad_casted_batch_dims, tf.reshape(batch_indices, [1, -1])], 0)
+    )
     # scatter values to pair indices
     return tf.scatter_nd(pair_indices, tf.reshape(values, [-1]), output_shape)
 
@@ -227,7 +242,9 @@ def _compute_mask_indices(
             f" `sequence_length`: {sequence_length}`"
         )
     # compute number of masked spans in batch
-    num_masked_spans = mask_prob * sequence_length / mask_length + tf.random.uniform((1,))
+    num_masked_spans = mask_prob * sequence_length / mask_length + tf.random.uniform(
+        (1,)
+    )
     num_masked_spans = tf.maximum(num_masked_spans, min_masks)
     num_masked_spans = tf.cast(num_masked_spans, tf.int32)
 
@@ -247,7 +264,9 @@ def _compute_mask_indices(
     # expand masked indices to masked spans
     spec_aug_mask_idxs = tf.expand_dims(spec_aug_mask_idxs, -1)
     spec_aug_mask_idxs = tf.tile(spec_aug_mask_idxs, (1, 1, mask_length))
-    spec_aug_mask_idxs = tf.reshape(spec_aug_mask_idxs, (batch_size, num_masked_spans * mask_length))
+    spec_aug_mask_idxs = tf.reshape(
+        spec_aug_mask_idxs, (batch_size, num_masked_spans * mask_length)
+    )
 
     offsets = tf.range(mask_length)[tf.newaxis, tf.newaxis, :]
     offsets = tf.tile(offsets, (batch_size, num_masked_spans, 1))
@@ -330,7 +349,9 @@ class TFHubertGroupNorm(tf.keras.layers.Layer):
         input_shape = tf.keras.backend.int_shape(inputs)
         tensor_input_shape = tf.shape(inputs)
 
-        reshaped_inputs, group_shape = self._reshape_into_groups(inputs, input_shape, tensor_input_shape)
+        reshaped_inputs, group_shape = self._reshape_into_groups(
+            inputs, input_shape, tensor_input_shape
+        )
 
         normalized_inputs = self._apply_normalization(reshaped_inputs, input_shape)
 
@@ -350,9 +371,13 @@ class TFHubertGroupNorm(tf.keras.layers.Layer):
             "center": self.center,
             "scale": self.scale,
             "beta_initializer": tf.keras.initializers.serialize(self.beta_initializer),
-            "gamma_initializer": tf.keras.initializers.serialize(self.gamma_initializer),
+            "gamma_initializer": tf.keras.initializers.serialize(
+                self.gamma_initializer
+            ),
             "beta_regularizer": tf.keras.regularizers.serialize(self.beta_regularizer),
-            "gamma_regularizer": tf.keras.regularizers.serialize(self.gamma_regularizer),
+            "gamma_regularizer": tf.keras.regularizers.serialize(
+                self.gamma_regularizer
+            ),
             "beta_constraint": tf.keras.constraints.serialize(self.beta_constraint),
             "gamma_constraint": tf.keras.constraints.serialize(self.gamma_constraint),
         }
@@ -386,7 +411,9 @@ class TFHubertGroupNorm(tf.keras.layers.Layer):
             axis = -1 if self.axis == -1 else self.axis - 1
         group_reduction_axes.pop(axis)
 
-        mean, variance = tf.nn.moments(reshaped_inputs, group_reduction_axes, keepdims=True)
+        mean, variance = tf.nn.moments(
+            reshaped_inputs, group_reduction_axes, keepdims=True
+        )
 
         gamma, beta = self._get_reshaped_weights(input_shape)
         normalized_inputs = tf.nn.batch_normalization(
@@ -458,7 +485,9 @@ class TFHubertGroupNorm(tf.keras.layers.Layer):
     def _create_input_spec(self, input_shape):
 
         dim = input_shape[self.axis]
-        self.input_spec = tf.keras.layers.InputSpec(ndim=len(input_shape), axes={self.axis: dim})
+        self.input_spec = tf.keras.layers.InputSpec(
+            ndim=len(input_shape), axes={self.axis: dim}
+        )
 
     def _add_gamma_weight(self, input_shape):
 
@@ -524,12 +553,16 @@ class TFHubertWeightNormConv1D(tf.keras.layers.Conv1D):
 
     def _init_norm(self):
         """Set the norm of the weight vector."""
-        kernel_norm = tf.sqrt(tf.reduce_sum(tf.square(self.weight_v), axis=self.kernel_norm_axes))
+        kernel_norm = tf.sqrt(
+            tf.reduce_sum(tf.square(self.weight_v), axis=self.kernel_norm_axes)
+        )
         self.weight_g.assign(kernel_norm[:, tf.newaxis, tf.newaxis])
 
     def _normalize_kernel(self):
         """Generate normalized weights."""
-        kernel = tf.nn.l2_normalize(self.weight_v, axis=self.kernel_norm_axes) * tf.transpose(self.weight_g)
+        kernel = tf.nn.l2_normalize(
+            self.weight_v, axis=self.kernel_norm_axes
+        ) * tf.transpose(self.weight_g)
         self.kernel = tf.transpose(kernel)
 
     def build(self, input_shape):
@@ -539,7 +572,9 @@ class TFHubertWeightNormConv1D(tf.keras.layers.Conv1D):
             input_shape[-2] += self.explicit_padding * 2
             super().build(input_shape)
 
-            self.kernel = tf.Variable(tf.transpose(self.kernel), name="weight_v", trainable=True)
+            self.kernel = tf.Variable(
+                tf.transpose(self.kernel), name="weight_v", trainable=True
+            )
             self.weight_v = self.kernel
 
             self.weight_g = self.add_weight(
@@ -549,7 +584,9 @@ class TFHubertWeightNormConv1D(tf.keras.layers.Conv1D):
                 dtype=self.weight_v.dtype,
                 trainable=True,
             )
-            self.bias = self.add_weight(name="bias", shape=(self.filters,), initializer="zeros", trainable=True)
+            self.bias = self.add_weight(
+                name="bias", shape=(self.filters,), initializer="zeros", trainable=True
+            )
 
     def call(self, inputs):
         if not self.initialized:
@@ -558,7 +595,9 @@ class TFHubertWeightNormConv1D(tf.keras.layers.Conv1D):
 
         self._normalize_kernel()
 
-        padded_inputs = tf.pad(inputs, ((0, 0), (self.explicit_padding, self.explicit_padding), (0, 0)))
+        padded_inputs = tf.pad(
+            inputs, ((0, 0), (self.explicit_padding, self.explicit_padding), (0, 0))
+        )
         output = super().call(padded_inputs)
 
         return output
@@ -600,7 +639,9 @@ class TFHubertLayerNormConvLayer(tf.keras.layers.Layer):
             use_bias=config.conv_bias,
             name="conv",
         )
-        self.layer_norm = tf.keras.layers.LayerNormalization(name="layer_norm", epsilon=config.layer_norm_eps)
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            name="layer_norm", epsilon=config.layer_norm_eps
+        )
         self.activation = get_tf_activation(config.feat_extract_activation)
 
     def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
@@ -625,7 +666,9 @@ class TFHubertGroupNormConvLayer(tf.keras.layers.Layer):
             name="conv",
         )
         self.activation = get_tf_activation(config.feat_extract_activation)
-        self.layer_norm = TFHubertGroupNorm(groups=self.out_conv_dim, epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = TFHubertGroupNorm(
+            groups=self.out_conv_dim, epsilon=config.layer_norm_eps, name="layer_norm"
+        )
 
     def call(self, hidden_states: tf.Tensor) -> tf.Tensor:
         hidden_states = self.conv(hidden_states)
@@ -672,8 +715,12 @@ class TFHubertFeatureEncoder(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         if config.feat_extract_norm == "group":
-            conv_layers = [TFHubertGroupNormConvLayer(config, layer_id=0, name=f"conv_layers.{0}")] + [
-                TFHubertNoLayerNormConvLayer(config, layer_id=i + 1, name=f"conv_layers.{i+1}")
+            conv_layers = [
+                TFHubertGroupNormConvLayer(config, layer_id=0, name=f"conv_layers.{0}")
+            ] + [
+                TFHubertNoLayerNormConvLayer(
+                    config, layer_id=i + 1, name=f"conv_layers.{i+1}"
+                )
                 for i in range(config.num_feat_extract_layers - 1)
             ]
         elif config.feat_extract_norm == "layer":
@@ -709,7 +756,9 @@ class TFHubertFeatureProjection(tf.keras.layers.Layer):
     def __init__(self, config: HubertConfig, **kwargs):
         super().__init__(**kwargs)
 
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.projection = tf.keras.layers.Dense(
             units=config.hidden_size,
             kernel_initializer=get_initializer(config.initializer_range),
@@ -758,7 +807,10 @@ class TFHubertAttention(tf.keras.layers.Layer):
         self.out_proj = tf.keras.layers.Dense(embed_dim, use_bias=bias, name="out_proj")
 
     def _shape(self, tensor: tf.Tensor, seq_len: int, bsz: int):
-        return tf.transpose(tf.reshape(tensor, (bsz, seq_len, self.num_heads, self.head_dim)), (0, 2, 1, 3))
+        return tf.transpose(
+            tf.reshape(tensor, (bsz, seq_len, self.num_heads, self.head_dim)),
+            (0, 2, 1, 3),
+        )
 
     def call(
         self,
@@ -836,8 +888,13 @@ class TFHubertAttention(tf.keras.layers.Layer):
             )
 
             attention_mask = tf.cast(attention_mask, dtype=attn_weights.dtype)
-            attn_weights = tf.reshape(attn_weights, (bsz, self.num_heads, tgt_len, src_len)) + attention_mask
-            attn_weights = tf.reshape(attn_weights, (bsz * self.num_heads, tgt_len, src_len))
+            attn_weights = (
+                tf.reshape(attn_weights, (bsz, self.num_heads, tgt_len, src_len))
+                + attention_mask
+            )
+            attn_weights = tf.reshape(
+                attn_weights, (bsz * self.num_heads, tgt_len, src_len)
+            )
 
         attn_weights = stable_softmax(attn_weights, axis=-1)
 
@@ -854,7 +911,9 @@ class TFHubertAttention(tf.keras.layers.Layer):
             attn_weights = tf.reshape(layer_head_mask, (1, -1, 1, 1)) * tf.reshape(
                 attn_weights, (bsz, self.num_heads, tgt_len, src_len)
             )
-            attn_weights = tf.reshape(attn_weights, (bsz * self.num_heads, tgt_len, src_len))
+            attn_weights = tf.reshape(
+                attn_weights, (bsz * self.num_heads, tgt_len, src_len)
+            )
 
         attn_probs = self.dropout(attn_weights, training=training)
         attn_output = tf.matmul(attn_probs, value_states)
@@ -869,12 +928,15 @@ class TFHubertAttention(tf.keras.layers.Layer):
         )
 
         attn_output = tf.transpose(
-            tf.reshape(attn_output, (bsz, self.num_heads, tgt_len, self.head_dim)), (0, 2, 1, 3)
+            tf.reshape(attn_output, (bsz, self.num_heads, tgt_len, self.head_dim)),
+            (0, 2, 1, 3),
         )
         attn_output = tf.reshape(attn_output, (bsz, tgt_len, embed_dim))
 
         attn_output = self.out_proj(attn_output)
-        attn_weights: tf.Tensor = tf.reshape(attn_weights, (bsz, self.num_heads, tgt_len, src_len))
+        attn_weights: tf.Tensor = tf.reshape(
+            attn_weights, (bsz, self.num_heads, tgt_len, src_len)
+        )
 
         return attn_output, attn_weights, past_key_value
 
@@ -924,7 +986,9 @@ class TFHubertEncoderLayer(tf.keras.layers.Layer):
             name="attention",
         )
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout)
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.feed_forward = TFHubertFeedForward(config, name="feed_forward")
         self.final_layer_norm = tf.keras.layers.LayerNormalization(
             epsilon=config.layer_norm_eps, name="final_layer_norm"
@@ -968,7 +1032,9 @@ class TFHubertEncoderLayerStableLayerNorm(tf.keras.layers.Layer):
             name="attention",
         )
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout)
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.feed_forward = TFHubertFeedForward(config, name="feed_forward")
         self.final_layer_norm = tf.keras.layers.LayerNormalization(
             epsilon=config.layer_norm_eps, name="final_layer_norm"
@@ -988,7 +1054,9 @@ class TFHubertEncoderLayerStableLayerNorm(tf.keras.layers.Layer):
         )
         hidden_states = self.dropout(hidden_states, training=training)
         hidden_states = attn_residual + hidden_states
-        hidden_states = hidden_states + self.feed_forward(self.final_layer_norm(hidden_states))
+        hidden_states = hidden_states + self.feed_forward(
+            self.final_layer_norm(hidden_states)
+        )
 
         outputs = (hidden_states,)
 
@@ -1003,10 +1071,17 @@ class TFHubertEncoder(tf.keras.layers.Layer):
     def __init__(self, config: HubertConfig, **kwargs):
         super().__init__(**kwargs)
         self.config = config
-        self.pos_conv_embed = TFHubertPositionalConvEmbedding(config, name="pos_conv_embed")
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.pos_conv_embed = TFHubertPositionalConvEmbedding(
+            config, name="pos_conv_embed"
+        )
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout)
-        self.layer = [TFHubertEncoderLayer(config, name=f"layers.{i}") for i in range(config.num_hidden_layers)]
+        self.layer = [
+            TFHubertEncoderLayer(config, name=f"layers.{i}")
+            for i in range(config.num_hidden_layers)
+        ]
 
     def call(
         self,
@@ -1037,7 +1112,9 @@ class TFHubertEncoder(tf.keras.layers.Layer):
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = np.random.uniform(0, 1)
-            if training and (dropout_probability < self.config.layerdrop):  # skip the layer
+            if training and (
+                dropout_probability < self.config.layerdrop
+            ):  # skip the layer
                 continue
 
             layer_outputs = layer_module(
@@ -1056,7 +1133,11 @@ class TFHubertEncoder(tf.keras.layers.Layer):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return TFBaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
@@ -1069,11 +1150,16 @@ class TFHubertEncoderStableLayerNorm(tf.keras.layers.Layer):
     def __init__(self, config: HubertConfig, **kwargs):
         super().__init__(**kwargs)
         self.config = config
-        self.pos_conv_embed = TFHubertPositionalConvEmbedding(config, name="pos_conv_embed")
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.pos_conv_embed = TFHubertPositionalConvEmbedding(
+            config, name="pos_conv_embed"
+        )
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout)
         self.layer = [
-            TFHubertEncoderLayerStableLayerNorm(config, name=f"layers.{i}") for i in range(config.num_hidden_layers)
+            TFHubertEncoderLayerStableLayerNorm(config, name=f"layers.{i}")
+            for i in range(config.num_hidden_layers)
         ]
 
     def call(
@@ -1104,7 +1190,9 @@ class TFHubertEncoderStableLayerNorm(tf.keras.layers.Layer):
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = np.random.uniform(0, 1)
-            if training and (dropout_probability < self.config.layerdrop):  # skip the layer
+            if training and (
+                dropout_probability < self.config.layerdrop
+            ):  # skip the layer
                 continue
 
             layer_outputs = layer_module(
@@ -1124,7 +1212,11 @@ class TFHubertEncoderStableLayerNorm(tf.keras.layers.Layer):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return TFBaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
@@ -1139,8 +1231,12 @@ class TFHubertMainLayer(tf.keras.layers.Layer):
     def __init__(self, config: HubertConfig, **kwargs):
         super().__init__(**kwargs)
         self.config = config
-        self.feature_extractor = TFHubertFeatureEncoder(config, name="feature_extractor")
-        self.feature_projection = TFHubertFeatureProjection(config, name="feature_projection")
+        self.feature_extractor = TFHubertFeatureEncoder(
+            config, name="feature_extractor"
+        )
+        self.feature_projection = TFHubertFeatureProjection(
+            config, name="feature_projection"
+        )
 
         if config.do_stable_layer_norm:
             self.encoder = TFHubertEncoderStableLayerNorm(config, name="encoder")
@@ -1149,7 +1245,10 @@ class TFHubertMainLayer(tf.keras.layers.Layer):
 
     def build(self, input_shape: tf.TensorShape):
         self.masked_spec_embed = self.add_weight(
-            shape=(self.config.hidden_size,), initializer="uniform", trainable=True, name="masked_spec_embed"
+            shape=(self.config.hidden_size,),
+            initializer="uniform",
+            trainable=True,
+            name="masked_spec_embed",
         )
 
         super().build(input_shape)
@@ -1164,12 +1263,16 @@ class TFHubertMainLayer(tf.keras.layers.Layer):
             # from https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
             return (input_length - kernel_size) // stride + 1
 
-        for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
+        for kernel_size, stride in zip(
+            self.config.conv_kernel, self.config.conv_stride
+        ):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
 
         return input_lengths
 
-    def _mask_hidden_states(self, hidden_states: tf.Tensor, mask_time_indices: Optional[tf.Tensor] = None):
+    def _mask_hidden_states(
+        self, hidden_states: tf.Tensor, mask_time_indices: Optional[tf.Tensor] = None
+    ):
         """
         Masks extracted features along time axis and/or along feature axis according to
         [SpecAugment](https://arxiv.org/abs/1904.08779).
@@ -1209,7 +1312,9 @@ class TFHubertMainLayer(tf.keras.layers.Layer):
                 mask_prob=self.config.mask_feature_prob,
                 mask_length=self.config.mask_feature_length,
             )
-            hidden_states = tf.where(mask_feature_indices[:, tf.newaxis, :], hidden_states, 0)
+            hidden_states = tf.where(
+                mask_feature_indices[:, tf.newaxis, :], hidden_states, 0
+            )
 
         return hidden_states
 
@@ -1249,17 +1354,25 @@ class TFHubertMainLayer(tf.keras.layers.Layer):
 
         if inputs["attention_mask"] is not None:
             # compute real output lengths according to convolution formula
-            output_lengths = self._get_feat_extract_output_lengths(tf.reduce_sum(inputs["attention_mask"], -1))
-
-            attention_mask = tf.sequence_mask(
-                output_lengths, maxlen=shape_list(hidden_states)[1], dtype=hidden_states.dtype
+            output_lengths = self._get_feat_extract_output_lengths(
+                tf.reduce_sum(inputs["attention_mask"], -1)
             )
 
-        hidden_states = self.feature_projection(hidden_states, training=inputs["training"])
+            attention_mask = tf.sequence_mask(
+                output_lengths,
+                maxlen=shape_list(hidden_states)[1],
+                dtype=hidden_states.dtype,
+            )
+
+        hidden_states = self.feature_projection(
+            hidden_states, training=inputs["training"]
+        )
 
         mask_time_indices = kwargs.get("mask_time_indices", None)
         if inputs["training"]:
-            hidden_states = self._mask_hidden_states(hidden_states, mask_time_indices=mask_time_indices)
+            hidden_states = self._mask_hidden_states(
+                hidden_states, mask_time_indices=mask_time_indices
+            )
 
         encoder_outputs = self.encoder(
             hidden_states,
@@ -1297,7 +1410,9 @@ class TFHubertPreTrainedModel(TFPreTrainedModel):
         input_values = tf.convert_to_tensor(np.random.rand(1, 16000), tf.float32)
         dummy_inputs = {
             "input_values": input_values,
-            "attention_mask": tf.cast(tf.not_equal(input_values, pad_token), tf.float32),
+            "attention_mask": tf.cast(
+                tf.not_equal(input_values, pad_token), tf.float32
+            ),
         }
         return dummy_inputs
 
@@ -1311,9 +1426,15 @@ class TFHubertPreTrainedModel(TFPreTrainedModel):
     @tf.function(
         input_signature=[
             {
-                "input_values": tf.TensorSpec((None, None), tf.float32, name="input_values"),
-                "attention_mask": tf.TensorSpec((None, None), tf.int64, name="attention_mask"),
-                "token_type_ids": tf.TensorSpec((None, None), tf.int64, name="token_type_ids"),
+                "input_values": tf.TensorSpec(
+                    (None, None), tf.float32, name="input_values"
+                ),
+                "attention_mask": tf.TensorSpec(
+                    (None, None), tf.int64, name="attention_mask"
+                ),
+                "token_type_ids": tf.TensorSpec(
+                    (None, None), tf.int64, name="token_type_ids"
+                ),
             }
         ]
     )
@@ -1432,7 +1553,9 @@ class TFHubertModel(TFHubertPreTrainedModel):
         self.hubert = TFHubertMainLayer(config, name="hubert")
 
     @add_start_docstrings_to_model_forward(HUBERT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFBaseModelOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFBaseModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_values: tf.Tensor,
@@ -1490,12 +1613,18 @@ class TFHubertModel(TFHubertPreTrainedModel):
         )
 
         inputs["output_hidden_states"] = (
-            inputs["output_hidden_states"] if inputs["output_hidden_states"] else self.config.output_hidden_states
+            inputs["output_hidden_states"]
+            if inputs["output_hidden_states"]
+            else self.config.output_hidden_states
         )
         inputs["output_attentions"] = (
-            inputs["output_attentions"] if inputs["output_attentions"] else self.config.output_attentions
+            inputs["output_attentions"]
+            if inputs["output_attentions"]
+            else self.config.output_attentions
         )
-        inputs["return_dict"] = inputs["return_dict"] if inputs["return_dict"] else self.config.return_dict
+        inputs["return_dict"] = (
+            inputs["return_dict"] if inputs["return_dict"] else self.config.return_dict
+        )
 
         outputs = self.hubert(
             input_values=inputs["input_values"],
@@ -1513,10 +1642,20 @@ class TFHubertModel(TFHubertPreTrainedModel):
         return outputs
 
     def serving_output(self, output):
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         return TFBaseModelOutput(
-            last_hidden_state=output.last_hidden_state, hidden_states=hidden_states, attentions=attentions
+            last_hidden_state=output.last_hidden_state,
+            hidden_states=hidden_states,
+            attentions=attentions,
         )
 
 
@@ -1552,7 +1691,9 @@ class TFHubertForCTC(TFHubertPreTrainedModel):
         self.hubert.feature_extractor.trainable = False
 
     @add_start_docstrings_to_model_forward(HUBERT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFCausalLMOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFCausalLMOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_values: tf.Tensor,
@@ -1645,14 +1786,18 @@ class TFHubertForCTC(TFHubertPreTrainedModel):
         if labels is not None:
 
             if tf.reduce_max(labels) >= self.config.vocab_size:
-                raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
+                raise ValueError(
+                    f"Label values must be <= vocab_size: {self.config.vocab_size}"
+                )
 
             attention_mask = (
                 inputs["attention_mask"]
                 if inputs["attention_mask"] is not None
                 else tf.ones_like(inputs["input_values"], dtype=tf.float32)
             )
-            input_lengths = self.hubert._get_feat_extract_output_lengths(tf.reduce_sum(attention_mask, axis=-1))
+            input_lengths = self.hubert._get_feat_extract_output_lengths(
+                tf.reduce_sum(attention_mask, axis=-1)
+            )
 
             # assuming that padded tokens are filled with -100
             # when not being attended to
@@ -1689,6 +1834,16 @@ class TFHubertForCTC(TFHubertPreTrainedModel):
         )
 
     def serving_output(self, output: TFCausalLMOutput) -> TFCausalLMOutput:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
-        return TFCausalLMOutput(logits=output.logits, hidden_states=hidden_states, attentions=attentions)
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
+        return TFCausalLMOutput(
+            logits=output.logits, hidden_states=hidden_states, attentions=attentions
+        )

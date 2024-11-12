@@ -75,7 +75,9 @@ class TestTrainerExt(TestCasePlus):
             do_eval=do_eval,
             do_predict=do_predict,
         )
-        logs = TrainerState.load_from_json(os.path.join(output_dir, "trainer_state.json")).log_history
+        logs = TrainerState.load_from_json(
+            os.path.join(output_dir, "trainer_state.json")
+        ).log_history
 
         if not do_eval:
             return
@@ -88,7 +90,9 @@ class TestTrainerExt(TestCasePlus):
 
             last_step_stats = eval_metrics[-1]
             assert isinstance(last_step_stats["eval_bleu"], float)
-            assert not math.isnan(float(last_step_stats["eval_loss"])), "eval_loss must not be `nan`"
+            assert not math.isnan(
+                float(last_step_stats["eval_loss"])
+            ), "eval_loss must not be `nan`"
 
     @require_torch_non_multi_gpu
     def test_run_seq2seq_no_dist(self):
@@ -116,14 +120,20 @@ class TestTrainerExt(TestCasePlus):
     @require_torch_multi_gpu
     @require_fairscale
     def test_run_seq2seq_sharded_ddp_fp16(self):
-        self.run_seq2seq_quick(distributed=True, extra_args_str="--sharded_ddp simple --fp16")
+        self.run_seq2seq_quick(
+            distributed=True, extra_args_str="--sharded_ddp simple --fp16"
+        )
 
     # test --sharded_ddp zero_dp_2 w/o --fp16
     @unittest.skip("Requires an update of the env running those tests")
     @require_torch_multi_gpu
     @require_fairscale
     def test_run_seq2seq_fully_sharded_ddp(self):
-        self.run_seq2seq_quick(distributed=True, extra_args_str="--sharded_ddp zero_dp_2", predict_with_generate=False)
+        self.run_seq2seq_quick(
+            distributed=True,
+            extra_args_str="--sharded_ddp zero_dp_2",
+            predict_with_generate=False,
+        )
 
     # test --sharded_ddp zero_dp_2 w/ --fp16
     @unittest.skip("Requires an update of the env running those tests")
@@ -131,7 +141,9 @@ class TestTrainerExt(TestCasePlus):
     @require_fairscale
     def test_run_seq2seq_fully_sharded_ddp_fp16(self):
         self.run_seq2seq_quick(
-            distributed=True, extra_args_str="--sharded_ddp zero_dp_2 --fp16", predict_with_generate=False
+            distributed=True,
+            extra_args_str="--sharded_ddp zero_dp_2 --fp16",
+            predict_with_generate=False,
         )
 
     @require_apex
@@ -145,10 +157,14 @@ class TestTrainerExt(TestCasePlus):
         # specifically to the problem traced it to self.optimizer.step() - if it's run 2nd time via
         # 2nd main() call it botches the future eval.
         #
-        self.run_seq2seq_quick(distributed=True, extra_args_str="--fp16 --fp16_backend=apex")
+        self.run_seq2seq_quick(
+            distributed=True, extra_args_str="--fp16 --fp16_backend=apex"
+        )
         # test 2nd time - was getting eval_loss': nan'
         # to reproduce the problem set distributed=False
-        self.run_seq2seq_quick(distributed=True, extra_args_str="--fp16 --fp16_backend=apex")
+        self.run_seq2seq_quick(
+            distributed=True, extra_args_str="--fp16 --fp16_backend=apex"
+        )
 
     @parameterized.expand(["base", "low", "high", "mixed"])
     @require_torch_multi_gpu
@@ -159,16 +175,30 @@ class TestTrainerExt(TestCasePlus):
             base=dict(extra_args_str="", n_matches=1),
             # test with low log_level and log_level_replica - should be noisy on all processes
             # now the info string should appear twice on 2 processes
-            low=dict(extra_args_str="--log_level debug --log_level_replica debug", n_matches=2),
+            low=dict(
+                extra_args_str="--log_level debug --log_level_replica debug",
+                n_matches=2,
+            ),
             # test with high log_level and low log_level_replica
             # now the info string should appear once only on the replica
-            high=dict(extra_args_str="--log_level error --log_level_replica debug", n_matches=1),
+            high=dict(
+                extra_args_str="--log_level error --log_level_replica debug",
+                n_matches=1,
+            ),
             # test with high log_level and log_level_replica - should be quiet on all processes
-            mixed=dict(extra_args_str="--log_level error --log_level_replica error", n_matches=0),
+            mixed=dict(
+                extra_args_str="--log_level error --log_level_replica error",
+                n_matches=0,
+            ),
         )
 
         data = experiments[experiment_id]
-        kwargs = dict(distributed=True, predict_with_generate=False, do_eval=False, do_predict=False)
+        kwargs = dict(
+            distributed=True,
+            predict_with_generate=False,
+            do_eval=False,
+            do_predict=False,
+        )
         log_info_string = "Running training"
         with CaptureStderr() as cl:
             self.run_seq2seq_quick(**kwargs, extra_args_str=data["extra_args_str"])
@@ -187,12 +217,16 @@ class TestTrainerExt(TestCasePlus):
         )
 
         # Check metrics
-        logs = TrainerState.load_from_json(os.path.join(output_dir, "trainer_state.json")).log_history
+        logs = TrainerState.load_from_json(
+            os.path.join(output_dir, "trainer_state.json")
+        ).log_history
         eval_metrics = [log for log in logs if "eval_loss" in log.keys()]
         first_step_stats = eval_metrics[0]
         last_step_stats = eval_metrics[-1]
 
-        assert first_step_stats["eval_loss"] > last_step_stats["eval_loss"], "model learned nothing"
+        assert (
+            first_step_stats["eval_loss"] > last_step_stats["eval_loss"]
+        ), "model learned nothing"
         assert isinstance(last_step_stats["eval_bleu"], float)
 
         # test if do_predict saves generations and metrics
@@ -227,15 +261,21 @@ class TestTrainerExt(TestCasePlus):
             )
 
             # Check metrics
-            logs = TrainerState.load_from_json(Path(output_dir, "trainer_state.json")).log_history
+            logs = TrainerState.load_from_json(
+                Path(output_dir, "trainer_state.json")
+            ).log_history
             gpu_peak_mem = logs[0]["train_mem_gpu_peaked_delta"]
             gpu_alloc_mem = logs[0]["train_mem_gpu_alloc_delta"]
 
             loss = logs[0]["train_loss"]
             return gpu_peak_mem, gpu_alloc_mem, loss
 
-        gpu_peak_mem_orig, gpu_alloc_mem_orig, loss_orig = train_and_return_metrics(OptimizerNames.ADAMW_TORCH.value)
-        gpu_peak_mem_bnb, gpu_alloc_mem_bnb, loss_bnb = train_and_return_metrics(OptimizerNames.ADAMW_BNB.value)
+        gpu_peak_mem_orig, gpu_alloc_mem_orig, loss_orig = train_and_return_metrics(
+            OptimizerNames.ADAMW_TORCH.value
+        )
+        gpu_peak_mem_bnb, gpu_alloc_mem_bnb, loss_bnb = train_and_return_metrics(
+            OptimizerNames.ADAMW_BNB.value
+        )
 
         gpu_peak_mem_diff_bytes = gpu_peak_mem_orig - gpu_peak_mem_bnb
         gpu_peak_mem_diff_percent = gpu_peak_mem_diff_bytes / gpu_peak_mem_bnb
@@ -268,13 +308,17 @@ class TestTrainerExt(TestCasePlus):
         )
 
         self.assertEqual(
-            loss_orig, loss_bnb, f"loss should be the same, but got loss_orig={loss_orig}, loss_bnb={loss_bnb}"
+            loss_orig,
+            loss_bnb,
+            f"loss should be the same, but got loss_orig={loss_orig}, loss_bnb={loss_bnb}",
         )
 
         # Additionally let's test that the absolute gpu memory difference is larger or about the
         # same as the expected saving coming from BNB (6 bytes per param)
         model = AutoModel.from_pretrained(MARIAN_MODEL)
-        total_numel = sum(dict((p.data_ptr(), p.numel()) for p in model.parameters()).values())
+        total_numel = sum(
+            dict((p.data_ptr(), p.numel()) for p in model.parameters()).values()
+        )
         bnb_saved_bytes = total_numel * 6  # 324MB
 
         self.assertGreater(

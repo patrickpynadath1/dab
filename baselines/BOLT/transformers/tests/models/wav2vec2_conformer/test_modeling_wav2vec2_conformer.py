@@ -21,7 +21,12 @@ import numpy as np
 from datasets import load_dataset
 
 from transformers import Wav2Vec2ConformerConfig, is_torch_available
-from transformers.testing_utils import is_pt_flax_cross_test, require_torch, slow, torch_device
+from transformers.testing_utils import (
+    is_pt_flax_cross_test,
+    require_torch,
+    slow,
+    torch_device,
+)
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -130,10 +135,14 @@ class Wav2Vec2ConformerModelTester:
         self.output_seq_length = int(math.ceil(output_seq_length))
         self.encoder_seq_length = self.output_seq_length
 
-        self.adapter_output_seq_length = (self.output_seq_length - 1) // adapter_stride + 1
+        self.adapter_output_seq_length = (
+            self.output_seq_length - 1
+        ) // adapter_stride + 1
 
     def prepare_config_and_inputs(self, position_embeddings_type="relative"):
-        input_values = floats_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        input_values = floats_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size
+        )
         attention_mask = random_attention_mask([self.batch_size, self.seq_length])
 
         config = self.get_config(position_embeddings_type=position_embeddings_type)
@@ -178,7 +187,8 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.output_seq_length, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.output_seq_length, self.hidden_size),
         )
 
     def create_and_check_model_with_adapter(self, config, input_values, attention_mask):
@@ -188,10 +198,13 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.adapter_output_seq_length, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.adapter_output_seq_length, self.hidden_size),
         )
 
-    def create_and_check_model_with_adapter_for_ctc(self, config, input_values, attention_mask):
+    def create_and_check_model_with_adapter_for_ctc(
+        self, config, input_values, attention_mask
+    ):
         config.add_adapter = True
         config.output_hidden_size = 2 * config.hidden_size
         model = Wav2Vec2ConformerForCTC(config=config)
@@ -199,10 +212,13 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
-            result.logits.shape, (self.batch_size, self.adapter_output_seq_length, self.vocab_size)
+            result.logits.shape,
+            (self.batch_size, self.adapter_output_seq_length, self.vocab_size),
         )
 
-    def create_and_check_model_with_adapter_proj_dim(self, config, input_values, attention_mask):
+    def create_and_check_model_with_adapter_proj_dim(
+        self, config, input_values, attention_mask
+    ):
         config.add_adapter = True
         config.output_hidden_size = 8
         model = Wav2Vec2ConformerModel(config=config)
@@ -211,7 +227,11 @@ class Wav2Vec2ConformerModelTester:
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
             result.last_hidden_state.shape,
-            (self.batch_size, self.adapter_output_seq_length, config.output_hidden_size),
+            (
+                self.batch_size,
+                self.adapter_output_seq_length,
+                config.output_hidden_size,
+            ),
         )
 
     def create_and_check_batch_inference(self, config, input_values, *args):
@@ -222,7 +242,9 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.bool)
+        attention_mask = torch.ones(
+            input_values.shape, device=torch_device, dtype=torch.bool
+        )
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
 
@@ -231,7 +253,9 @@ class Wav2Vec2ConformerModelTester:
             input_values[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0.0
 
-        batch_outputs = model(input_values, attention_mask=attention_mask).last_hidden_state
+        batch_outputs = model(
+            input_values, attention_mask=attention_mask
+        ).last_hidden_state
 
         for i in range(input_values.shape[0]):
             input_slice = input_values[i : i + 1, : input_lengths[i]]
@@ -248,11 +272,17 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.long)
+        attention_mask = torch.ones(
+            input_values.shape, device=torch_device, dtype=torch.long
+        )
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], min(max_length_labels) - 1), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_values.shape[0], min(max_length_labels) - 1), model.config.vocab_size
+        )
 
         # pad input
         for i in range(len(input_lengths)):
@@ -260,10 +290,14 @@ class Wav2Vec2ConformerModelTester:
             attention_mask[i, input_lengths[i] :] = 0
 
         model.config.ctc_loss_reduction = "sum"
-        sum_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss.item()
+        sum_loss = model(
+            input_values, attention_mask=attention_mask, labels=labels
+        ).loss.item()
 
         model.config.ctc_loss_reduction = "mean"
-        mean_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss.item()
+        mean_loss = model(
+            input_values, attention_mask=attention_mask, labels=labels
+        ).loss.item()
 
         self.parent.assertTrue(isinstance(sum_loss, float))
         self.parent.assertTrue(isinstance(mean_loss, float))
@@ -276,7 +310,9 @@ class Wav2Vec2ConformerModelTester:
         model.eval()
 
         input_values = input_values[:3]
-        attention_mask = torch.ones(input_values.shape, device=torch_device, dtype=torch.long)
+        attention_mask = torch.ones(
+            input_values.shape, device=torch_device, dtype=torch.long
+        )
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         labels = ids_tensor((input_values.shape[0], 1), len(model.config.id2label))
@@ -286,7 +322,9 @@ class Wav2Vec2ConformerModelTester:
             input_values[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0
 
-        masked_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss.item()
+        masked_loss = model(
+            input_values, attention_mask=attention_mask, labels=labels
+        ).loss.item()
         unmasked_loss = model(input_values, labels=labels).loss.item()
 
         self.parent.assertTrue(isinstance(masked_loss, float))
@@ -305,8 +343,12 @@ class Wav2Vec2ConformerModelTester:
         input_values = input_values[:3]
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size
+        )
 
         # pad input
         for i in range(len(input_lengths)):
@@ -376,8 +418,13 @@ class Wav2Vec2ConformerModelTester:
         input_values = input_values[:3]
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size + 100)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_values.shape[0], max(max_length_labels) - 2),
+            model.config.vocab_size + 100,
+        )
 
         with self.parent.assertRaises(ValueError):
             model(input_values, labels=labels)
@@ -408,7 +455,9 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = Wav2Vec2ConformerModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=Wav2Vec2ConformerConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=Wav2Vec2ConformerConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -418,15 +467,21 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_model_with_relative(self):
-        config_and_inputs = self.model_tester.prepare_config_and_inputs(position_embeddings_type="relative")
+        config_and_inputs = self.model_tester.prepare_config_and_inputs(
+            position_embeddings_type="relative"
+        )
         self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_model_with_rotary(self):
-        config_and_inputs = self.model_tester.prepare_config_and_inputs(position_embeddings_type="rotary")
+        config_and_inputs = self.model_tester.prepare_config_and_inputs(
+            position_embeddings_type="rotary"
+        )
         self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_model_with_no_rel_pos(self):
-        config_and_inputs = self.model_tester.prepare_config_and_inputs(position_embeddings_type=None)
+        config_and_inputs = self.model_tester.prepare_config_and_inputs(
+            position_embeddings_type=None
+        )
         self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_model_with_adapter(self):
@@ -435,11 +490,15 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_model_with_adapter_for_ctc(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_model_with_adapter_for_ctc(*config_and_inputs)
+        self.model_tester.create_and_check_model_with_adapter_for_ctc(
+            *config_and_inputs
+        )
 
     def test_model_with_adapter_proj_dim(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_model_with_adapter_proj_dim(*config_and_inputs)
+        self.model_tester.create_and_check_model_with_adapter_proj_dim(
+            *config_and_inputs
+        )
 
     def test_ctc_loss_inference(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -510,11 +569,15 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
         input_values = inputs_dict["input_values"]
 
         input_lengths = torch.tensor(
-            [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=torch.long, device=torch_device
+            [input_values.shape[1] for _ in range(input_values.shape[0])],
+            dtype=torch.long,
+            device=torch_device,
         )
         output_lengths = model._get_feat_extract_output_lengths(input_lengths)
 
-        labels = ids_tensor((input_values.shape[0], output_lengths[0] - 2), self.model_tester.vocab_size)
+        labels = ids_tensor(
+            (input_values.shape[0], output_lengths[0] - 2), self.model_tester.vocab_size
+        )
         inputs_dict["attention_mask"] = torch.ones_like(inputs_dict["attention_mask"])
         inputs_dict["labels"] = labels
 
@@ -561,7 +624,9 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any([x in name for x in uniform_init_parms]):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0
+                            <= ((param.data.mean() * 1e9).round() / 1e9).item()
+                            <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
                     else:
@@ -587,23 +652,34 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
             module.pos_bias_v.data.fill_(3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
             module.codevectors.data.fill_(3)
-        if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
+        if (
+            hasattr(module, "masked_spec_embed")
+            and module.masked_spec_embed is not None
+        ):
             module.masked_spec_embed.data.fill_(3)
 
     def test_mask_feature_prob_ctc(self):
         model = Wav2Vec2ConformerForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2-conformer", mask_feature_prob=0.2, mask_feature_length=2
+            "hf-internal-testing/tiny-random-wav2vec2-conformer",
+            mask_feature_prob=0.2,
+            mask_feature_length=2,
         )
         model.to(torch_device).train()
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2-conformer", return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2-conformer",
+            return_attention_mask=True,
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
-        input_features = [np.random.random(16_000 * s) for s in batch_duration_in_seconds]
+        input_features = [
+            np.random.random(16_000 * s) for s in batch_duration_in_seconds
+        ]
 
         batch = processor(
-            input_features, padding=True, sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt"
+            input_features,
+            padding=True,
+            sampling_rate=processor.feature_extractor.sampling_rate,
+            return_tensors="pt",
         )
 
         logits = model(
@@ -615,18 +691,26 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_mask_time_prob_ctc(self):
         model = Wav2Vec2ConformerForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2-conformer", mask_time_prob=0.2, mask_time_length=2
+            "hf-internal-testing/tiny-random-wav2vec2-conformer",
+            mask_time_prob=0.2,
+            mask_time_length=2,
         )
         model.to(torch_device).train()
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2-conformer", return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2-conformer",
+            return_attention_mask=True,
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
-        input_features = [np.random.random(16_000 * s) for s in batch_duration_in_seconds]
+        input_features = [
+            np.random.random(16_000 * s) for s in batch_duration_in_seconds
+        ]
 
         batch = processor(
-            input_features, padding=True, sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt"
+            input_features,
+            padding=True,
+            sampling_rate=processor.feature_extractor.sampling_rate,
+            return_tensors="pt",
         )
 
         logits = model(
@@ -642,7 +726,9 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = Wav2Vec2ConformerModel.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
+        model = Wav2Vec2ConformerModel.from_pretrained(
+            "facebook/wav2vec2-conformer-rel-pos-large"
+        )
         self.assertIsNotNone(model)
 
 
@@ -654,10 +740,15 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask_prob = 0.5
         mask_length = 1
 
-        mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
+        mask = _compute_mask_indices(
+            (batch_size, sequence_length), mask_prob, mask_length
+        )
         mask = torch.from_numpy(mask).to(torch_device)
 
-        self.assertListEqual(mask.sum(axis=-1).tolist(), [mask_prob * sequence_length for _ in range(batch_size)])
+        self.assertListEqual(
+            mask.sum(axis=-1).tolist(),
+            [mask_prob * sequence_length for _ in range(batch_size)],
+        )
 
     def test_compute_mask_indices_low_prob(self):
         # with these settings num_masked_spans=0.5, which means probabilistic rounding
@@ -673,7 +764,9 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         count_dimensions_not_masked = 0
 
         for _ in range(n_trials):
-            mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
+            mask = _compute_mask_indices(
+                (batch_size, sequence_length), mask_prob, mask_length
+            )
             mask = torch.from_numpy(mask).to(torch_device)
 
             num_masks = torch.sum(mask).item()
@@ -695,7 +788,9 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask_prob = 0.5
         mask_length = 4
 
-        mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
+        mask = _compute_mask_indices(
+            (batch_size, sequence_length), mask_prob, mask_length
+        )
         mask = torch.from_numpy(mask).to(torch_device)
 
         # because of overlap mask don't have to add up exactly to `mask_prob * sequence_length`, but have to be smaller or equal
@@ -708,11 +803,16 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask_prob = 0.5
         mask_length = 4
 
-        attention_mask = torch.ones((batch_size, sequence_length), dtype=torch.long, device=torch_device)
+        attention_mask = torch.ones(
+            (batch_size, sequence_length), dtype=torch.long, device=torch_device
+        )
         attention_mask[:2, sequence_length // 2 :] = 0
 
         mask = _compute_mask_indices(
-            (batch_size, sequence_length), mask_prob, mask_length, attention_mask=attention_mask
+            (batch_size, sequence_length),
+            mask_prob,
+            mask_length,
+            attention_mask=attention_mask,
         )
         mask = torch.from_numpy(mask).to(torch_device)
 
@@ -727,12 +827,18 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask_prob = 0.05
         mask_length = 10
 
-        attention_mask = torch.ones((batch_size, sequence_length), dtype=torch.long, device=torch_device)
+        attention_mask = torch.ones(
+            (batch_size, sequence_length), dtype=torch.long, device=torch_device
+        )
         # force one example to be heavily padded
         attention_mask[0, 5:] = 0
 
         mask = _compute_mask_indices(
-            (batch_size, sequence_length), mask_prob, mask_length, attention_mask=attention_mask, min_masks=2
+            (batch_size, sequence_length),
+            mask_prob,
+            mask_length,
+            attention_mask=attention_mask,
+            min_masks=2,
         )
 
         # make sure that non-padded examples cannot be padded
@@ -757,24 +863,44 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         hidden_size = 4
         num_negatives = 3
 
-        features = (torch.arange(sequence_length * hidden_size, device=torch_device) // hidden_size).view(
+        features = (
+            torch.arange(sequence_length * hidden_size, device=torch_device)
+            // hidden_size
+        ).view(
             sequence_length, hidden_size
         )  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size).contiguous()
+        features = (
+            features[None, :]
+            .expand(batch_size, sequence_length, hidden_size)
+            .contiguous()
+        )
 
         # sample negative indices
-        sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives, None)
-        sampled_negative_indices = torch.from_numpy(sampled_negative_indices).to(torch_device)
-        negatives = features.view(-1, hidden_size)[sampled_negative_indices.long().view(-1)]
-        negatives = negatives.view(batch_size, sequence_length, -1, hidden_size).permute(2, 0, 1, 3)
-        self.assertTrue(negatives.shape == (num_negatives, batch_size, sequence_length, hidden_size))
+        sampled_negative_indices = _sample_negative_indices(
+            (batch_size, sequence_length), num_negatives, None
+        )
+        sampled_negative_indices = torch.from_numpy(sampled_negative_indices).to(
+            torch_device
+        )
+        negatives = features.view(-1, hidden_size)[
+            sampled_negative_indices.long().view(-1)
+        ]
+        negatives = negatives.view(
+            batch_size, sequence_length, -1, hidden_size
+        ).permute(2, 0, 1, 3)
+        self.assertTrue(
+            negatives.shape == (num_negatives, batch_size, sequence_length, hidden_size)
+        )
 
         # make sure no negatively sampled vector is actually a positive one
         for negative in negatives:
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        self.assertTrue(negatives.unique(dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
+        self.assertTrue(
+            negatives.unique(dim=-1).shape,
+            (num_negatives, batch_size, sequence_length, 1),
+        )
 
     def test_sample_negatives_with_mask(self):
         batch_size = 2
@@ -783,50 +909,78 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         num_negatives = 3
 
         # second half of last input tensor is padded
-        mask = torch.ones((batch_size, sequence_length), dtype=torch.long, device=torch_device)
+        mask = torch.ones(
+            (batch_size, sequence_length), dtype=torch.long, device=torch_device
+        )
         mask[-1, sequence_length // 2 :] = 0
 
-        features = (torch.arange(sequence_length * hidden_size, device=torch_device) // hidden_size).view(
+        features = (
+            torch.arange(sequence_length * hidden_size, device=torch_device)
+            // hidden_size
+        ).view(
             sequence_length, hidden_size
         )  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size).contiguous()
+        features = (
+            features[None, :]
+            .expand(batch_size, sequence_length, hidden_size)
+            .contiguous()
+        )
 
         # replace masked feature vectors with -100 to test that those are not sampled
-        features = torch.where(mask[:, :, None].expand(features.shape).bool(), features, -100)
+        features = torch.where(
+            mask[:, :, None].expand(features.shape).bool(), features, -100
+        )
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices(
             (batch_size, sequence_length), num_negatives, mask.cpu().numpy()
         )
-        sampled_negative_indices = torch.from_numpy(sampled_negative_indices).to(torch_device)
-        negatives = features.view(-1, hidden_size)[sampled_negative_indices.long().view(-1)]
-        negatives = negatives.view(batch_size, sequence_length, -1, hidden_size).permute(2, 0, 1, 3)
+        sampled_negative_indices = torch.from_numpy(sampled_negative_indices).to(
+            torch_device
+        )
+        negatives = features.view(-1, hidden_size)[
+            sampled_negative_indices.long().view(-1)
+        ]
+        negatives = negatives.view(
+            batch_size, sequence_length, -1, hidden_size
+        ).permute(2, 0, 1, 3)
 
         self.assertTrue((negatives >= 0).all().item())
 
-        self.assertTrue(negatives.shape == (num_negatives, batch_size, sequence_length, hidden_size))
+        self.assertTrue(
+            negatives.shape == (num_negatives, batch_size, sequence_length, hidden_size)
+        )
 
         # make sure no negatively sampled vector is actually a positive one
         for negative in negatives:
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        self.assertTrue(negatives.unique(dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
+        self.assertTrue(
+            negatives.unique(dim=-1).shape,
+            (num_negatives, batch_size, sequence_length, 1),
+        )
 
 
 @require_torch
 @slow
 class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
     def _load_datasamples(self, num_samples):
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        )
         # automatic decoding with librispeech
-        speech_samples = ds.sort("id").filter(lambda x: x["id"] in [f"1272-141231-000{i}" for i in range(num_samples)])
+        speech_samples = ds.sort("id").filter(
+            lambda x: x["id"] in [f"1272-141231-000{i}" for i in range(num_samples)]
+        )
         speech_samples = speech_samples[:num_samples]["audio"]
 
         return [x["array"] for x in speech_samples]
 
     def test_inference_ctc_normal_batched_rel_pos(self):
-        model = Wav2Vec2ConformerForCTC.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large-960h-ft")
+        model = Wav2Vec2ConformerForCTC.from_pretrained(
+            "facebook/wav2vec2-conformer-rel-pos-large-960h-ft"
+        )
         model.to(torch_device)
         processor = Wav2Vec2Processor.from_pretrained(
             "facebook/wav2vec2-conformer-rel-pos-large-960h-ft", do_lower_case=True
@@ -851,7 +1005,9 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_ctc_normal_batched_rope(self):
-        model = Wav2Vec2ConformerForCTC.from_pretrained("facebook/wav2vec2-conformer-rope-large-960h-ft")
+        model = Wav2Vec2ConformerForCTC.from_pretrained(
+            "facebook/wav2vec2-conformer-rope-large-960h-ft"
+        )
         model.to(torch_device)
         processor = Wav2Vec2Processor.from_pretrained(
             "facebook/wav2vec2-conformer-rope-large-960h-ft", do_lower_case=True
@@ -876,7 +1032,9 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_pretrained(self):
-        model = Wav2Vec2ConformerForPreTraining.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
+        model = Wav2Vec2ConformerForPreTraining.from_pretrained(
+            "facebook/wav2vec2-conformer-rel-pos-large"
+        )
         model.to(torch_device)
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
             "facebook/wav2vec2-conformer-rel-pos-large", return_attention_mask=True
@@ -886,7 +1044,9 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         inputs_dict = feature_extractor(input_speech, return_tensors="pt", padding=True)
 
         batch_size = inputs_dict["input_values"].shape[0]
-        feature_seq_length = int(model._get_feat_extract_output_lengths(inputs_dict["input_values"].shape[1]))
+        feature_seq_length = int(
+            model._get_feat_extract_output_lengths(inputs_dict["input_values"].shape[1])
+        )
 
         features_shape = (batch_size, feature_seq_length)
 
@@ -907,14 +1067,18 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
             )
 
         # compute cosine similarity
-        cosine_sim = torch.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
+        cosine_sim = torch.cosine_similarity(
+            outputs.projected_states, outputs.projected_quantized_states, dim=-1
+        )
 
         # retrieve cosine sim of masked features
         cosine_sim_masked = cosine_sim[mask_time_indices]
 
         # ... now compare to randomly initialized model
 
-        config = Wav2Vec2ConformerConfig.from_pretrained("facebook/wav2vec2-conformer-rel-pos-large")
+        config = Wav2Vec2ConformerConfig.from_pretrained(
+            "facebook/wav2vec2-conformer-rel-pos-large"
+        )
         model_rand = Wav2Vec2ConformerForPreTraining(config).to(torch_device).eval()
 
         with torch.no_grad():
@@ -926,7 +1090,9 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
 
         # compute cosine similarity
         cosine_sim_rand = torch.cosine_similarity(
-            outputs_rand.projected_states, outputs_rand.projected_quantized_states, dim=-1
+            outputs_rand.projected_states,
+            outputs_rand.projected_quantized_states,
+            dim=-1,
         )
 
         # retrieve cosine sim of masked features
@@ -936,4 +1102,7 @@ class Wav2Vec2ConformerModelIntegrationTest(unittest.TestCase):
         # => the cosine similarity between quantized states and predicted states > 0.5
         # a random wav2vec2_conformer model has not learned to predict the quantized latent states
         # => the cosine similarity between quantized states and predicted states is very likely < 0.1
-        self.assertTrue(cosine_sim_masked.mean().item() - 5 * cosine_sim_masked_rand.mean().item() > 0)
+        self.assertTrue(
+            cosine_sim_masked.mean().item() - 5 * cosine_sim_masked_rand.mean().item()
+            > 0
+        )

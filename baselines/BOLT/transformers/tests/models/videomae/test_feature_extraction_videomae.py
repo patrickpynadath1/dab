@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_video_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_video_inputs,
+)
 
 
 if is_torch_available():
@@ -74,9 +77,13 @@ class VideoMAEFeatureExtractionTester(unittest.TestCase):
 
 @require_torch
 @require_vision
-class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestCase):
+class VideoMAEFeatureExtractionTest(
+    FeatureExtractionSavingTestMixin, unittest.TestCase
+):
 
-    feature_extraction_class = VideoMAEFeatureExtractor if is_vision_available() else None
+    feature_extraction_class = (
+        VideoMAEFeatureExtractor if is_vision_available() else None
+    )
 
     def setUp(self):
         self.feature_extract_tester = VideoMAEFeatureExtractionTester(self)
@@ -100,13 +107,17 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL videos
-        video_inputs = prepare_video_inputs(self.feature_extract_tester, equal_resolution=False)
+        video_inputs = prepare_video_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for video in video_inputs:
             self.assertIsInstance(video, list)
             self.assertIsInstance(video[0], Image.Image)
 
         # Test not batched input
-        encoded_videos = feature_extractor(video_inputs[0], return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (
@@ -119,7 +130,9 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_videos = feature_extractor(video_inputs, return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (
@@ -135,13 +148,17 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        video_inputs = prepare_video_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        video_inputs = prepare_video_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for video in video_inputs:
             self.assertIsInstance(video, list)
             self.assertIsInstance(video[0], np.ndarray)
 
         # Test not batched input
-        encoded_videos = feature_extractor(video_inputs[0], return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (
@@ -154,7 +171,9 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_videos = feature_extractor(video_inputs, return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (
@@ -170,13 +189,17 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        video_inputs = prepare_video_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        video_inputs = prepare_video_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for video in video_inputs:
             self.assertIsInstance(video, list)
             self.assertIsInstance(video[0], torch.Tensor)
 
         # Test not batched input
-        encoded_videos = feature_extractor(video_inputs[0], return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (
@@ -189,7 +212,9 @@ class VideoMAEFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         )
 
         # Test batched
-        encoded_videos = feature_extractor(video_inputs, return_tensors="pt").pixel_values
+        encoded_videos = feature_extractor(
+            video_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_videos.shape,
             (

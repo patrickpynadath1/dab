@@ -32,6 +32,7 @@ class CLIPProcessor(ProcessorMixin):
         tokenizer ([`CLIPTokenizerFast`]):
             The tokenizer is a required input.
     """
+
     feature_extractor_class = "CLIPFeatureExtractor"
     tokenizer_class = ("CLIPTokenizer", "CLIPTokenizerFast")
 
@@ -76,13 +77,17 @@ class CLIPProcessor(ProcessorMixin):
         """
 
         if text is None and images is None:
-            raise ValueError("You have to specify either text or images. Both cannot be none.")
+            raise ValueError(
+                "You have to specify either text or images. Both cannot be none."
+            )
 
         if text is not None:
             encoding = self.tokenizer(text, return_tensors=return_tensors, **kwargs)
 
         if images is not None:
-            image_features = self.feature_extractor(images, return_tensors=return_tensors, **kwargs)
+            image_features = self.feature_extractor(
+                images, return_tensors=return_tensors, **kwargs
+            )
 
         if text is not None and images is not None:
             encoding["pixel_values"] = image_features.pixel_values
@@ -90,7 +95,9 @@ class CLIPProcessor(ProcessorMixin):
         elif text is not None:
             return encoding
         else:
-            return BatchEncoding(data=dict(**image_features), tensor_type=return_tensors)
+            return BatchEncoding(
+                data=dict(**image_features), tensor_type=return_tensors
+            )
 
     def batch_decode(self, *args, **kwargs):
         """

@@ -20,7 +20,11 @@ from transformers import RoFormerConfig, is_tf_available
 from transformers.testing_utils import require_tf, slow
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_tf_common import TFModelTesterMixin, ids_tensor, random_attention_mask
+from ...test_modeling_tf_common import (
+    TFModelTesterMixin,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_tf_available():
@@ -99,14 +103,20 @@ class TFRoFormerModelTester:
 
         token_type_ids = None
         if self.use_token_type_ids:
-            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+            token_type_ids = ids_tensor(
+                [self.batch_size, self.seq_length], self.type_vocab_size
+            )
 
         sequence_labels = None
         token_labels = None
         choice_labels = None
         if self.use_labels:
-            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            sequence_labels = ids_tensor(
+                [self.batch_size], self.type_sequence_label_size
+            )
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
         config = RoFormerConfig(
@@ -124,23 +134,52 @@ class TFRoFormerModelTester:
             return_dict=True,
         )
 
-        return config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        return (
+            config,
+            input_ids,
+            token_type_ids,
+            input_mask,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+        )
 
     def create_and_check_model(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = TFRoFormerModel(config=config)
-        inputs = {"input_ids": input_ids, "attention_mask": input_mask, "token_type_ids": token_type_ids}
+        inputs = {
+            "input_ids": input_ids,
+            "attention_mask": input_mask,
+            "token_type_ids": token_type_ids,
+        }
 
         inputs = [input_ids, input_mask]
         result = model(inputs)
 
         result = model(input_ids)
 
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_lm_head(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.is_decoder = True
         model = TFRoFormerForCausalLM(config=config)
@@ -151,11 +190,19 @@ class TFRoFormerModelTester:
         }
         prediction_scores = model(inputs)["logits"]
         self.parent.assertListEqual(
-            list(prediction_scores.numpy().shape), [self.batch_size, self.seq_length, self.vocab_size]
+            list(prediction_scores.numpy().shape),
+            [self.batch_size, self.seq_length, self.vocab_size],
         )
 
     def create_and_check_for_masked_lm(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = TFRoFormerForMaskedLM(config=config)
         inputs = {
@@ -164,10 +211,19 @@ class TFRoFormerModelTester:
             "token_type_ids": token_type_ids,
         }
         result = model(inputs)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
 
     def create_and_check_for_sequence_classification(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_labels = self.num_labels
         model = TFRoFormerForSequenceClassification(config=config)
@@ -181,23 +237,45 @@ class TFRoFormerModelTester:
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_multiple_choice(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_choices = self.num_choices
         model = TFRoFormerForMultipleChoice(config=config)
-        multiple_choice_inputs_ids = tf.tile(tf.expand_dims(input_ids, 1), (1, self.num_choices, 1))
-        multiple_choice_input_mask = tf.tile(tf.expand_dims(input_mask, 1), (1, self.num_choices, 1))
-        multiple_choice_token_type_ids = tf.tile(tf.expand_dims(token_type_ids, 1), (1, self.num_choices, 1))
+        multiple_choice_inputs_ids = tf.tile(
+            tf.expand_dims(input_ids, 1), (1, self.num_choices, 1)
+        )
+        multiple_choice_input_mask = tf.tile(
+            tf.expand_dims(input_mask, 1), (1, self.num_choices, 1)
+        )
+        multiple_choice_token_type_ids = tf.tile(
+            tf.expand_dims(token_type_ids, 1), (1, self.num_choices, 1)
+        )
         inputs = {
             "input_ids": multiple_choice_inputs_ids,
             "attention_mask": multiple_choice_input_mask,
             "token_type_ids": multiple_choice_token_type_ids,
         }
         result = model(inputs)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_choices))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.num_choices)
+        )
 
     def create_and_check_for_token_classification(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         config.num_labels = self.num_labels
         model = TFRoFormerForTokenClassification(config=config)
@@ -207,10 +285,19 @@ class TFRoFormerModelTester:
             "token_type_ids": token_type_ids,
         }
         result = model(inputs)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.num_labels)
+        )
 
     def create_and_check_for_question_answering(
-        self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
+        self,
+        config,
+        input_ids,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels,
+        choice_labels,
     ):
         model = TFRoFormerForQuestionAnswering(config=config)
         inputs = {
@@ -220,8 +307,12 @@ class TFRoFormerModelTester:
         }
 
         result = model(inputs)
-        self.parent.assertEqual(result.start_logits.shape, (self.batch_size, self.seq_length))
-        self.parent.assertEqual(result.end_logits.shape, (self.batch_size, self.seq_length))
+        self.parent.assertEqual(
+            result.start_logits.shape, (self.batch_size, self.seq_length)
+        )
+        self.parent.assertEqual(
+            result.end_logits.shape, (self.batch_size, self.seq_length)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -234,7 +325,11 @@ class TFRoFormerModelTester:
             token_labels,
             choice_labels,
         ) = config_and_inputs
-        inputs_dict = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": input_mask}
+        inputs_dict = {
+            "input_ids": input_ids,
+            "token_type_ids": token_type_ids,
+            "attention_mask": input_mask,
+        }
         return config, inputs_dict
 
 
@@ -260,7 +355,9 @@ class TFRoFormerModelTest(TFModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = TFRoFormerModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=RoFormerConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=RoFormerConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -287,7 +384,9 @@ class TFRoFormerModelTest(TFModelTesterMixin, unittest.TestCase):
 
     def test_for_sequence_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
+        self.model_tester.create_and_check_for_sequence_classification(
+            *config_and_inputs
+        )
 
     def test_for_token_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -338,7 +437,10 @@ class TFRoFormerSinusoidalPositionalEmbeddingTest(unittest.TestCase):
 
         emb = emb1(input_ids.shape)
         desired_weights = tf.constant(
-            [[0.0000, 0.0000, 0.0000, 1.0000, 1.0000, 1.0000], [0.8415, 0.0464, 0.0022, 0.5403, 0.9989, 1.0000]]
+            [
+                [0.0000, 0.0000, 0.0000, 1.0000, 1.0000, 1.0000],
+                [0.8415, 0.0464, 0.0022, 0.5403, 0.9989, 1.0000],
+            ]
         )
 
         tf.debugging.assert_near(emb, desired_weights, atol=self.tolerance)
@@ -352,7 +454,9 @@ class TFRoFormerSinusoidalPositionalEmbeddingTest(unittest.TestCase):
                 [0.9093, 0.9364, 0.9581, 0.9749, 0.9870],
             ]
         )
-        emb1 = TFRoFormerSinusoidalPositionalEmbedding(num_positions=512, embedding_dim=512)
+        emb1 = TFRoFormerSinusoidalPositionalEmbedding(
+            num_positions=512, embedding_dim=512
+        )
         emb1([2, 16, 512])
         weights = emb1.weight[:3, :5]
 
@@ -365,15 +469,29 @@ class TFRoFormerSelfAttentionRotaryPositionEmbeddingTest(unittest.TestCase):
 
     def test_apply_rotary_position_embeddings(self):
         # 2,12,16,64
-        query_layer = tf.reshape(tf.range(2 * 12 * 16 * 64, dtype=tf.float32), shape=(2, 12, 16, 64)) / 100
+        query_layer = (
+            tf.reshape(
+                tf.range(2 * 12 * 16 * 64, dtype=tf.float32), shape=(2, 12, 16, 64)
+            )
+            / 100
+        )
 
-        key_layer = -tf.reshape(tf.range(2 * 12 * 16 * 64, dtype=tf.float32), shape=(2, 12, 16, 64)) / 100
+        key_layer = (
+            -tf.reshape(
+                tf.range(2 * 12 * 16 * 64, dtype=tf.float32), shape=(2, 12, 16, 64)
+            )
+            / 100
+        )
 
-        embed_positions = TFRoFormerSinusoidalPositionalEmbedding(num_positions=32, embedding_dim=64)
+        embed_positions = TFRoFormerSinusoidalPositionalEmbedding(
+            num_positions=32, embedding_dim=64
+        )
         sinusoidal_pos = embed_positions([2, 16, 768])[None, None, :, :]
 
-        query_layer, key_layer = TFRoFormerSelfAttention.apply_rotary_position_embeddings(
-            sinusoidal_pos, query_layer, key_layer
+        query_layer, key_layer = (
+            TFRoFormerSelfAttention.apply_rotary_position_embeddings(
+                sinusoidal_pos, query_layer, key_layer
+            )
         )
 
         desired_query_layer = tf.constant(
@@ -397,5 +515,9 @@ class TFRoFormerSelfAttentionRotaryPositionEmbeddingTest(unittest.TestCase):
             ]
         )
 
-        tf.debugging.assert_near(query_layer[0, 0, :6, :8], desired_query_layer, atol=self.tolerance)
-        tf.debugging.assert_near(key_layer[0, 0, :6, :8], desired_key_layer, atol=self.tolerance)
+        tf.debugging.assert_near(
+            query_layer[0, 0, :6, :8], desired_query_layer, atol=self.tolerance
+        )
+        tf.debugging.assert_near(
+            key_layer[0, 0, :6, :8], desired_key_layer, atol=self.tolerance
+        )

@@ -60,12 +60,16 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
 
     inverted_mask = 1.0 - expanded_mask
 
-    return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
+    return inverted_mask.masked_fill(
+        inverted_mask.to(torch.bool), torch.finfo(dtype).min
+    )
 
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss with clip->owlvit
 def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
-    return nn.functional.cross_entropy(logits, torch.arange(len(logits), device=logits.device))
+    return nn.functional.cross_entropy(
+        logits, torch.arange(len(logits), device=logits.device)
+    )
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->owlvit
@@ -108,7 +112,11 @@ class OwlViTOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["text_model_output", "vision_model_output"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
 
@@ -176,11 +184,15 @@ class OwlViTVisionEmbeddings(nn.Module):
         self.num_patches = (config.image_size // config.patch_size) ** 2
         self.num_positions = self.num_patches + 1
         self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
-        self.register_buffer("position_ids", torch.arange(self.num_positions).expand((1, -1)))
+        self.register_buffer(
+            "position_ids", torch.arange(self.num_positions).expand((1, -1))
+        )
 
     def forward(self, pixel_values: torch.FloatTensor) -> torch.Tensor:
         batch_size = pixel_values.shape[0]
-        patch_embeds = self.patch_embedding(pixel_values)  # shape = [batch_size, num_channels, height, width]
+        patch_embeds = self.patch_embedding(
+            pixel_values
+        )  # shape = [batch_size, num_channels, height, width]
         patch_embeds = patch_embeds.flatten(2).transpose(1, 2)
 
         class_embeds = self.class_embedding.expand(batch_size, 1, -1)
@@ -194,10 +206,14 @@ class OwlViTTextEmbeddings(nn.Module):
     def __init__(self, config: OwlViTTextConfig):
         super().__init__()
         self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.position_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.position_embedding = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer(
+            "position_ids", torch.arange(config.max_position_embeddings).expand((1, -1))
+        )
 
     def forward(
         self,
@@ -206,7 +222,9 @@ class OwlViTTextEmbeddings(nn.Module):
         inputs_embeds: Optional[torch.FloatTensor] = None,
     ) -> torch.Tensor:
 
-        seq_length = input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
+        seq_length = (
+            input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
+        )
 
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
@@ -243,7 +261,11 @@ class OwlViTAttention(nn.Module):
         self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return (
+            tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+            .contiguous()
+        )
 
     def forward(
         self,
@@ -282,7 +304,10 @@ class OwlViTAttention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is"
                     f" {causal_attention_mask.size()}"
                 )
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + causal_attention_mask
+            attn_weights = (
+                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+                + causal_attention_mask
+            )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if attention_mask is not None:
@@ -290,7 +315,10 @@ class OwlViTAttention(nn.Module):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
                 )
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
+            attn_weights = (
+                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+                + attention_mask
+            )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn_weights = nn.functional.softmax(attn_weights, dim=-1)
@@ -300,12 +328,18 @@ class OwlViTAttention(nn.Module):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
+            attn_weights_reshaped = attn_weights.view(
+                bsz, self.num_heads, tgt_len, src_len
+            )
+            attn_weights = attn_weights_reshaped.view(
+                bsz * self.num_heads, tgt_len, src_len
+            )
         else:
             attn_weights_reshaped = None
 
-        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(
+            attn_weights, p=self.dropout, training=self.training
+        )
 
         attn_output = torch.bmm(attn_probs, value_states)
 
@@ -410,12 +444,24 @@ class OwlViTPreTrainedModel(PreTrainedModel):
             module.position_embedding.weight.data.normal_(mean=0.0, std=factor * 0.02)
         elif isinstance(module, OwlViTVisionEmbeddings):
             factor = self.config.initializer_factor
-            nn.init.normal_(module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor)
-            nn.init.normal_(module.patch_embedding.weight, std=module.config.initializer_range * factor)
-            nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
+            nn.init.normal_(
+                module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor
+            )
+            nn.init.normal_(
+                module.patch_embedding.weight,
+                std=module.config.initializer_range * factor,
+            )
+            nn.init.normal_(
+                module.position_embedding.weight,
+                std=module.config.initializer_range * factor,
+            )
         elif isinstance(module, OwlViTAttention):
             factor = self.config.initializer_factor
-            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            in_proj_std = (
+                (module.embed_dim**-0.5)
+                * ((2 * module.config.num_hidden_layers) ** -0.5)
+                * factor
+            )
             out_proj_std = (module.embed_dim**-0.5) * factor
             nn.init.normal_(module.q_proj.weight, std=in_proj_std)
             nn.init.normal_(module.k_proj.weight, std=in_proj_std)
@@ -424,7 +470,9 @@ class OwlViTPreTrainedModel(PreTrainedModel):
         elif isinstance(module, OwlViTMLP):
             factor = self.config.initializer_factor
             in_proj_std = (
-                (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+                (module.config.hidden_size**-0.5)
+                * ((2 * module.config.num_hidden_layers) ** -0.5)
+                * factor
             )
             fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
             nn.init.normal_(module.fc1.weight, std=fc_std)
@@ -550,7 +598,9 @@ class OwlViTEncoder(nn.Module):
 
     def __init__(self, config: OwlViTConfig):
         super().__init__()
-        self.layers = nn.ModuleList([OwlViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList(
+            [OwlViTEncoderLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
     def forward(
@@ -584,11 +634,19 @@ class OwlViTEncoder(nn.Module):
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -628,9 +686,15 @@ class OwlViTEncoder(nn.Module):
             encoder_states = encoder_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, encoder_states, all_attentions]
+                if v is not None
+            )
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=encoder_states,
+            attentions=all_attentions,
         )
 
 
@@ -644,7 +708,9 @@ class OwlViTTextTransformer(nn.Module):
         self.final_layer_norm = nn.LayerNorm(embed_dim)
 
     @add_start_docstrings_to_model_forward(OWLVIT_TEXT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=OwlViTTextConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=OwlViTTextConfig
+    )
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -658,20 +724,32 @@ class OwlViTTextTransformer(nn.Module):
         Returns:
 
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         input_shape = input_ids.size()
         input_ids = input_ids.view(-1, input_shape[-1])
         hidden_states = self.embeddings(input_ids=input_ids, position_ids=position_ids)
 
-        num_samples, seq_len = input_shape  # num_samples = batch_size * num_max_text_queries
+        num_samples, seq_len = (
+            input_shape  # num_samples = batch_size * num_max_text_queries
+        )
         # OWLVIT's text model uses causal mask, prepare it here.
         # https://github.com/openai/CLIP/blob/cfcffb90e69f37bf2ff1e988237a0fbe41f33c04/clip/model.py#L324
-        causal_attention_mask = self._build_causal_attention_mask(num_samples, seq_len).to(hidden_states.device)
+        causal_attention_mask = self._build_causal_attention_mask(
+            num_samples, seq_len
+        ).to(hidden_states.device)
         # expand attention_mask
         if attention_mask is not None:
             # [num_samples, seq_len] -> [num_samples, 1, tgt_seq_len, src_seq_len]
@@ -692,7 +770,8 @@ class OwlViTTextTransformer(nn.Module):
         # take features from the end of tokens embedding (end of token is the highest number in each sequence)
         # casting to torch.int for onnx compatibility: argmax doesn't support int64 inputs with opset 14
         pooled_output = last_hidden_state[
-            torch.arange(last_hidden_state.shape[0]), input_ids.to(torch.int).argmax(dim=-1)
+            torch.arange(last_hidden_state.shape[0]),
+            input_ids.to(torch.int).argmax(dim=-1),
         ]
 
         if not return_dict:
@@ -731,7 +810,9 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
         self.text_model.embeddings.token_embedding = value
 
     @add_start_docstrings_to_model_forward(OWLVIT_TEXT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=OwlViTTextConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=OwlViTTextConfig
+    )
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -778,7 +859,9 @@ class OwlViTVisionTransformer(nn.Module):
         self.post_layernorm = nn.LayerNorm(config.hidden_size)
 
     @add_start_docstrings_to_model_forward(OWLVIT_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=OwlViTVisionConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=OwlViTVisionConfig
+    )
     def forward(
         self,
         pixel_values: torch.FloatTensor,
@@ -791,11 +874,19 @@ class OwlViTVisionTransformer(nn.Module):
         Returns:
 
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         hidden_states = self.embeddings(pixel_values)
         hidden_states = self.pre_layernorm(hidden_states)
@@ -839,7 +930,9 @@ class OwlViTVisionModel(OwlViTPreTrainedModel):
         return self.vision_model.embeddings.patch_embedding
 
     @add_start_docstrings_to_model_forward(OWLVIT_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=OwlViTVisionConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=OwlViTVisionConfig
+    )
     def forward(
         self,
         pixel_values: Optional[torch.FloatTensor] = None,
@@ -904,8 +997,12 @@ class OwlViTModel(OwlViTPreTrainedModel):
         self.text_model = OwlViTTextTransformer(text_config)
         self.vision_model = OwlViTVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
-        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False
+        )
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False
+        )
         self.logit_scale = nn.Parameter(torch.ones([]) * config.logit_scale_init_value)
 
         # Initialize weights and apply final processing
@@ -937,11 +1034,19 @@ class OwlViTModel(OwlViTPreTrainedModel):
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # Get embeddings for all text queries in all batch samples
         text_output = self.text_model(
@@ -984,11 +1089,19 @@ class OwlViTModel(OwlViTPreTrainedModel):
         >>> image_features = model.get_image_features(**inputs)
         ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
@@ -1038,14 +1151,24 @@ class OwlViTModel(OwlViTPreTrainedModel):
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
         ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # Whether to return unprojected image features
-        return_base_image_embeds = return_base_image_embeds if return_base_image_embeds is not None else False
+        return_base_image_embeds = (
+            return_base_image_embeds if return_base_image_embeds is not None else False
+        )
 
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
@@ -1087,7 +1210,14 @@ class OwlViTModel(OwlViTPreTrainedModel):
             image_embeds = self.vision_model.post_layernorm(last_hidden_state)
 
         if not return_dict:
-            output = (logits_per_image, logits_per_text, text_embeds, image_embeds, text_outputs, vision_outputs)
+            output = (
+                logits_per_image,
+                logits_per_text,
+                text_embeds,
+                image_embeds,
+                text_outputs,
+                vision_outputs,
+            )
             return ((loss,) + output) if loss is not None else output
 
         return OwlViTOutput(
@@ -1142,11 +1272,15 @@ class OwlViTClassPredictionHead(nn.Module):
         image_class_embeds = self.dense0(image_embeds)
 
         # Normalize image and text features
-        image_class_embeds /= torch.linalg.norm(image_class_embeds, dim=-1, keepdim=True) + 1e-6
+        image_class_embeds /= (
+            torch.linalg.norm(image_class_embeds, dim=-1, keepdim=True) + 1e-6
+        )
         query_embeds /= torch.linalg.norm(query_embeds, dim=-1, keepdim=True) + 1e-6
 
         # Get class predictions
-        pred_logits = torch.einsum("...pd,...qd->...pq", image_class_embeds, query_embeds)
+        pred_logits = torch.einsum(
+            "...pd,...qd->...pq", image_class_embeds, query_embeds
+        )
 
         # Apply a learnable shift and scale to logits
         logit_shift = self.logit_shift(image_embeds)
@@ -1181,19 +1315,23 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
     def normalize_grid_corner_coordinates(self, feature_map: torch.FloatTensor):
         # Computes normalized xy corner coordinates from feature_map.
         if not feature_map.ndim == 4:
-            raise ValueError("Expected input shape is [batch_size, num_patches, num_patches, hidden_dim]")
+            raise ValueError(
+                "Expected input shape is [batch_size, num_patches, num_patches, hidden_dim]"
+            )
 
         device = feature_map.device
         num_patches = feature_map.shape[1]
 
         box_coordinates = np.stack(
-            np.meshgrid(np.arange(1, num_patches + 1), np.arange(1, num_patches + 1)), axis=-1
+            np.meshgrid(np.arange(1, num_patches + 1), np.arange(1, num_patches + 1)),
+            axis=-1,
         ).astype(np.float32)
         box_coordinates /= np.array([num_patches, num_patches], np.float32)
 
         # Flatten (h, w, 2) -> (h*w, 2)
         box_coordinates = box_coordinates.reshape(
-            box_coordinates.shape[0] * box_coordinates.shape[1], box_coordinates.shape[2]
+            box_coordinates.shape[0] * box_coordinates.shape[1],
+            box_coordinates.shape[2],
         )
         box_coordinates = torch.from_numpy(box_coordinates).to(device)
 
@@ -1205,7 +1343,9 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         box_coordinates = torch.clip(box_coordinates, 0.0, 1.0)
 
         # Unnormalize xy
-        box_coord_bias = torch.log(box_coordinates + 1e-4) - torch.log1p(-box_coordinates + 1e-4)
+        box_coord_bias = torch.log(box_coordinates + 1e-4) - torch.log1p(
+            -box_coordinates + 1e-4
+        )
 
         # The box size is biased to the patch size
         box_size = torch.full_like(box_coord_bias, 1.0 / feature_map.shape[-2])
@@ -1253,7 +1393,9 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
             query_mask:
                 Must be provided with query_embeddings. A mask indicating which query embeddings are valid.
         """
-        (pred_logits, image_class_embeds) = self.class_head(image_feats, query_embeds, query_mask)
+        (pred_logits, image_class_embeds) = self.class_head(
+            image_feats, query_embeds, query_mask
+        )
 
         return (pred_logits, image_class_embeds)
 
@@ -1299,10 +1441,17 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         text_model_last_hidden_state = outputs[-2][0]
         vision_model_last_hidden_state = outputs[-1][0]
 
-        return (text_embeds, image_embeds, text_model_last_hidden_state, vision_model_last_hidden_state)
+        return (
+            text_embeds,
+            image_embeds,
+            text_model_last_hidden_state,
+            vision_model_last_hidden_state,
+        )
 
     @add_start_docstrings_to_model_forward(OWLVIT_OBJECT_DETECTION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=OwlViTObjectDetectionOutput, config_class=OwlViTConfig)
+    @replace_return_docstrings(
+        output_type=OwlViTObjectDetectionOutput, config_class=OwlViTConfig
+    )
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -1349,9 +1498,13 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         Detected a photo of a cat with confidence 0.717 at location [1.46, 55.26, 315.55, 472.17]
         ```"""
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.return_dict
+        )
 
         # Embed images and text queries
         outputs = self.image_text_embedder(
@@ -1370,18 +1523,24 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         feature_map = outputs[1]
 
         batch_size, num_patches, num_patches, hidden_dim = feature_map.shape
-        image_feats = torch.reshape(feature_map, (batch_size, num_patches * num_patches, hidden_dim))
+        image_feats = torch.reshape(
+            feature_map, (batch_size, num_patches * num_patches, hidden_dim)
+        )
 
         # Reshape from [batch_size * max_text_queries, hidden_dim] -> [batch_size, max_text_queries, hidden_dim]
         max_text_queries = input_ids.shape[0] // batch_size
-        query_embeds = query_embeds.reshape(batch_size, max_text_queries, query_embeds.shape[-1])
+        query_embeds = query_embeds.reshape(
+            batch_size, max_text_queries, query_embeds.shape[-1]
+        )
 
         # If first token is 0, then this is a padded query [batch_size, num_queries].
         input_ids = input_ids.reshape(batch_size, max_text_queries, input_ids.shape[-1])
         query_mask = input_ids[..., 0] > 0
 
         # Predict object classes [batch_size, num_patches, num_queries+1]
-        (pred_logits, class_embeds) = self.class_predictor(image_feats, query_embeds, query_mask)
+        (pred_logits, class_embeds) = self.class_predictor(
+            image_feats, query_embeds, query_mask
+        )
 
         # Predict object boxes
         pred_boxes = self.box_predictor(image_feats, feature_map)

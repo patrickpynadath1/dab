@@ -41,13 +41,19 @@ class ImageToTextPipeline(Pipeline):
         super().__init__(*args, **kwargs)
         requires_backends(self, "vision")
         self.check_model_type(
-            TF_MODEL_FOR_VISION_2_SEQ_MAPPING if self.framework == "tf" else MODEL_FOR_VISION_2_SEQ_MAPPING
+            TF_MODEL_FOR_VISION_2_SEQ_MAPPING
+            if self.framework == "tf"
+            else MODEL_FOR_VISION_2_SEQ_MAPPING
         )
 
     def _sanitize_parameters(self, **kwargs):
         return {}, {}, {}
 
-    def __call__(self, images: Union[str, List[str], "Image.Image", List["Image.Image"]], **kwargs):
+    def __call__(
+        self,
+        images: Union[str, List[str], "Image.Image", List["Image.Image"]],
+        **kwargs
+    ):
         """
         Assign labels to the image(s) passed as inputs.
 
@@ -70,7 +76,9 @@ class ImageToTextPipeline(Pipeline):
 
     def preprocess(self, image):
         image = load_image(image)
-        model_inputs = self.feature_extractor(images=image, return_tensors=self.framework)
+        model_inputs = self.feature_extractor(
+            images=image, return_tensors=self.framework
+        )
         return model_inputs
 
     def _forward(self, model_inputs):

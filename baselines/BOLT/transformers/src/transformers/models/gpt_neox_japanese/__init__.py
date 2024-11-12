@@ -22,7 +22,10 @@ from ...utils import OptionalDependencyNotAvailable
 
 
 _import_structure = {
-    "configuration_gpt_neox_japanese": ["GPT_NEOX_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP", "GPTNeoXJapaneseConfig"],
+    "configuration_gpt_neox_japanese": [
+        "GPT_NEOX_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "GPTNeoXJapaneseConfig",
+    ],
     "tokenization_gpt_neox_japanese": ["GPTNeoXJapaneseTokenizer"],
 }
 
@@ -42,7 +45,10 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_gpt_neox_japanese import GPT_NEOX_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP, GPTNeoXJapaneseConfig
+    from .configuration_gpt_neox_japanese import (
+        GPT_NEOX_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        GPTNeoXJapaneseConfig,
+    )
     from .tokenization_gpt_neox_japanese import GPTNeoXJapaneseTokenizer
 
     try:
@@ -63,4 +69,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

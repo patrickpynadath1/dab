@@ -139,8 +139,8 @@ class OpenGPT2Config(PretrainedConfig):
         >>> configuration = model.config
     """
 
-    #model_type = "gpt2"
-    #keys_to_ignore_at_inference = ["past_key_values"]
+    # model_type = "gpt2"
+    # keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
         self,
@@ -154,7 +154,7 @@ class OpenGPT2Config(PretrainedConfig):
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
-        #attn_pdrop=0.1,
+        # attn_pdrop=0.1,
         layer_norm_epsilon=1e-5,
         initializer_range=0.02,
         summary_type="cls_index",
@@ -170,7 +170,6 @@ class OpenGPT2Config(PretrainedConfig):
     ):
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
-
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
@@ -182,7 +181,6 @@ class OpenGPT2Config(PretrainedConfig):
         self.max_position_embeddings = max_position_embeddings
         self.initializer_range = initializer_range
         self.pad_token_id = 0
-
 
         self.layer_norm_epsilon = layer_norm_epsilon
         self.initializer_range = initializer_range
@@ -197,7 +195,7 @@ class OpenGPT2Config(PretrainedConfig):
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
 
-    '''
+    """
     @property
     def max_position_embeddings(self):
         return self.n_positions
@@ -213,10 +211,4 @@ class OpenGPT2Config(PretrainedConfig):
     @property
     def num_hidden_layers(self):
         return self.n_layer
-    '''
-
-
-
-
-
-
+    """

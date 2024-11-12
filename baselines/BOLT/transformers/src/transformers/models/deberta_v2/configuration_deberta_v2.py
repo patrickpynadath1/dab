@@ -93,6 +93,7 @@ class DebertaV2Config(PretrainedConfig):
         layer_norm_eps (`float`, optional, defaults to 1e-12):
             The epsilon used by the layer normalization layers.
     """
+
     model_type = "deberta-v2"
 
     def __init__(
@@ -157,10 +158,16 @@ class DebertaV2OnnxConfig(OnnxConfig):
             dynamic_axis = {0: "batch", 1: "sequence"}
         if self._config.type_vocab_size > 0:
             return OrderedDict(
-                [("input_ids", dynamic_axis), ("attention_mask", dynamic_axis), ("token_type_ids", dynamic_axis)]
+                [
+                    ("input_ids", dynamic_axis),
+                    ("attention_mask", dynamic_axis),
+                    ("token_type_ids", dynamic_axis),
+                ]
             )
         else:
-            return OrderedDict([("input_ids", dynamic_axis), ("attention_mask", dynamic_axis)])
+            return OrderedDict(
+                [("input_ids", dynamic_axis), ("attention_mask", dynamic_axis)]
+            )
 
     @property
     def default_onnx_opset(self) -> int:
@@ -179,7 +186,9 @@ class DebertaV2OnnxConfig(OnnxConfig):
         image_height: int = 40,
         tokenizer: "PreTrainedTokenizerBase" = None,
     ) -> Mapping[str, Any]:
-        dummy_inputs = super().generate_dummy_inputs(preprocessor=preprocessor, framework=framework)
+        dummy_inputs = super().generate_dummy_inputs(
+            preprocessor=preprocessor, framework=framework
+        )
         if self._config.type_vocab_size == 0 and "token_type_ids" in dummy_inputs:
             del dummy_inputs["token_type_ids"]
         return dummy_inputs

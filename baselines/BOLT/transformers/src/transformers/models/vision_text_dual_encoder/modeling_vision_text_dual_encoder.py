@@ -21,7 +21,12 @@ import torch
 from torch import nn
 
 from ...modeling_utils import PreTrainedModel
-from ...utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
+from ...utils import (
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+    logging,
+    replace_return_docstrings,
+)
 from ..auto.configuration_auto import AutoConfig
 from ..auto.modeling_auto import AutoModel
 from ..clip.modeling_clip import CLIPOutput, CLIPVisionConfig, CLIPVisionModel
@@ -148,7 +153,9 @@ VISION_TEXT_DUAL_ENCODER_INPUTS_DOCSTRING = r"""
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
-    return nn.functional.cross_entropy(logits, torch.arange(len(logits), device=logits.device))
+    return nn.functional.cross_entropy(
+        logits, torch.arange(len(logits), device=logits.device)
+    )
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss
@@ -171,13 +178,19 @@ class VisionTextDualEncoderModel(PreTrainedModel):
     ):
 
         if config is None and (vision_model is None or text_model is None):
-            raise ValueError("Either a configuration or an vision and a text model has to be provided")
+            raise ValueError(
+                "Either a configuration or an vision and a text model has to be provided"
+            )
 
         if config is None:
-            config = VisionTextDualEncoderConfig.from_vision_text_configs(vision_model.config, text_model.config)
+            config = VisionTextDualEncoderConfig.from_vision_text_configs(
+                vision_model.config, text_model.config
+            )
         else:
             if not isinstance(config, self.config_class):
-                raise ValueError(f"config: {config} has to be of type {self.config_class}")
+                raise ValueError(
+                    f"config: {config} has to be of type {self.config_class}"
+                )
 
         # initialize with config
         super().__init__(config)
@@ -203,11 +216,19 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         self.text_embed_dim = config.text_config.hidden_size
         self.projection_dim = config.projection_dim
 
-        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
-        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
-        self.logit_scale = nn.Parameter(torch.ones([]) * self.config.logit_scale_init_value)
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False
+        )
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False
+        )
+        self.logit_scale = nn.Parameter(
+            torch.ones([]) * self.config.logit_scale_init_value
+        )
 
-    @add_start_docstrings_to_model_forward(VISION_TEXT_DUAL_ENCODER_TEXT_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(
+        VISION_TEXT_DUAL_ENCODER_TEXT_INPUTS_DOCSTRING
+    )
     def get_text_features(
         self,
         input_ids=None,
@@ -249,7 +270,9 @@ class VisionTextDualEncoderModel(PreTrainedModel):
 
         return text_features
 
-    @add_start_docstrings_to_model_forward(VISION_TEXT_DUAL_ENCODER_VISION_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(
+        VISION_TEXT_DUAL_ENCODER_VISION_INPUTS_DOCSTRING
+    )
     def get_image_features(
         self,
         pixel_values=None,
@@ -353,7 +376,9 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.return_dict
+        )
 
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
@@ -392,7 +417,14 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             loss = clip_loss(logits_per_text)
 
         if not return_dict:
-            output = (logits_per_image, logits_per_text, text_embeds, image_embeds, text_outputs, vision_outputs)
+            output = (
+                logits_per_image,
+                logits_per_text,
+                text_embeds,
+                image_embeds,
+                text_outputs,
+                vision_outputs,
+            )
             return ((loss,) + output) if loss is not None else output
 
         return CLIPOutput(
@@ -476,11 +508,15 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         >>> model = VisionTextDualEncoderModel.from_pretrained("./vit-bert")
         ```"""
         kwargs_vision = {
-            argument[len("vision_") :]: value for argument, value in kwargs.items() if argument.startswith("vision_")
+            argument[len("vision_") :]: value
+            for argument, value in kwargs.items()
+            if argument.startswith("vision_")
         }
 
         kwargs_text = {
-            argument[len("text_") :]: value for argument, value in kwargs.items() if argument.startswith("text_")
+            argument[len("text_") :]: value
+            for argument, value in kwargs.items()
+            if argument.startswith("text_")
         }
 
         # remove vision, text kwargs from kwargs
@@ -502,11 +538,15 @@ class VisionTextDualEncoderModel(PreTrainedModel):
 
             if vision_config.model_type == "clip":
                 kwargs_vision["config"] = vision_config.vision_config
-                vision_model = CLIPVisionModel.from_pretrained(vision_model_name_or_path, *model_args, **kwargs_vision)
+                vision_model = CLIPVisionModel.from_pretrained(
+                    vision_model_name_or_path, *model_args, **kwargs_vision
+                )
                 # TODO: Should we use the pre-trained projection as well ?
             else:
                 kwargs_vision["config"] = vision_config
-                vision_model = AutoModel.from_pretrained(vision_model_name_or_path, *model_args, **kwargs_vision)
+                vision_model = AutoModel.from_pretrained(
+                    vision_model_name_or_path, *model_args, **kwargs_vision
+                )
 
         text_model = kwargs_text.pop("model", None)
         if text_model is None:
@@ -519,10 +559,14 @@ class VisionTextDualEncoderModel(PreTrainedModel):
                 text_config = AutoConfig.from_pretrained(text_model_name_or_path)
                 kwargs_text["config"] = text_config
 
-            text_model = AutoModel.from_pretrained(text_model_name_or_path, *model_args, **kwargs_text)
+            text_model = AutoModel.from_pretrained(
+                text_model_name_or_path, *model_args, **kwargs_text
+            )
 
         # instantiate config with corresponding kwargs
-        config = VisionTextDualEncoderConfig.from_vision_text_configs(vision_model.config, text_model.config, **kwargs)
+        config = VisionTextDualEncoderConfig.from_vision_text_configs(
+            vision_model.config, text_model.config, **kwargs
+        )
 
         # init model
         model = cls(config=config, vision_model=vision_model, text_model=text_model)

@@ -10,6 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class RobertaCustomForSequenceClassification(RobertaPreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -19,14 +20,16 @@ class RobertaCustomForSequenceClassification(RobertaPreTrainedModel):
         self.config = config
         print(config.vocab_size)
 
-
         self.roberta = RobertaModel(config, add_pooling_layer=False)
         embeds = self.roberta.get_input_embeddings()
-        old_dim = getattr(config,'n_embd', embeds.embedding_dim)
-        new_dim = getattr(config,'new_n_embd', None)
-        new_vocab_size = getattr(config,'new_vocab_size', config.vocab_size)
+        old_dim = getattr(config, "n_embd", embeds.embedding_dim)
+        new_dim = getattr(config, "new_n_embd", None)
+        new_vocab_size = getattr(config, "new_vocab_size", config.vocab_size)
         if new_dim is not None:
-            new_embeds = nn.Sequential(nn.Embedding(new_vocab_size, new_dim), nn.Linear(new_dim, old_dim, bias=False))
+            new_embeds = nn.Sequential(
+                nn.Embedding(new_vocab_size, new_dim),
+                nn.Linear(new_dim, old_dim, bias=False),
+            )
             self.roberta.set_input_embeddings(new_embeds)
 
         self.classifier = RobertaClassificationHead(config)
@@ -52,7 +55,9 @@ class RobertaCustomForSequenceClassification(RobertaPreTrainedModel):
             config.num_labels - 1]`. If :obj:`config.num_labels == 1` a regression loss is computed (Mean-Square loss),
             If :obj:`config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.roberta(
             input_ids,
@@ -73,7 +78,9 @@ class RobertaCustomForSequenceClassification(RobertaPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (
+                    labels.dtype == torch.long or labels.dtype == torch.int
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

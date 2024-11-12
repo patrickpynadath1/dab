@@ -21,7 +21,8 @@ from model_with_biases import GPTPromptTuningWithbiasesModelLM
 
 prompt_file = "./detoxic/sampled_1k_prompt.txt"
 seq_len = int(sys.argv[1])
-output_file = 'detoxic/gen_len' + str(seq_len) + '.txt'
+output_file = "detoxic/gen_len" + str(seq_len) + ".txt"
+
 
 class Config:
     num_train_epochs = 50
@@ -30,11 +31,13 @@ class Config:
     lr_scheduler_type = "linear"
     num_warmup_steps = 5
     max_train_steps = num_train_epochs
-    
+
     # Prompt-tuning
     # number of prompt tokens
     n_prompt_tokens = 10
     init_from_vocab = True
+
+
 args = Config()
 
 batch_size = 20
@@ -47,7 +50,9 @@ model = GPTPromptTuningWithbiasesModelLM.from_pretrained(
     use_full_prompt=False,
 )
 model.cuda()
-discriminator = AutoModelForSequenceClassification.from_pretrained("./checkpoints/BOLT_models/replaced_vocab_roberta_for_jigsaw/")
+discriminator = AutoModelForSequenceClassification.from_pretrained(
+    "./checkpoints/BOLT_models/replaced_vocab_roberta_for_jigsaw/"
+)
 discriminator.cuda()
 model.init_discriminator(discriminator)
 
@@ -59,10 +64,16 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
         prefixs = [prompt] * batch_size
         inputs = tokenizer(prefixs, return_tensors="pt")
         inputs = inputs.to("cuda")
-        model.set_biases(batch_size, seq_len + inputs.input_ids.shape[1], 'non_toxic', 0.7)
+        model.set_biases(
+            batch_size, seq_len + inputs.input_ids.shape[1], "non_toxic", 0.7
+        )
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model.named_parameters() if "biases" in n or "trainable_weights" in n],
+                "params": [
+                    p
+                    for n, p in model.named_parameters()
+                    if "biases" in n or "trainable_weights" in n
+                ],
                 "weight_decay": args.weight_decay,
             }
         ]
@@ -75,13 +86,23 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
             if all([loss < 0.0003 for loss in minimun_loss]):
                 break
             if i % 1 == 0:
-                loss, output_ids, gpt_logit, senti_losses = model.soft_forward(**inputs, labels=inputs.input_ids, use_full_prompt=False)
+                loss, output_ids, gpt_logit, senti_losses = model.soft_forward(
+                    **inputs, labels=inputs.input_ids, use_full_prompt=False
+                )
                 sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             loss.backward()
             if i % 1 == 0:
                 optimizer.step()
-                noise = [torch.normal(mean=0.01, std=0.01, size=model.biases[0].shape,
-                                     device='cuda', requires_grad=False) for _ in range(len(model.biases))]
+                noise = [
+                    torch.normal(
+                        mean=0.01,
+                        std=0.01,
+                        size=model.biases[0].shape,
+                        device="cuda",
+                        requires_grad=False,
+                    )
+                    for _ in range(len(model.biases))
+                ]
                 for i in range(len(model.biases)):
                     model.biases[i].data = model.biases[i].data + noise[i]
             if i % 1 == 0:
@@ -89,10 +110,10 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
                     if senti_losses[idx] < minimun_loss[idx]:
                         minimun_loss[idx] = senti_losses[idx]
                         stored_sentence[idx] = sentences[idx]
-            
+
         end_time = time.time()
         print("minimun loss: ", minimun_loss)
         print("stored sentence: ", stored_sentence)
         print("time: ", end_time - start_time)
-        g.write('\n'.join(stored_sentence) + "\n\n")
+        g.write("\n".join(stored_sentence) + "\n\n")
         g.flush()

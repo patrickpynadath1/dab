@@ -14,7 +14,10 @@
 
 import unittest
 
-from transformers import MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING, is_vision_available
+from transformers import (
+    MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING,
+    is_vision_available,
+)
 from transformers.pipelines import pipeline
 from transformers.testing_utils import (
     is_pipeline_test,
@@ -41,14 +44,21 @@ else:
 @is_pipeline_test
 @require_torch
 @require_vision
-class VisualQuestionAnsweringPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta):
+class VisualQuestionAnsweringPipelineTests(
+    unittest.TestCase, metaclass=PipelineTestCaseMeta
+):
     model_mapping = MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
-        vqa_pipeline = pipeline("visual-question-answering", model="hf-internal-testing/tiny-vilt-random-vqa")
+        vqa_pipeline = pipeline(
+            "visual-question-answering",
+            model="hf-internal-testing/tiny-vilt-random-vqa",
+        )
         examples = [
             {
-                "image": Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png"),
+                "image": Image.open(
+                    "./tests/fixtures/tests_samples/COCO/000000039769.png"
+                ),
                 "question": "How many cats are there?",
             },
             {
@@ -70,39 +80,60 @@ class VisualQuestionAnsweringPipelineTests(unittest.TestCase, metaclass=Pipeline
 
     @require_torch
     def test_small_model_pt(self):
-        vqa_pipeline = pipeline("visual-question-answering", model="hf-internal-testing/tiny-vilt-random-vqa")
+        vqa_pipeline = pipeline(
+            "visual-question-answering",
+            model="hf-internal-testing/tiny-vilt-random-vqa",
+        )
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
         question = "How many cats are there?"
 
-        outputs = vqa_pipeline(image=image, question="How many cats are there?", top_k=2)
+        outputs = vqa_pipeline(
+            image=image, question="How many cats are there?", top_k=2
+        )
         self.assertEqual(
-            outputs, [{"score": ANY(float), "answer": ANY(str)}, {"score": ANY(float), "answer": ANY(str)}]
+            outputs,
+            [
+                {"score": ANY(float), "answer": ANY(str)},
+                {"score": ANY(float), "answer": ANY(str)},
+            ],
         )
 
         outputs = vqa_pipeline({"image": image, "question": question}, top_k=2)
         self.assertEqual(
-            outputs, [{"score": ANY(float), "answer": ANY(str)}, {"score": ANY(float), "answer": ANY(str)}]
+            outputs,
+            [
+                {"score": ANY(float), "answer": ANY(str)},
+                {"score": ANY(float), "answer": ANY(str)},
+            ],
         )
 
     @slow
     @require_torch
     def test_large_model_pt(self):
-        vqa_pipeline = pipeline("visual-question-answering", model="dandelin/vilt-b32-finetuned-vqa")
+        vqa_pipeline = pipeline(
+            "visual-question-answering", model="dandelin/vilt-b32-finetuned-vqa"
+        )
         image = "./tests/fixtures/tests_samples/COCO/000000039769.png"
         question = "How many cats are there?"
 
         outputs = vqa_pipeline(image=image, question=question, top_k=2)
         self.assertEqual(
-            nested_simplify(outputs, decimals=4), [{"score": 0.8799, "answer": "2"}, {"score": 0.296, "answer": "1"}]
+            nested_simplify(outputs, decimals=4),
+            [{"score": 0.8799, "answer": "2"}, {"score": 0.296, "answer": "1"}],
         )
 
         outputs = vqa_pipeline({"image": image, "question": question}, top_k=2)
         self.assertEqual(
-            nested_simplify(outputs, decimals=4), [{"score": 0.8799, "answer": "2"}, {"score": 0.296, "answer": "1"}]
+            nested_simplify(outputs, decimals=4),
+            [{"score": 0.8799, "answer": "2"}, {"score": 0.296, "answer": "1"}],
         )
 
         outputs = vqa_pipeline(
-            [{"image": image, "question": question}, {"image": image, "question": question}], top_k=2
+            [
+                {"image": image, "question": question},
+                {"image": image, "question": question},
+            ],
+            top_k=2,
         )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),

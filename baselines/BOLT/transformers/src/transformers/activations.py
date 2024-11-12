@@ -31,7 +31,17 @@ class NewGELUActivation(nn.Module):
     """
 
     def forward(self, input: Tensor) -> Tensor:
-        return 0.5 * input * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (input + 0.044715 * torch.pow(input, 3.0))))
+        return (
+            0.5
+            * input
+            * (
+                1.0
+                + torch.tanh(
+                    math.sqrt(2.0 / math.pi)
+                    * (input + 0.044715 * torch.pow(input, 3.0))
+                )
+            )
+        )
 
 
 class GELUActivation(nn.Module):
@@ -62,7 +72,14 @@ class FastGELUActivation(nn.Module):
     """
 
     def forward(self, input: Tensor) -> Tensor:
-        return 0.5 * input * (1.0 + torch.tanh(input * 0.7978845608 * (1.0 + 0.044715 * input * input)))
+        return (
+            0.5
+            * input
+            * (
+                1.0
+                + torch.tanh(input * 0.7978845608 * (1.0 + 0.044715 * input * input))
+            )
+        )
 
 
 class QuickGELUActivation(nn.Module):
@@ -120,7 +137,9 @@ class MishActivation(nn.Module):
 
     def __init__(self):
         super().__init__()
-        if version.parse(version.parse(torch.__version__).base_version) < version.parse("1.9"):
+        if version.parse(version.parse(torch.__version__).base_version) < version.parse(
+            "1.9"
+        ):
             self.act = self._mish_python
         else:
             self.act = nn.functional.mish
@@ -162,7 +181,9 @@ def get_activation(activation_string):
     if activation_string in ACT2FN:
         return ACT2FN[activation_string]
     else:
-        raise KeyError(f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}")
+        raise KeyError(
+            f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}"
+        )
 
 
 # For backwards compatibility with: from activations import gelu_python

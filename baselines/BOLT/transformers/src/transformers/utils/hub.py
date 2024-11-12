@@ -38,7 +38,10 @@ from huggingface_hub import (
     hf_hub_url,
     whoami,
 )
-from huggingface_hub.constants import HUGGINGFACE_HEADER_X_LINKED_ETAG, HUGGINGFACE_HEADER_X_REPO_COMMIT
+from huggingface_hub.constants import (
+    HUGGINGFACE_HEADER_X_LINKED_ETAG,
+    HUGGINGFACE_HEADER_X_REPO_COMMIT,
+)
 from huggingface_hub.file_download import REGEX_COMMIT_HASH, http_get
 from huggingface_hub.utils import (
     EntryNotFoundError,
@@ -63,18 +66,26 @@ from .import_utils import (
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
-_is_offline_mode = True if os.environ.get("TRANSFORMERS_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES else False
+_is_offline_mode = (
+    True
+    if os.environ.get("TRANSFORMERS_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES
+    else False
+)
 
 
 def is_offline_mode():
     return _is_offline_mode
 
 
-torch_cache_home = os.getenv("TORCH_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "torch"))
+torch_cache_home = os.getenv(
+    "TORCH_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "torch")
+)
 old_default_cache_path = os.path.join(torch_cache_home, "transformers")
 # New default cache, shared with the Datasets library
 hf_cache_home = os.path.expanduser(
-    os.getenv("HF_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "huggingface"))
+    os.getenv(
+        "HF_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "huggingface")
+    )
 )
 default_cache_path = os.path.join(hf_cache_home, "hub")
 
@@ -95,8 +106,12 @@ if (
     )
     shutil.move(old_default_cache_path, default_cache_path)
 
-PYTORCH_PRETRAINED_BERT_CACHE = os.getenv("PYTORCH_PRETRAINED_BERT_CACHE", default_cache_path)
-PYTORCH_TRANSFORMERS_CACHE = os.getenv("PYTORCH_TRANSFORMERS_CACHE", PYTORCH_PRETRAINED_BERT_CACHE)
+PYTORCH_PRETRAINED_BERT_CACHE = os.getenv(
+    "PYTORCH_PRETRAINED_BERT_CACHE", default_cache_path
+)
+PYTORCH_TRANSFORMERS_CACHE = os.getenv(
+    "PYTORCH_TRANSFORMERS_CACHE", PYTORCH_PRETRAINED_BERT_CACHE
+)
 HUGGINGFACE_HUB_CACHE = os.getenv("HUGGINGFACE_HUB_CACHE", PYTORCH_TRANSFORMERS_CACHE)
 TRANSFORMERS_CACHE = os.getenv("TRANSFORMERS_CACHE", HUGGINGFACE_HUB_CACHE)
 HF_MODULES_CACHE = os.getenv("HF_MODULES_CACHE", os.path.join(hf_cache_home, "modules"))
@@ -107,8 +122,12 @@ DISABLE_TELEMETRY = os.getenv("DISABLE_TELEMETRY", False) in ENV_VARS_TRUE_VALUE
 S3_BUCKET_PREFIX = "https://s3.amazonaws.com/models.huggingface.co/bert"
 CLOUDFRONT_DISTRIB_PREFIX = "https://cdn.huggingface.co"
 
-_staging_mode = os.environ.get("HUGGINGFACE_CO_STAGING", "NO").upper() in ENV_VARS_TRUE_VALUES
-_default_endpoint = "https://hub-ci.huggingface.co" if _staging_mode else "https://huggingface.co"
+_staging_mode = (
+    os.environ.get("HUGGINGFACE_CO_STAGING", "NO").upper() in ENV_VARS_TRUE_VALUES
+)
+_default_endpoint = (
+    "https://hub-ci.huggingface.co" if _staging_mode else "https://huggingface.co"
+)
 
 HUGGINGFACE_CO_RESOLVE_ENDPOINT = _default_endpoint
 if os.environ.get("HUGGINGFACE_CO_RESOLVE_ENDPOINT", None) is not None:
@@ -117,10 +136,18 @@ if os.environ.get("HUGGINGFACE_CO_RESOLVE_ENDPOINT", None) is not None:
         "Transformers v5. Use `HF_ENDPOINT` instead.",
         FutureWarning,
     )
-    HUGGINGFACE_CO_RESOLVE_ENDPOINT = os.environ.get("HUGGINGFACE_CO_RESOLVE_ENDPOINT", None)
-HUGGINGFACE_CO_RESOLVE_ENDPOINT = os.environ.get("HF_ENDPOINT", HUGGINGFACE_CO_RESOLVE_ENDPOINT)
-HUGGINGFACE_CO_PREFIX = HUGGINGFACE_CO_RESOLVE_ENDPOINT + "/{model_id}/resolve/{revision}/{filename}"
-HUGGINGFACE_CO_EXAMPLES_TELEMETRY = HUGGINGFACE_CO_RESOLVE_ENDPOINT + "/api/telemetry/examples"
+    HUGGINGFACE_CO_RESOLVE_ENDPOINT = os.environ.get(
+        "HUGGINGFACE_CO_RESOLVE_ENDPOINT", None
+    )
+HUGGINGFACE_CO_RESOLVE_ENDPOINT = os.environ.get(
+    "HF_ENDPOINT", HUGGINGFACE_CO_RESOLVE_ENDPOINT
+)
+HUGGINGFACE_CO_PREFIX = (
+    HUGGINGFACE_CO_RESOLVE_ENDPOINT + "/{model_id}/resolve/{revision}/{filename}"
+)
+HUGGINGFACE_CO_EXAMPLES_TELEMETRY = (
+    HUGGINGFACE_CO_RESOLVE_ENDPOINT + "/api/telemetry/examples"
+)
 
 # Return value when trying to load a file from cache but the file does not exist in the distant repo.
 _CACHED_NO_EXIST = object()
@@ -176,8 +203,16 @@ def define_sagemaker_information():
         dlc_tag = None
 
     sagemaker_params = json.loads(os.getenv("SM_FRAMEWORK_PARAMS", "{}"))
-    runs_distributed_training = True if "sagemaker_distributed_dataparallel_enabled" in sagemaker_params else False
-    account_id = os.getenv("TRAINING_JOB_ARN").split(":")[4] if "TRAINING_JOB_ARN" in os.environ else None
+    runs_distributed_training = (
+        True
+        if "sagemaker_distributed_dataparallel_enabled" in sagemaker_params
+        else False
+    )
+    account_id = (
+        os.getenv("TRAINING_JOB_ARN").split(":")[4]
+        if "TRAINING_JOB_ARN" in os.environ
+        else None
+    )
 
     sagemaker_object = {
         "sm_framework": os.getenv("SM_FRAMEWORK_MODULE", None),
@@ -204,7 +239,9 @@ def http_user_agent(user_agent: Union[Dict, str, None] = None) -> str:
     if DISABLE_TELEMETRY:
         return ua + "; telemetry/off"
     if is_training_run_on_sagemaker():
-        ua += "; " + "; ".join(f"{k}/{v}" for k, v in define_sagemaker_information().items())
+        ua += "; " + "; ".join(
+            f"{k}/{v}" for k, v in define_sagemaker_information().items()
+        )
     # CI will set this value to True
     if os.environ.get("TRANSFORMERS_IS_CI", "").upper() in ENV_VARS_TRUE_VALUES:
         ua += "; is_ci/true"
@@ -400,7 +437,9 @@ def cached_file(
             elif not _raise_exceptions_for_missing_entries:
                 return None
             else:
-                raise EnvironmentError(f"Could not locate {full_filename} inside {path_or_repo_id}.")
+                raise EnvironmentError(
+                    f"Could not locate {full_filename} inside {path_or_repo_id}."
+                )
 
     user_agent = http_user_agent(user_agent)
     try:
@@ -434,10 +473,15 @@ def cached_file(
         )
     except LocalEntryNotFoundError:
         # We try to see if we have a cached version (not up to date):
-        resolved_file = try_to_load_from_cache(path_or_repo_id, full_filename, cache_dir=cache_dir, revision=revision)
+        resolved_file = try_to_load_from_cache(
+            path_or_repo_id, full_filename, cache_dir=cache_dir, revision=revision
+        )
         if resolved_file is not None:
             return resolved_file
-        if not _raise_exceptions_for_missing_entries or not _raise_exceptions_for_connection_errors:
+        if (
+            not _raise_exceptions_for_missing_entries
+            or not _raise_exceptions_for_connection_errors
+        ):
             return None
         raise EnvironmentError(
             f"We couldn't connect to '{HUGGINGFACE_CO_RESOLVE_ENDPOINT}' to load this file, couldn't find it in the"
@@ -456,13 +500,17 @@ def cached_file(
         )
     except HTTPError as err:
         # First we try to see if we have a cached version (not up to date):
-        resolved_file = try_to_load_from_cache(path_or_repo_id, full_filename, cache_dir=cache_dir, revision=revision)
+        resolved_file = try_to_load_from_cache(
+            path_or_repo_id, full_filename, cache_dir=cache_dir, revision=revision
+        )
         if resolved_file is not None:
             return resolved_file
         if not _raise_exceptions_for_connection_errors:
             return None
 
-        raise EnvironmentError(f"There was a specific connection error when trying to load {path_or_repo_id}:\n{err}")
+        raise EnvironmentError(
+            f"There was a specific connection error when trying to load {path_or_repo_id}:\n{err}"
+        )
 
     return resolved_file
 
@@ -602,16 +650,22 @@ def has_file(
     elif use_auth_token:
         token = HfFolder.get_token()
         if token is None:
-            raise EnvironmentError("You specified use_auth_token=True, but a huggingface token was not found.")
+            raise EnvironmentError(
+                "You specified use_auth_token=True, but a huggingface token was not found."
+            )
         headers["authorization"] = f"Bearer {token}"
 
-    r = requests.head(url, headers=headers, allow_redirects=False, proxies=proxies, timeout=10)
+    r = requests.head(
+        url, headers=headers, allow_redirects=False, proxies=proxies, timeout=10
+    )
     try:
         huggingface_hub.utils._errors._raise_for_status(r)
         return True
     except RepositoryNotFoundError as e:
         logger.error(e)
-        raise EnvironmentError(f"{path_or_repo} is not a local folder or a valid repository name on 'https://hf.co'.")
+        raise EnvironmentError(
+            f"{path_or_repo} is not a local folder or a valid repository name on 'https://hf.co'."
+        )
     except RevisionNotFoundError as e:
         logger.error(e)
         raise EnvironmentError(
@@ -668,7 +722,10 @@ class PushToHubMixin:
         """
         Returns the list of files with their last modification timestamp.
         """
-        return {f: os.path.getmtime(os.path.join(working_dir, f)) for f in os.listdir(working_dir)}
+        return {
+            f: os.path.getmtime(os.path.join(working_dir, f))
+            for f in os.listdir(working_dir)
+        }
 
     def _upload_modified_files(
         self,
@@ -698,14 +755,25 @@ class PushToHubMixin:
         modified_files = [
             f
             for f in os.listdir(working_dir)
-            if f not in files_timestamps or os.path.getmtime(os.path.join(working_dir, f)) > files_timestamps[f]
+            if f not in files_timestamps
+            or os.path.getmtime(os.path.join(working_dir, f)) > files_timestamps[f]
         ]
         operations = []
         for file in modified_files:
-            operations.append(CommitOperationAdd(path_or_fileobj=os.path.join(working_dir, file), path_in_repo=file))
-        logger.info(f"Uploading the following files to {repo_id}: {','.join(modified_files)}")
+            operations.append(
+                CommitOperationAdd(
+                    path_or_fileobj=os.path.join(working_dir, file), path_in_repo=file
+                )
+            )
+        logger.info(
+            f"Uploading the following files to {repo_id}: {','.join(modified_files)}"
+        )
         return create_commit(
-            repo_id=repo_id, operations=operations, commit_message=commit_message, token=token, create_pr=create_pr
+            repo_id=repo_id,
+            operations=operations,
+            commit_message=commit_message,
+            token=token,
+            create_pr=create_pr,
         )
 
     def push_to_hub(
@@ -717,7 +785,7 @@ class PushToHubMixin:
         use_auth_token: Optional[Union[bool, str]] = None,
         max_shard_size: Optional[Union[int, str]] = "10GB",
         create_pr: bool = False,
-        **deprecated_kwargs
+        **deprecated_kwargs,
     ) -> str:
         """
         Upload the {object_files} to the 🤗 Model Hub while synchronizing a local clone of the repo in
@@ -776,24 +844,37 @@ class PushToHubMixin:
             working_dir = repo_id.split("/")[-1]
 
         repo_id, token = self._create_repo(
-            repo_id, private=private, use_auth_token=use_auth_token, repo_url=repo_url, organization=organization
+            repo_id,
+            private=private,
+            use_auth_token=use_auth_token,
+            repo_url=repo_url,
+            organization=organization,
         )
 
         if use_temp_dir is None:
             use_temp_dir = not os.path.isdir(working_dir)
 
-        with working_or_temp_dir(working_dir=working_dir, use_temp_dir=use_temp_dir) as work_dir:
+        with working_or_temp_dir(
+            working_dir=working_dir, use_temp_dir=use_temp_dir
+        ) as work_dir:
             files_timestamps = self._get_files_timestamps(work_dir)
 
             # Save all files.
             self.save_pretrained(work_dir, max_shard_size=max_shard_size)
 
             return self._upload_modified_files(
-                work_dir, repo_id, files_timestamps, commit_message=commit_message, token=token, create_pr=create_pr
+                work_dir,
+                repo_id,
+                files_timestamps,
+                commit_message=commit_message,
+                token=token,
+                create_pr=create_pr,
             )
 
 
-def get_full_repo_name(model_id: str, organization: Optional[str] = None, token: Optional[str] = None):
+def get_full_repo_name(
+    model_id: str, organization: Optional[str] = None, token: Optional[str] = None
+):
     if token is None:
         token = HfFolder.get_token()
     if organization is None:
@@ -818,7 +899,11 @@ def send_example_telemetry(example_name, *example_args, framework="pytorch"):
 
     data = {"example": example_name, "framework": framework}
     for args in example_args:
-        args_as_dict = {k: v for k, v in args.__dict__.items() if not k.startswith("_") and v is not None}
+        args_as_dict = {
+            k: v
+            for k, v in args.__dict__.items()
+            if not k.startswith("_") and v is not None
+        }
         if "model_name_or_path" in args_as_dict:
             model_name = args_as_dict["model_name_or_path"]
             # Filter out local paths
@@ -828,7 +913,9 @@ def send_example_telemetry(example_name, *example_args, framework="pytorch"):
             data["dataset_name"] = args_as_dict["dataset_name"]
         elif "task_name" in args_as_dict:
             # Extract script name from the example_name
-            script_name = example_name.replace("tf_", "").replace("flax_", "").replace("run_", "")
+            script_name = (
+                example_name.replace("tf_", "").replace("flax_", "").replace("run_", "")
+            )
             script_name = script_name.replace("_no_trainer", "")
             data["dataset_name"] = f"{script_name}-{args_as_dict['task_name']}"
 
@@ -871,7 +958,9 @@ def convert_file_size_to_int(size: Union[int, str]):
     if size.upper().endswith("KB"):
         int_size = int(size[:-2]) * (10**3)
         return int_size // 8 if size.endswith("b") else int_size
-    raise ValueError("`size` is not in a valid format. Use an integer followed by the unit, e.g., '5GB'.")
+    raise ValueError(
+        "`size` is not in a valid format. Use an integer followed by the unit, e.g., '5GB'."
+    )
 
 
 def get_checkpoint_shard_files(
@@ -901,7 +990,9 @@ def get_checkpoint_shard_files(
     import json
 
     if not os.path.isfile(index_filename):
-        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
+        raise ValueError(
+            f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}."
+        )
 
     with open(index_filename, "r") as f:
         index = json.loads(f.read())
@@ -912,7 +1003,10 @@ def get_checkpoint_shard_files(
 
     # First, let's deal with local folder.
     if os.path.isdir(pretrained_model_name_or_path):
-        shard_filenames = [os.path.join(pretrained_model_name_or_path, subfolder, f) for f in shard_filenames]
+        shard_filenames = [
+            os.path.join(pretrained_model_name_or_path, subfolder, f)
+            for f in shard_filenames
+        ]
         return shard_filenames, sharded_metadata
 
     # At this stage pretrained_model_name_or_path is a model identifier on the Hub
@@ -1104,7 +1198,9 @@ else:
     with open(cache_version_file) as f:
         cache_version = int(f.read())
 
-cache_is_not_empty = os.path.isdir(TRANSFORMERS_CACHE) and len(os.listdir(TRANSFORMERS_CACHE)) > 0
+cache_is_not_empty = (
+    os.path.isdir(TRANSFORMERS_CACHE) and len(os.listdir(TRANSFORMERS_CACHE)) > 0
+)
 
 if cache_version < 1 and cache_is_not_empty:
     if is_offline_mode():

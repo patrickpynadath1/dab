@@ -82,9 +82,14 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         normalize_means=True,
         normalize_vars=True,
         return_attention_mask=False,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
+        super().__init__(
+            feature_size=feature_size,
+            sampling_rate=sampling_rate,
+            padding_value=padding_value,
+            **kwargs,
+        )
 
         self.feature_size = feature_size
         self.sampling_rate = sampling_rate
@@ -110,7 +115,9 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         return int(1 + np.floor((in_size - frame_size) * 1 / frame_stride))
 
     @staticmethod
-    def _frame_signal(one_waveform, n_frames, frame_signal_scale, window_length, sample_stride):
+    def _frame_signal(
+        one_waveform, n_frames, frame_signal_scale, window_length, sample_stride
+    ):
         scale = frame_signal_scale
         frames = np.zeros(n_frames * window_length)
         for frame_idx in range(n_frames):
@@ -169,7 +176,9 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         Extracts MFSC Features for one waveform vector (unbatched). Adapted from Flashlight's C++ MFSC code.
         """
         if self.win_function == "hamming_window":
-            window = torch.hamming_window(window_length=self.sample_size, periodic=False, alpha=0.54, beta=0.46)
+            window = torch.hamming_window(
+                window_length=self.sample_size, periodic=False, alpha=0.54, beta=0.46
+            )
         else:
             window = getattr(torch, self.win_function)()
 
@@ -185,17 +194,27 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
 
         fbanks = fbanks.numpy()
 
-        n_frames = self._num_frames_calc(one_waveform.size, self.sample_size, self.sample_stride)
-
-        frames = self._frame_signal(
-            one_waveform, n_frames, self.frame_signal_scale, self.sample_size, self.sample_stride
+        n_frames = self._num_frames_calc(
+            one_waveform.size, self.sample_size, self.sample_stride
         )
 
-        self._apply_preemphasis_inplace(frames, self.sample_size, self.preemphasis_coeff)
+        frames = self._frame_signal(
+            one_waveform,
+            n_frames,
+            self.frame_signal_scale,
+            self.sample_size,
+            self.sample_stride,
+        )
+
+        self._apply_preemphasis_inplace(
+            frames, self.sample_size, self.preemphasis_coeff
+        )
 
         frames = self._windowing(frames, self.sample_size, window)
 
-        dft_out = self._dft(frames.flatten(), self.n_freqs, n_frames, self.sample_size, self.n_fft)
+        dft_out = self._dft(
+            frames.flatten(), self.n_freqs, n_frames, self.sample_size, self.n_fft
+        )
 
         # msfc_features = STFT * mel frequency banks.
         msfc_features = np.einsum("...tf,fm->...tm", dft_out, fbanks)
@@ -224,10 +243,19 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         return x
 
     def normalize(
-        self, input_features: List[np.ndarray], attention_mask: Optional[np.ndarray] = None
+        self,
+        input_features: List[np.ndarray],
+        attention_mask: Optional[np.ndarray] = None,
     ) -> List[np.ndarray]:
-        lengths = attention_mask.sum(-1) if attention_mask is not None else [x.shape[0] for x in input_features]
-        return [self._normalize_one(x, n, self.padding_value) for x, n in zip(input_features, lengths)]
+        lengths = (
+            attention_mask.sum(-1)
+            if attention_mask is not None
+            else [x.shape[0] for x in input_features]
+        )
+        return [
+            self._normalize_one(x, n, self.padding_value)
+            for x, n in zip(input_features, lengths)
+        ]
 
     def __call__(
         self,
@@ -239,7 +267,7 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask: Optional[bool] = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
         sampling_rate: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> BatchFeature:
         """
         Main method to featurize and prepare for the model one or several sequence(s). sequences. It returns the
@@ -301,14 +329,19 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
 
         is_batched = bool(
             isinstance(raw_speech, (list, tuple))
-            and (isinstance(raw_speech[0], np.ndarray) or isinstance(raw_speech[0], (tuple, list)))
+            and (
+                isinstance(raw_speech[0], np.ndarray)
+                or isinstance(raw_speech[0], (tuple, list))
+            )
         )
 
         if is_batched:
             raw_speech = [np.asarray(speech, dtype=np.float32) for speech in raw_speech]
         elif not is_batched and not isinstance(raw_speech, np.ndarray):
             raw_speech = np.asarray(raw_speech, dtype=np.float32)
-        elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(np.float64):
+        elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(
+            np.float64
+        ):
             raw_speech = raw_speech.astype(np.float32)
 
         # always return batch
@@ -316,7 +349,9 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
             raw_speech = [raw_speech]
 
         # extract fbank features
-        features = [self._extract_mfsc_features(one_waveform) for one_waveform in raw_speech]
+        features = [
+            self._extract_mfsc_features(one_waveform) for one_waveform in raw_speech
+        ]
 
         # convert into correct format for padding
         encoded_inputs = BatchFeature({"input_features": features})
@@ -333,16 +368,21 @@ class MCTCTFeatureExtractor(SequenceFeatureExtractor):
         # make sure list is in array format
         input_features = padded_inputs.get("input_features")
         if isinstance(input_features[0], list):
-            padded_inputs["input_features"] = [np.asarray(feature, dtype=np.float32) for feature in input_features]
+            padded_inputs["input_features"] = [
+                np.asarray(feature, dtype=np.float32) for feature in input_features
+            ]
 
         attention_mask = padded_inputs.get("attention_mask")
         if attention_mask is not None:
-            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.int32) for array in attention_mask]
+            padded_inputs["attention_mask"] = [
+                np.asarray(array, dtype=np.int32) for array in attention_mask
+            ]
 
         if self.normalize_means or self.normalize_vars:
             attention_mask = (
                 np.array(attention_mask, dtype=np.int32)
-                if self._get_padding_strategies(padding, max_length=max_length) is not PaddingStrategy.DO_NOT_PAD
+                if self._get_padding_strategies(padding, max_length=max_length)
+                is not PaddingStrategy.DO_NOT_PAD
                 and padding
                 else None
             )

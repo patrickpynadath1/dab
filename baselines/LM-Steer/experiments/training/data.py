@@ -67,13 +67,11 @@ def load_sentiment_data(dataset_name):
 
 def load_toy_sentiment_data(dataset_name):
     dataset = {
-        "toy-sentiment-1":
-        [
+        "toy-sentiment-1": [
             {"text": "This is excellent!", "label": 1},
             {"text": "This is terrible.", "label": -1},
         ],
-        "toy-sentiment-2":
-        [
+        "toy-sentiment-2": [
             {"text": "This is excellent, perfect and fabulous.", "label": 1},
             {"text": "This is terrible, bad, intolerable.", "label": -1},
         ],

@@ -28,7 +28,11 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_roformer": ["ROFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP", "RoFormerConfig", "RoFormerOnnxConfig"],
+    "configuration_roformer": [
+        "ROFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "RoFormerConfig",
+        "RoFormerOnnxConfig",
+    ],
     "tokenization_roformer": ["RoFormerTokenizer"],
 }
 
@@ -100,7 +104,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_roformer import ROFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, RoFormerConfig, RoFormerOnnxConfig
+    from .configuration_roformer import (
+        ROFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        RoFormerConfig,
+        RoFormerOnnxConfig,
+    )
     from .tokenization_roformer import RoFormerTokenizer
 
     try:
@@ -171,4 +179,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

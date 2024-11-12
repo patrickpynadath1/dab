@@ -8,15 +8,22 @@ from lm_steer.utils import set_seed
 
 
 class Switching_GPTNeoXModel(nn.Module):
-    def __init__(self, model_name, adapted_component, adaptor_class,
-                 num_steers, rank, epsilon, init_var,
-                 low_resource_mode):
+    def __init__(
+        self,
+        model_name,
+        adapted_component,
+        adaptor_class,
+        num_steers,
+        rank,
+        epsilon,
+        init_var,
+        low_resource_mode,
+    ):
         super().__init__()
         self.adapted_component = adapted_component
         if low_resource_mode:
             self.model = GPTNeoXForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16, low_cpu_mem_usage=True
+                model_name, torch_dtype=torch.float16, low_cpu_mem_usage=True
             )
         else:
             self.model = GPTNeoXForCausalLM.from_pretrained(model_name)
@@ -36,8 +43,16 @@ class Switching_GPTNeoXModel(nn.Module):
         if adapted_component == "final_layer":
             self.model.gpt_neox = Hack_no_grad(self.model.gpt_neox)
             self.steer = Projected_Adaptor(
-                self.model.embed_out, adaptor_class, num_steers, embed_dim,
-                vocab_size, rank, epsilon, init_var, "output")
+                self.model.embed_out,
+                adaptor_class,
+                num_steers,
+                embed_dim,
+                vocab_size,
+                rank,
+                epsilon,
+                init_var,
+                "output",
+            )
             self.model.set_output_embeddings(self.steer)
         else:
             raise NotImplementedError()
@@ -45,9 +60,8 @@ class Switching_GPTNeoXModel(nn.Module):
     def forward(self, input_ids, attention_mask, steer_values):
         self.steer.set_value(steer_values)
         output = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=input_ids)
+            input_ids=input_ids, attention_mask=attention_mask, labels=input_ids
+        )
         return output
 
     def parameters(self):
@@ -66,20 +80,29 @@ class Switching_GPTNeoXModel(nn.Module):
     def regularization_term(self):
         return self.steer.regularization_term()
 
-    def generate(self, prompt, steer_values, min_length=20, max_length=100,
-                 seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
-                 temperature=1, top_p=1):
-        '''
+    def generate(
+        self,
+        prompt,
+        steer_values,
+        min_length=20,
+        max_length=100,
+        seed=None,
+        num_beams=1,
+        num_beam_groups=1,
+        do_sample=True,
+        temperature=1,
+        top_p=1,
+    ):
+        """
         prompt: a string
         steer_values
         min_length: minimum generation length
         max_length: maximum generation length
         seed: seed for generation. None if not specified.
-        '''
+        """
         if seed is not None:
             set_seed(seed)
-        steer_values = torch.Tensor(steer_values).to(
-            self.device)
+        steer_values = torch.Tensor(steer_values).to(self.device)
         if self.low_resource_mode:
             fp16 = torch.float16
             steer_values = steer_values.to(fp16)
@@ -87,14 +110,20 @@ class Switching_GPTNeoXModel(nn.Module):
             self.steer.projector2.data = self.steer.projector2.to(fp16)
         self.steer.set_value(steer_values[None])
         with torch.no_grad():
-            input_ids = self.tokenizer(
-                prompt, return_tensors="pt").input_ids.to(self.device)
+            input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids.to(
+                self.device
+            )
             gen_tokens = self.model.generate(
                 input_ids,
-                num_beams=num_beams, num_beam_groups=num_beam_groups,
-                do_sample=do_sample, temperature=temperature, top_p=top_p,
-                min_length=min_length, max_length=max_length,
-                pad_token_id=self.tokenizer.pad_token_id)
+                num_beams=num_beams,
+                num_beam_groups=num_beam_groups,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                min_length=min_length,
+                max_length=max_length,
+                pad_token_id=self.tokenizer.pad_token_id,
+            )
             text = self.tokenizer.batch_decode(gen_tokens)[0]
 
         # recovering

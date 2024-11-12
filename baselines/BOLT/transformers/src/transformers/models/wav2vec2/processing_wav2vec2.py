@@ -37,6 +37,7 @@ class Wav2Vec2Processor(ProcessorMixin):
         tokenizer ([`PreTrainedTokenizer`]):
             An instance of [`PreTrainedTokenizer`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "Wav2Vec2FeatureExtractor"
     tokenizer_class = "AutoTokenizer"
 
@@ -59,8 +60,12 @@ class Wav2Vec2Processor(ProcessorMixin):
                 FutureWarning,
             )
 
-            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(pretrained_model_name_or_path, **kwargs)
-            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+                pretrained_model_name_or_path, **kwargs
+            )
+            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(
+                pretrained_model_name_or_path, **kwargs
+            )
 
             return cls(feature_extractor=feature_extractor, tokenizer=tokenizer)
 
@@ -76,7 +81,9 @@ class Wav2Vec2Processor(ProcessorMixin):
             return self.current_processor(*args, **kwargs)
 
         if "raw_speech" in kwargs:
-            warnings.warn("Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead.")
+            warnings.warn(
+                "Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead."
+            )
             audio = kwargs.pop("raw_speech")
         else:
             audio = kwargs.pop("audio", None)
@@ -86,7 +93,9 @@ class Wav2Vec2Processor(ProcessorMixin):
             args = args[1:]
 
         if audio is None and text is None:
-            raise ValueError("You need to specify either an `audio` or `text` input to process.")
+            raise ValueError(
+                "You need to specify either an `audio` or `text` input to process."
+            )
 
         if audio is not None:
             inputs = self.feature_extractor(audio, *args, **kwargs)

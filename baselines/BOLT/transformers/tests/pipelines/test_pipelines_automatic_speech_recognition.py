@@ -53,10 +53,16 @@ if is_torch_available():
 
 
 @is_pipeline_test
-class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta):
+class AutomaticSpeechRecognitionPipelineTests(
+    unittest.TestCase, metaclass=PipelineTestCaseMeta
+):
     model_mapping = {
         k: v
-        for k, v in (list(MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING.items()) if MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING else [])
+        for k, v in (
+            list(MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING.items())
+            if MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
+            else []
+        )
         + (MODEL_FOR_CTC_MAPPING.items() if MODEL_FOR_CTC_MAPPING else [])
     }
 
@@ -83,7 +89,11 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         self.assertEqual(outputs, {"text": ANY(str)})
 
         # Striding
-        audio = {"raw": audio, "stride": (0, 4000), "sampling_rate": speech_recognizer.feature_extractor.sampling_rate}
+        audio = {
+            "raw": audio,
+            "stride": (0, 4000),
+            "sampling_rate": speech_recognizer.feature_extractor.sampling_rate,
+        }
         if speech_recognizer.type == "ctc":
             outputs = speech_recognizer(audio)
             self.assertEqual(outputs, {"text": ANY(str)})
@@ -103,7 +113,10 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
                 outputs,
                 {
                     "text": ANY(str),
-                    "chunks": [{"text": ANY(str), "timestamp": (ANY(float), ANY(float))} for i in range(n)],
+                    "chunks": [
+                        {"text": ANY(str), "timestamp": (ANY(float), ANY(float))}
+                        for i in range(n)
+                    ],
                 },
             )
 
@@ -114,7 +127,10 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
                 outputs,
                 {
                     "text": ANY(str),
-                    "chunks": [{"text": ANY(str), "timestamp": (ANY(float), ANY(float))} for i in range(n)],
+                    "chunks": [
+                        {"text": ANY(str), "timestamp": (ANY(float), ANY(float))}
+                        for i in range(n)
+                    ],
                 },
             )
         else:
@@ -167,7 +183,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         output = speech_recognizer(filename)
         self.assertEqual(
             output,
-            {"text": "y en las ramas medio sumergidas revoloteaban algunos pájaros de quimérico y legendario plumaje"},
+            {
+                "text": "y en las ramas medio sumergidas revoloteaban algunos pájaros de quimérico y legendario plumaje"
+            },
         )
 
         # Override back to pure CTC
@@ -185,7 +203,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
 
         speech_recognizer.type = "ctc_with_lm"
         # Simple test with CTC with LM, chunking + timestamps
-        output = speech_recognizer(filename, chunk_length_s=2.0, return_timestamps="word")
+        output = speech_recognizer(
+            filename, chunk_length_s=2.0, return_timestamps="word"
+        )
         self.assertEqual(
             output,
             {
@@ -239,7 +259,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         output = speech_recognizer(waveform)
         self.assertEqual(output, {"text": ""})
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = speech_recognizer(filename)
         self.assertEqual(output, {"text": "A MAN SAID TO THE UNIVERSE SIR I EXIST"})
@@ -254,25 +276,35 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             framework="pt",
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = speech_recognizer(filename)
-        self.assertEqual(output, {"text": 'Ein Mann sagte zum Universum : " Sir, ich existiert! "'})
+        self.assertEqual(
+            output, {"text": 'Ein Mann sagte zum Universum : " Sir, ich existiert! "'}
+        )
 
     @slow
     @require_torch
     def test_simple_wav2vec2(self):
         model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
         tokenizer = AutoTokenizer.from_pretrained("facebook/wav2vec2-base-960h")
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/wav2vec2-base-960h"
+        )
 
-        asr = AutomaticSpeechRecognitionPipeline(model=model, tokenizer=tokenizer, feature_extractor=feature_extractor)
+        asr = AutomaticSpeechRecognitionPipeline(
+            model=model, tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         waveform = np.tile(np.arange(1000, dtype=np.float32), 34)
         output = asr(waveform)
         self.assertEqual(output, {"text": ""})
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = asr(filename)
         self.assertEqual(output, {"text": "A MAN SAID TO THE UNIVERSE SIR I EXIST"})
@@ -288,27 +320,39 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
     @require_torchaudio
     def test_simple_s2t(self):
 
-        model = Speech2TextForConditionalGeneration.from_pretrained("facebook/s2t-small-mustc-en-it-st")
+        model = Speech2TextForConditionalGeneration.from_pretrained(
+            "facebook/s2t-small-mustc-en-it-st"
+        )
         tokenizer = AutoTokenizer.from_pretrained("facebook/s2t-small-mustc-en-it-st")
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/s2t-small-mustc-en-it-st")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/s2t-small-mustc-en-it-st"
+        )
 
-        asr = AutomaticSpeechRecognitionPipeline(model=model, tokenizer=tokenizer, feature_extractor=feature_extractor)
+        asr = AutomaticSpeechRecognitionPipeline(
+            model=model, tokenizer=tokenizer, feature_extractor=feature_extractor
+        )
 
         waveform = np.tile(np.arange(1000, dtype=np.float32), 34)
 
         output = asr(waveform)
         self.assertEqual(output, {"text": "(Applausi)"})
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = asr(filename)
-        self.assertEqual(output, {"text": "Un uomo disse all'universo: \"Signore, io esisto."})
+        self.assertEqual(
+            output, {"text": "Un uomo disse all'universo: \"Signore, io esisto."}
+        )
 
         filename = ds[40]["file"]
         with open(filename, "rb") as f:
             data = f.read()
         output = asr(data)
-        self.assertEqual(output, {"text": "Un uomo disse all'universo: \"Signore, io esisto."})
+        self.assertEqual(
+            output, {"text": "Un uomo disse all'universo: \"Signore, io esisto."}
+        )
 
     @slow
     @require_torch
@@ -321,7 +365,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             framework="pt",
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = speech_recognizer(filename)
         self.assertEqual(output, {"text": "A man said to the universe: “Sir, I exist."})
@@ -337,10 +383,14 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             framework="pt",
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
         output = speech_recognizer(filename)
-        self.assertEqual(output, {"text": "Ein Mann sagte zu dem Universum, Sir, ich bin da."})
+        self.assertEqual(
+            output, {"text": "Ein Mann sagte zu dem Universum, Sir, ich bin da."}
+        )
 
     @slow
     @require_torch
@@ -350,11 +400,15 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             task="automatic-speech-recognition",
             model="patrickvonplaten/wav2vec2-2-bart-base",
             feature_extractor="patrickvonplaten/wav2vec2-2-bart-base",
-            tokenizer=AutoTokenizer.from_pretrained("patrickvonplaten/wav2vec2-2-bart-base"),
+            tokenizer=AutoTokenizer.from_pretrained(
+                "patrickvonplaten/wav2vec2-2-bart-base"
+            ),
             framework="pt",
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         filename = ds[40]["file"]
 
         output = speech_recognizer(filename)
@@ -368,7 +422,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             chunk_length_s=10.0,
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 2
@@ -384,7 +440,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             model="hf-internal-testing/tiny-random-wav2vec2",
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         # Take short audio to keep the test readable
         audio = ds[40]["audio"]["array"][:800]
 
@@ -428,7 +486,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             chunk_length_s=10.0,
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 2
@@ -456,7 +516,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         )
         self.assertEqual(speech_recognizer.type, "ctc_with_lm")
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 2
@@ -471,7 +533,10 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         # the `decode_beams` function.
         with self.assertRaises(TypeError) as e:
             output = speech_recognizer([audio_tiled], decoder_kwargs={"num_beams": 2})
-            self.assertContains(e.msg, "TypeError: decode_beams() got an unexpected keyword argument 'num_beams'")
+            self.assertContains(
+                e.msg,
+                "TypeError: decode_beams() got an unexpected keyword argument 'num_beams'",
+            )
         output = speech_recognizer([audio_tiled], decoder_kwargs={"beam_width": 2})
 
     @require_torch
@@ -484,7 +549,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         )
         self.assertEqual(speech_recognizer.type, "ctc_with_lm")
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 2
@@ -500,7 +567,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
     def test_chunking_and_timestamps(self):
         model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
         tokenizer = AutoTokenizer.from_pretrained("facebook/wav2vec2-base-960h")
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/wav2vec2-base-960h"
+        )
         speech_recognizer = pipeline(
             task="automatic-speech-recognition",
             model=model,
@@ -510,13 +579,18 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             chunk_length_s=10.0,
         )
 
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 10
         audio_tiled = np.tile(audio, n_repeats)
         output = speech_recognizer([audio_tiled], batch_size=2)
-        self.assertEqual(output, [{"text": ("A MAN SAID TO THE UNIVERSE SIR I EXIST " * n_repeats).strip()}])
+        self.assertEqual(
+            output,
+            [{"text": ("A MAN SAID TO THE UNIVERSE SIR I EXIST " * n_repeats).strip()}],
+        )
 
         output = speech_recognizer(audio, return_timestamps="char")
         self.assertEqual(audio.shape, (74_400,))
@@ -615,7 +689,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             model="patrickvonplaten/wav2vec2-base-100h-with-lm",
             chunk_length_s=10.0,
         )
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        ).sort("id")
         audio = ds[40]["audio"]["array"]
 
         n_repeats = 10
@@ -627,7 +703,9 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
 
     @require_torch
     def test_chunk_iterator(self):
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/wav2vec2-base-960h"
+        )
         inputs = torch.arange(100).long()
 
         outs = list(chunk_iter(inputs, feature_extractor, 100, 0, 0))
@@ -663,11 +741,13 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
 
     @require_torch
     def test_chunk_iterator_stride(self):
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/wav2vec2-base-960h"
+        )
         inputs = torch.arange(100).long()
-        input_values = feature_extractor(inputs, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt")[
-            "input_values"
-        ]
+        input_values = feature_extractor(
+            inputs, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt"
+        )["input_values"]
 
         outs = list(chunk_iter(inputs, feature_extractor, 100, 20, 10))
         self.assertEqual(len(outs), 2)
@@ -687,24 +767,47 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
         self.assertEqual([o["input_values"].shape for o in outs], [(1, 90), (1, 30)])
 
         inputs = torch.LongTensor([i % 2 for i in range(100)])
-        input_values = feature_extractor(inputs, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt")[
-            "input_values"
-        ]
+        input_values = feature_extractor(
+            inputs, sampling_rate=feature_extractor.sampling_rate, return_tensors="pt"
+        )["input_values"]
         outs = list(chunk_iter(inputs, feature_extractor, 30, 5, 5))
         self.assertEqual(len(outs), 5)
-        self.assertEqual([o["stride"] for o in outs], [(30, 0, 5), (30, 5, 5), (30, 5, 5), (30, 5, 5), (20, 5, 0)])
-        self.assertEqual([o["input_values"].shape for o in outs], [(1, 30), (1, 30), (1, 30), (1, 30), (1, 20)])
-        self.assertEqual([o["is_last"] for o in outs], [False, False, False, False, True])
+        self.assertEqual(
+            [o["stride"] for o in outs],
+            [(30, 0, 5), (30, 5, 5), (30, 5, 5), (30, 5, 5), (20, 5, 0)],
+        )
+        self.assertEqual(
+            [o["input_values"].shape for o in outs],
+            [(1, 30), (1, 30), (1, 30), (1, 30), (1, 20)],
+        )
+        self.assertEqual(
+            [o["is_last"] for o in outs], [False, False, False, False, True]
+        )
         # (0, 25)
-        self.assertEqual(nested_simplify(input_values[:, :30]), nested_simplify(outs[0]["input_values"]))
+        self.assertEqual(
+            nested_simplify(input_values[:, :30]),
+            nested_simplify(outs[0]["input_values"]),
+        )
         # (25, 45)
-        self.assertEqual(nested_simplify(input_values[:, 20:50]), nested_simplify(outs[1]["input_values"]))
+        self.assertEqual(
+            nested_simplify(input_values[:, 20:50]),
+            nested_simplify(outs[1]["input_values"]),
+        )
         # (45, 65)
-        self.assertEqual(nested_simplify(input_values[:, 40:70]), nested_simplify(outs[2]["input_values"]))
+        self.assertEqual(
+            nested_simplify(input_values[:, 40:70]),
+            nested_simplify(outs[2]["input_values"]),
+        )
         # (65, 85)
-        self.assertEqual(nested_simplify(input_values[:, 60:90]), nested_simplify(outs[3]["input_values"]))
+        self.assertEqual(
+            nested_simplify(input_values[:, 60:90]),
+            nested_simplify(outs[3]["input_values"]),
+        )
         # (85, 100)
-        self.assertEqual(nested_simplify(input_values[:, 80:100]), nested_simplify(outs[4]["input_values"]))
+        self.assertEqual(
+            nested_simplify(input_values[:, 80:100]),
+            nested_simplify(outs[4]["input_values"]),
+        )
 
     @require_torch
     def test_stride(self):
@@ -713,19 +816,27 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase, metaclass=Pipel
             model="hf-internal-testing/tiny-random-wav2vec2",
         )
         waveform = np.tile(np.arange(1000, dtype=np.float32), 10)
-        output = speech_recognizer({"raw": waveform, "stride": (0, 0), "sampling_rate": 16_000})
+        output = speech_recognizer(
+            {"raw": waveform, "stride": (0, 0), "sampling_rate": 16_000}
+        )
         self.assertEqual(output, {"text": "OB XB  B EB BB  B EB B OB X"})
 
         # 0 effective ids Just take the middle one
-        output = speech_recognizer({"raw": waveform, "stride": (5000, 5000), "sampling_rate": 16_000})
+        output = speech_recognizer(
+            {"raw": waveform, "stride": (5000, 5000), "sampling_rate": 16_000}
+        )
         self.assertEqual(output, {"text": ""})
 
         # Only 1 arange.
-        output = speech_recognizer({"raw": waveform, "stride": (0, 9000), "sampling_rate": 16_000})
+        output = speech_recognizer(
+            {"raw": waveform, "stride": (0, 9000), "sampling_rate": 16_000}
+        )
         self.assertEqual(output, {"text": "OB"})
 
         # 2nd arange
-        output = speech_recognizer({"raw": waveform, "stride": (1000, 8000), "sampling_rate": 16_000})
+        output = speech_recognizer(
+            {"raw": waveform, "stride": (1000, 8000), "sampling_rate": 16_000}
+        )
         self.assertEqual(output, {"text": "XB"})
 
 
@@ -753,20 +864,28 @@ def bytes_iter(chunk_size, chunks):
 @require_ffmpeg
 class AudioUtilsTest(unittest.TestCase):
     def test_chunk_bytes_iter_too_big(self):
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 10, stride=(0, 0)))
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02\x03\x04\x05", "stride": (0, 0)})
+        iter_ = iter(
+            chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 10, stride=(0, 0))
+        )
+        self.assertEqual(
+            next(iter_), {"raw": b"\x00\x01\x02\x03\x04\x05", "stride": (0, 0)}
+        )
         with self.assertRaises(StopIteration):
             next(iter_)
 
     def test_chunk_bytes_iter(self):
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 3, stride=(0, 0)))
+        iter_ = iter(
+            chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 3, stride=(0, 0))
+        )
         self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0)})
         self.assertEqual(next(iter_), {"raw": b"\x03\x04\x05", "stride": (0, 0)})
         with self.assertRaises(StopIteration):
             next(iter_)
 
     def test_chunk_bytes_iter_stride(self):
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 3, stride=(1, 1)))
+        iter_ = iter(
+            chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 3, stride=(1, 1))
+        )
         self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 1)})
         self.assertEqual(next(iter_), {"raw": b"\x01\x02\x03", "stride": (1, 1)})
         self.assertEqual(next(iter_), {"raw": b"\x02\x03\x04", "stride": (1, 1)})
@@ -777,29 +896,73 @@ class AudioUtilsTest(unittest.TestCase):
             next(iter_)
 
     def test_chunk_bytes_iter_stride_stream(self):
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=2), 5, stride=(1, 1), stream=True))
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True})
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02\x03\x04", "stride": (0, 1), "partial": False})
-        self.assertEqual(next(iter_), {"raw": b"\x03\x04\x05", "stride": (1, 0), "partial": False})
-        with self.assertRaises(StopIteration):
-            next(iter_)
-
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=3), 5, stride=(1, 1), stream=True))
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True})
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02\x03\x04", "stride": (0, 1), "partial": False})
-        self.assertEqual(next(iter_), {"raw": b"\x03\x04\x05\x06\x07", "stride": (1, 1), "partial": False})
-        self.assertEqual(next(iter_), {"raw": b"\x06\x07\x08", "stride": (1, 0), "partial": False})
-        with self.assertRaises(StopIteration):
-            next(iter_)
-
-        iter_ = iter(chunk_bytes_iter(bytes_iter(chunk_size=3, chunks=3), 10, stride=(1, 1), stream=True))
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True})
-        self.assertEqual(next(iter_), {"raw": b"\x00\x01\x02\x03\x04\x05", "stride": (0, 0), "partial": True})
-        self.assertEqual(
-            next(iter_), {"raw": b"\x00\x01\x02\x03\x04\x05\x06\x07\x08", "stride": (0, 0), "partial": True}
+        iter_ = iter(
+            chunk_bytes_iter(
+                bytes_iter(chunk_size=3, chunks=2), 5, stride=(1, 1), stream=True
+            )
         )
         self.assertEqual(
-            next(iter_), {"raw": b"\x00\x01\x02\x03\x04\x05\x06\x07\x08", "stride": (0, 0), "partial": False}
+            next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True}
+        )
+        self.assertEqual(
+            next(iter_),
+            {"raw": b"\x00\x01\x02\x03\x04", "stride": (0, 1), "partial": False},
+        )
+        self.assertEqual(
+            next(iter_), {"raw": b"\x03\x04\x05", "stride": (1, 0), "partial": False}
+        )
+        with self.assertRaises(StopIteration):
+            next(iter_)
+
+        iter_ = iter(
+            chunk_bytes_iter(
+                bytes_iter(chunk_size=3, chunks=3), 5, stride=(1, 1), stream=True
+            )
+        )
+        self.assertEqual(
+            next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True}
+        )
+        self.assertEqual(
+            next(iter_),
+            {"raw": b"\x00\x01\x02\x03\x04", "stride": (0, 1), "partial": False},
+        )
+        self.assertEqual(
+            next(iter_),
+            {"raw": b"\x03\x04\x05\x06\x07", "stride": (1, 1), "partial": False},
+        )
+        self.assertEqual(
+            next(iter_), {"raw": b"\x06\x07\x08", "stride": (1, 0), "partial": False}
+        )
+        with self.assertRaises(StopIteration):
+            next(iter_)
+
+        iter_ = iter(
+            chunk_bytes_iter(
+                bytes_iter(chunk_size=3, chunks=3), 10, stride=(1, 1), stream=True
+            )
+        )
+        self.assertEqual(
+            next(iter_), {"raw": b"\x00\x01\x02", "stride": (0, 0), "partial": True}
+        )
+        self.assertEqual(
+            next(iter_),
+            {"raw": b"\x00\x01\x02\x03\x04\x05", "stride": (0, 0), "partial": True},
+        )
+        self.assertEqual(
+            next(iter_),
+            {
+                "raw": b"\x00\x01\x02\x03\x04\x05\x06\x07\x08",
+                "stride": (0, 0),
+                "partial": True,
+            },
+        )
+        self.assertEqual(
+            next(iter_),
+            {
+                "raw": b"\x00\x01\x02\x03\x04\x05\x06\x07\x08",
+                "stride": (0, 0),
+                "partial": False,
+            },
         )
         with self.assertRaises(StopIteration):
             next(iter_)

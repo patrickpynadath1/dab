@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -141,23 +144,38 @@ class ViltFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestC
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
         self.assertEqual(
             encoded_images.shape,
             (
@@ -172,23 +190,38 @@ class ViltFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestC
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
         self.assertEqual(
             encoded_images.shape,
             (
@@ -203,23 +236,38 @@ class ViltFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestC
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs)
+        )
         self.assertEqual(
             encoded_images.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_values(image_inputs, batched=True)
+        )
         self.assertEqual(
             encoded_images.shape,
             (
@@ -233,19 +281,33 @@ class ViltFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestC
     def test_equivalence_pad_and_create_pixel_mask(self):
         # Initialize feature_extractors
         feature_extractor_1 = self.feature_extraction_class(**self.feat_extract_dict)
-        feature_extractor_2 = self.feature_extraction_class(do_resize=False, do_normalize=False)
+        feature_extractor_2 = self.feature_extraction_class(
+            do_resize=False, do_normalize=False
+        )
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test whether the method "pad_and_return_pixel_mask" and calling the feature extractor return the same tensors
-        encoded_images_with_method = feature_extractor_1.pad_and_create_pixel_mask(image_inputs, return_tensors="pt")
+        encoded_images_with_method = feature_extractor_1.pad_and_create_pixel_mask(
+            image_inputs, return_tensors="pt"
+        )
         encoded_images = feature_extractor_2(image_inputs, return_tensors="pt")
 
         self.assertTrue(
-            torch.allclose(encoded_images_with_method["pixel_values"], encoded_images["pixel_values"], atol=1e-4)
+            torch.allclose(
+                encoded_images_with_method["pixel_values"],
+                encoded_images["pixel_values"],
+                atol=1e-4,
+            )
         )
         self.assertTrue(
-            torch.allclose(encoded_images_with_method["pixel_mask"], encoded_images["pixel_mask"], atol=1e-4)
+            torch.allclose(
+                encoded_images_with_method["pixel_mask"],
+                encoded_images["pixel_mask"],
+                atol=1e-4,
+            )
         )

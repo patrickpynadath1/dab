@@ -331,14 +331,14 @@ class GPTPromptTuningWithbiasesModelMixin:
         if self.is_detoxic:
             senti_losses = -(senti_logits[:, 0] - senti_logits[:, 1])
         else:
-            if self.attribute == 'pos': 
+            if self.attribute == "pos":
                 senti_losses = -(senti_logits[:, 1] - senti_logits[:, 0])
-            else: 
+            else:
                 senti_losses = -(senti_logits[:, 0] - senti_logits[:, 1])
         senti_loss = torch.sum(senti_losses)
-        loss = senti_loss 
+        loss = senti_loss
 
-        return (loss, output_ids, onehot_generates, gpt_logit, senti_losses)
+        return (loss, output_ids, onehot_generates, gpt_logit, senti_losses, logits)
 
     def soft_forward_without_decoding(
         self,

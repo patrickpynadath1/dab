@@ -107,7 +107,9 @@ class HfTrainerDeepSpeedConfig(HfDeepSpeedConfig):
 
         ds_val = config.get(ds_key)
         if ds_val is not None and ds_val != hf_val:
-            self.mismatches.append(f"- ds {ds_key_long}={ds_val} vs hf {hf_key}={hf_val}")
+            self.mismatches.append(
+                f"- ds {ds_key_long}={ds_val} vs hf {hf_key}={hf_val}"
+            )
 
     fill_only = partialmethod(fill_match, must_match=False)
 
@@ -118,21 +120,41 @@ class HfTrainerDeepSpeedConfig(HfDeepSpeedConfig):
         """
         # DeepSpeed does:
         # train_batch_size = world_size * train_micro_batch_size_per_gpu * gradient_accumulation_steps
-        train_batch_size = args.world_size * args.per_device_train_batch_size * args.gradient_accumulation_steps
-        self.fill_match(
-            "train_micro_batch_size_per_gpu", args.per_device_train_batch_size, "per_device_train_batch_size"
+        train_batch_size = (
+            args.world_size
+            * args.per_device_train_batch_size
+            * args.gradient_accumulation_steps
         )
-        self.fill_match("gradient_accumulation_steps", args.gradient_accumulation_steps, "gradient_accumulation_steps")
-        self.fill_match("train_batch_size", train_batch_size, "train_batch_size (calculated)")
+        self.fill_match(
+            "train_micro_batch_size_per_gpu",
+            args.per_device_train_batch_size,
+            "per_device_train_batch_size",
+        )
+        self.fill_match(
+            "gradient_accumulation_steps",
+            args.gradient_accumulation_steps,
+            "gradient_accumulation_steps",
+        )
+        self.fill_match(
+            "train_batch_size", train_batch_size, "train_batch_size (calculated)"
+        )
         self.fill_match("gradient_clipping", args.max_grad_norm, "max_grad_norm")
 
         self.fill_match("optimizer.params.lr", args.learning_rate, "learning_rate")
-        self.fill_match("optimizer.params.betas", [args.adam_beta1, args.adam_beta2], "adam_beta1+adam_beta2")
+        self.fill_match(
+            "optimizer.params.betas",
+            [args.adam_beta1, args.adam_beta2],
+            "adam_beta1+adam_beta2",
+        )
         self.fill_match("optimizer.params.eps", args.adam_epsilon, "adam_epsilon")
-        self.fill_match("optimizer.params.weight_decay", args.weight_decay, "weight_decay")
+        self.fill_match(
+            "optimizer.params.weight_decay", args.weight_decay, "weight_decay"
+        )
 
         self.fill_only("scheduler.params.warmup_min_lr", 0)  # not a trainer arg
-        self.fill_match("scheduler.params.warmup_max_lr", args.learning_rate, "learning_rate")
+        self.fill_match(
+            "scheduler.params.warmup_max_lr", args.learning_rate, "learning_rate"
+        )
         # total_num_steps - will get set in trainer_config_finalize
 
         # fp16
@@ -151,10 +173,14 @@ class HfTrainerDeepSpeedConfig(HfDeepSpeedConfig):
 
         # apex: delegates amp work to apex (which needs to be available), but it cannot be used with any
         # ZeRO features
-        self.fill_match("amp.enabled", fp16_backend == "apex", "fp16+fp16_backend(apex)")
+        self.fill_match(
+            "amp.enabled", fp16_backend == "apex", "fp16+fp16_backend(apex)"
+        )
         self.fill_match("amp.opt_level", args.fp16_opt_level, "fp16_opt_level")
 
-        self.fill_match("bf16.enabled", (args.bf16 or args.bf16_full_eval), "bf16|bf16_full_eval")
+        self.fill_match(
+            "bf16.enabled", (args.bf16 or args.bf16_full_eval), "bf16|bf16_full_eval"
+        )
 
         # deepspeed's default mode is fp16 unless there is a config that says differently
         if self.is_true("bf16.enabled"):
@@ -172,15 +198,30 @@ class HfTrainerDeepSpeedConfig(HfDeepSpeedConfig):
         """
         # zero
         hidden_size = model.config.hidden_size
-        self.fill_only("zero_optimization.reduce_bucket_size", hidden_size * hidden_size)
+        self.fill_only(
+            "zero_optimization.reduce_bucket_size", hidden_size * hidden_size
+        )
         if self.is_zero3():
             # automatically assign the optimal config values based on model config
-            self.fill_only("zero_optimization.stage3_prefetch_bucket_size", 0.9 * hidden_size * hidden_size)
-            self.fill_only("zero_optimization.stage3_param_persistence_threshold", 10 * hidden_size)
+            self.fill_only(
+                "zero_optimization.stage3_prefetch_bucket_size",
+                0.9 * hidden_size * hidden_size,
+            )
+            self.fill_only(
+                "zero_optimization.stage3_param_persistence_threshold", 10 * hidden_size
+            )
 
         # scheduler
-        self.fill_match("scheduler.params.total_num_steps", num_training_steps, "num_training_steps (calculated)")
-        self.fill_match("scheduler.params.warmup_num_steps", args.get_warmup_steps(num_training_steps), "warmup_steps")
+        self.fill_match(
+            "scheduler.params.total_num_steps",
+            num_training_steps,
+            "num_training_steps (calculated)",
+        )
+        self.fill_match(
+            "scheduler.params.warmup_num_steps",
+            args.get_warmup_steps(num_training_steps),
+            "warmup_steps",
+        )
 
         if len(self.mismatches) > 0:
             mismatches = "\n".join(self.mismatches)
@@ -209,14 +250,20 @@ def unset_hf_deepspeed_config():
 
 
 def is_deepspeed_zero3_enabled():
-    if _hf_deepspeed_config_weak_ref is not None and _hf_deepspeed_config_weak_ref() is not None:
+    if (
+        _hf_deepspeed_config_weak_ref is not None
+        and _hf_deepspeed_config_weak_ref() is not None
+    ):
         return _hf_deepspeed_config_weak_ref().is_zero3()
     else:
         return False
 
 
 def deepspeed_config():
-    if _hf_deepspeed_config_weak_ref is not None and _hf_deepspeed_config_weak_ref() is not None:
+    if (
+        _hf_deepspeed_config_weak_ref is not None
+        and _hf_deepspeed_config_weak_ref() is not None
+    ):
         return _hf_deepspeed_config_weak_ref().config
     else:
         return None
@@ -264,7 +311,9 @@ def deepspeed_optim_sched(trainer, hf_deepspeed_config, args, num_training_steps
         config["zero_allow_untested_optimizer"] = True
 
     def _lr_scheduler_callable(optimizer):
-        return trainer.create_scheduler(num_training_steps=num_training_steps, optimizer=optimizer)
+        return trainer.create_scheduler(
+            num_training_steps=num_training_steps, optimizer=optimizer
+        )
 
     lr_scheduler = None
     if "scheduler" not in config:
@@ -272,12 +321,16 @@ def deepspeed_optim_sched(trainer, hf_deepspeed_config, args, num_training_steps
             # Optimizer is not available, so use callable to defer lr_scheduler creation to DS init
             lr_scheduler = _lr_scheduler_callable
         else:
-            lr_scheduler = trainer.create_scheduler(num_training_steps=num_training_steps, optimizer=optimizer)
+            lr_scheduler = trainer.create_scheduler(
+                num_training_steps=num_training_steps, optimizer=optimizer
+            )
 
     return optimizer, lr_scheduler
 
 
-def deepspeed_init(trainer, num_training_steps, resume_from_checkpoint=None, inference=False):
+def deepspeed_init(
+    trainer, num_training_steps, resume_from_checkpoint=None, inference=False
+):
     """
     Init DeepSpeed, after updating the DeepSpeed configuration with any relevant Trainer's args.
 
@@ -318,7 +371,9 @@ def deepspeed_init(trainer, num_training_steps, resume_from_checkpoint=None, inf
     if inference:
         # only Z3 makes sense for the inference
         if not hf_deepspeed_config.is_zero3():
-            raise ValueError("ZeRO inference only makes sense with ZeRO Stage 3 - please adjust your config")
+            raise ValueError(
+                "ZeRO inference only makes sense with ZeRO Stage 3 - please adjust your config"
+            )
 
         # in case the training config is re-used for inference
         hf_deepspeed_config.del_config_sub_tree("optimizer")
@@ -327,7 +382,9 @@ def deepspeed_init(trainer, num_training_steps, resume_from_checkpoint=None, inf
         model_parameters = None
     else:
         trainer.optimizer = None  # important for when deepspeed_init is used as re-init
-        optimizer, lr_scheduler = deepspeed_optim_sched(trainer, hf_deepspeed_config, args, num_training_steps)
+        optimizer, lr_scheduler = deepspeed_optim_sched(
+            trainer, hf_deepspeed_config, args, num_training_steps
+        )
         model_parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
 
     # keep for quick debug:
@@ -351,17 +408,25 @@ def deepspeed_init(trainer, num_training_steps, resume_from_checkpoint=None, inf
         # path contains what looks like a deepspeed checkpoint
         import glob
 
-        deepspeed_checkpoint_dirs = sorted(glob.glob(f"{resume_from_checkpoint}/global_step*"))
+        deepspeed_checkpoint_dirs = sorted(
+            glob.glob(f"{resume_from_checkpoint}/global_step*")
+        )
 
         if len(deepspeed_checkpoint_dirs) > 0:
             logger.info(f"Attempting to resume from {resume_from_checkpoint}")
             # this magically updates self.optimizer and self.lr_scheduler
             load_path, _ = deepspeed_engine.load_checkpoint(
-                resume_from_checkpoint, load_optimizer_states=True, load_lr_scheduler_states=True
+                resume_from_checkpoint,
+                load_optimizer_states=True,
+                load_lr_scheduler_states=True,
             )
             if load_path is None:
-                raise ValueError(f"[deepspeed] failed to resume from checkpoint {resume_from_checkpoint}")
+                raise ValueError(
+                    f"[deepspeed] failed to resume from checkpoint {resume_from_checkpoint}"
+                )
         else:
-            logger.info(f"{resume_from_checkpoint} doesn't have deepspeed checkpoints, doing nothing")
+            logger.info(
+                f"{resume_from_checkpoint} doesn't have deepspeed checkpoints, doing nothing"
+            )
 
     return deepspeed_engine, optimizer, lr_scheduler

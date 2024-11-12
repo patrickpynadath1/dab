@@ -28,7 +28,11 @@ from torch import Tensor
 
 import timm
 from huggingface_hub import hf_hub_download
-from transformers import AutoFeatureExtractor, ResNetConfig, ResNetForImageClassification
+from transformers import (
+    AutoFeatureExtractor,
+    ResNetConfig,
+    ResNetForImageClassification,
+)
 from transformers.utils import logging
 
 
@@ -43,7 +47,11 @@ class Tracker:
     handles: list = field(default_factory=list)
 
     def _forward_hook(self, m, inputs: Tensor, outputs: Tensor):
-        has_not_submodules = len(list(m.modules())) == 1 or isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d)
+        has_not_submodules = (
+            len(list(m.modules())) == 1
+            or isinstance(m, nn.Conv2d)
+            or isinstance(m, nn.BatchNorm2d)
+        )
         if has_not_submodules:
             self.traced.append(m)
 
@@ -91,7 +99,9 @@ class ModuleTransfer:
                 print(f"Transfered from={src_m} to={dest_m}")
 
 
-def convert_weight_and_push(name: str, config: ResNetConfig, save_directory: Path, push_to_hub: bool = True):
+def convert_weight_and_push(
+    name: str, config: ResNetConfig, save_directory: Path, push_to_hub: bool = True
+):
     print(f"Converting {name}...")
     with torch.no_grad():
         from_model = timm.create_model(name, pretrained=True).eval()
@@ -100,7 +110,9 @@ def convert_weight_and_push(name: str, config: ResNetConfig, save_directory: Pat
         x = torch.randn((1, 3, 224, 224))
         module_transfer(x)
 
-    assert torch.allclose(from_model(x), our_model(x).logits), "The model logits don't match the original one."
+    assert torch.allclose(
+        from_model(x), our_model(x).logits
+    ), "The model logits don't match the original one."
 
     checkpoint_name = f"resnet{'-'.join(name.split('resnet'))}"
     print(checkpoint_name)
@@ -113,7 +125,9 @@ def convert_weight_and_push(name: str, config: ResNetConfig, save_directory: Pat
         )
 
         # we can use the convnext one
-        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/convnext-base-224-22k-1k")
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            "facebook/convnext-base-224-22k-1k"
+        )
         feature_extractor.push_to_hub(
             repo_path_or_name=save_directory / checkpoint_name,
             commit_message="Add feature extractor",
@@ -123,7 +137,9 @@ def convert_weight_and_push(name: str, config: ResNetConfig, save_directory: Pat
         print(f"Pushed {checkpoint_name}")
 
 
-def convert_weights_and_push(save_directory: Path, model_name: str = None, push_to_hub: bool = True):
+def convert_weights_and_push(
+    save_directory: Path, model_name: str = None, push_to_hub: bool = True
+):
     filename = "imagenet-1k-id2label.json"
     num_labels = 1000
     expected_shape = (1, num_labels)
@@ -136,31 +152,43 @@ def convert_weights_and_push(save_directory: Path, model_name: str = None, push_
     id2label = id2label
     label2id = {v: k for k, v in id2label.items()}
 
-    ImageNetPreTrainedConfig = partial(ResNetConfig, num_labels=num_labels, id2label=id2label, label2id=label2id)
+    ImageNetPreTrainedConfig = partial(
+        ResNetConfig, num_labels=num_labels, id2label=id2label, label2id=label2id
+    )
 
     names_to_config = {
         "resnet18": ImageNetPreTrainedConfig(
             depths=[2, 2, 2, 2], hidden_sizes=[64, 128, 256, 512], layer_type="basic"
         ),
         "resnet26": ImageNetPreTrainedConfig(
-            depths=[2, 2, 2, 2], hidden_sizes=[256, 512, 1024, 2048], layer_type="bottleneck"
+            depths=[2, 2, 2, 2],
+            hidden_sizes=[256, 512, 1024, 2048],
+            layer_type="bottleneck",
         ),
         "resnet34": ImageNetPreTrainedConfig(
             depths=[3, 4, 6, 3], hidden_sizes=[64, 128, 256, 512], layer_type="basic"
         ),
         "resnet50": ImageNetPreTrainedConfig(
-            depths=[3, 4, 6, 3], hidden_sizes=[256, 512, 1024, 2048], layer_type="bottleneck"
+            depths=[3, 4, 6, 3],
+            hidden_sizes=[256, 512, 1024, 2048],
+            layer_type="bottleneck",
         ),
         "resnet101": ImageNetPreTrainedConfig(
-            depths=[3, 4, 23, 3], hidden_sizes=[256, 512, 1024, 2048], layer_type="bottleneck"
+            depths=[3, 4, 23, 3],
+            hidden_sizes=[256, 512, 1024, 2048],
+            layer_type="bottleneck",
         ),
         "resnet152": ImageNetPreTrainedConfig(
-            depths=[3, 8, 36, 3], hidden_sizes=[256, 512, 1024, 2048], layer_type="bottleneck"
+            depths=[3, 8, 36, 3],
+            hidden_sizes=[256, 512, 1024, 2048],
+            layer_type="bottleneck",
         ),
     }
 
     if model_name:
-        convert_weight_and_push(model_name, names_to_config[model_name], save_directory, push_to_hub)
+        convert_weight_and_push(
+            model_name, names_to_config[model_name], save_directory, push_to_hub
+        )
     else:
         for model_name, config in names_to_config.items():
             convert_weight_and_push(model_name, config, save_directory, push_to_hub)
@@ -197,4 +225,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     pytorch_dump_folder_path: Path = args.pytorch_dump_folder_path
     pytorch_dump_folder_path.mkdir(exist_ok=True, parents=True)
-    convert_weights_and_push(pytorch_dump_folder_path, args.model_name, args.push_to_hub)
+    convert_weights_and_push(
+        pytorch_dump_folder_path, args.model_name, args.push_to_hub
+    )

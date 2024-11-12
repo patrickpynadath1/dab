@@ -238,6 +238,7 @@ class PretrainedConfig(PushToHubMixin):
             not be XLA-compatible. This option is here for backward compatibility and will be removed in Transformers
             v5.
     """
+
     model_type: str = ""
     is_composition: bool = False
     attribute_map: Dict[str, str] = {}
@@ -258,10 +259,16 @@ class PretrainedConfig(PushToHubMixin):
         self.return_dict = kwargs.pop("return_dict", True)
         self.output_hidden_states = kwargs.pop("output_hidden_states", False)
         self.output_attentions = kwargs.pop("output_attentions", False)
-        self.torchscript = kwargs.pop("torchscript", False)  # Only used by PyTorch models
-        self.torch_dtype = kwargs.pop("torch_dtype", None)  # Only used by PyTorch models
+        self.torchscript = kwargs.pop(
+            "torchscript", False
+        )  # Only used by PyTorch models
+        self.torch_dtype = kwargs.pop(
+            "torch_dtype", None
+        )  # Only used by PyTorch models
         self.use_bfloat16 = kwargs.pop("use_bfloat16", False)
-        self.tf_legacy_loss = kwargs.pop("tf_legacy_loss", False)  # Only used by TensorFlow models
+        self.tf_legacy_loss = kwargs.pop(
+            "tf_legacy_loss", False
+        )  # Only used by TensorFlow models
         self.pruned_heads = kwargs.pop("pruned_heads", {})
         self.tie_word_embeddings = kwargs.pop(
             "tie_word_embeddings", True
@@ -270,7 +277,9 @@ class PretrainedConfig(PushToHubMixin):
         # Is decoder is used in encoder-decoder models to differentiate encoder from decoder
         self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
         self.is_decoder = kwargs.pop("is_decoder", False)
-        self.cross_attention_hidden_size = kwargs.pop("cross_attention_hidden_size", None)
+        self.cross_attention_hidden_size = kwargs.pop(
+            "cross_attention_hidden_size", None
+        )
         self.add_cross_attention = kwargs.pop("add_cross_attention", False)
         self.tie_encoder_decoder = kwargs.pop("tie_encoder_decoder", False)
 
@@ -289,7 +298,9 @@ class PretrainedConfig(PushToHubMixin):
         self.repetition_penalty = kwargs.pop("repetition_penalty", 1.0)
         self.length_penalty = kwargs.pop("length_penalty", 1.0)
         self.no_repeat_ngram_size = kwargs.pop("no_repeat_ngram_size", 0)
-        self.encoder_no_repeat_ngram_size = kwargs.pop("encoder_no_repeat_ngram_size", 0)
+        self.encoder_no_repeat_ngram_size = kwargs.pop(
+            "encoder_no_repeat_ngram_size", 0
+        )
         self.bad_words_ids = kwargs.pop("bad_words_ids", None)
         self.num_return_sequences = kwargs.pop("num_return_sequences", 1)
         self.chunk_size_feed_forward = kwargs.pop("chunk_size_feed_forward", 0)
@@ -298,7 +309,9 @@ class PretrainedConfig(PushToHubMixin):
         self.forced_bos_token_id = kwargs.pop("forced_bos_token_id", None)
         self.forced_eos_token_id = kwargs.pop("forced_eos_token_id", None)
         self.remove_invalid_values = kwargs.pop("remove_invalid_values", False)
-        self.exponential_decay_length_penalty = kwargs.pop("exponential_decay_length_penalty", None)
+        self.exponential_decay_length_penalty = kwargs.pop(
+            "exponential_decay_length_penalty", None
+        )
 
         # Fine-tuning task arguments
         self.architectures = kwargs.pop("architectures", None)
@@ -312,7 +325,9 @@ class PretrainedConfig(PushToHubMixin):
                     f"You passed along `num_labels={num_labels}` with an incompatible id to label map: "
                     f"{self.id2label}. The number of labels wil be overwritten to {self.num_labels}."
                 )
-            self.id2label = dict((int(key), value) for key, value in self.id2label.items())
+            self.id2label = dict(
+                (int(key), value) for key, value in self.id2label.items()
+            )
             # Keys are always strings in JSON so convert ids to int here.
         else:
             self.num_labels = kwargs.pop("num_labels", 2)
@@ -340,8 +355,15 @@ class PretrainedConfig(PushToHubMixin):
 
         # regression / multi-label classification
         self.problem_type = kwargs.pop("problem_type", None)
-        allowed_problem_types = ("regression", "single_label_classification", "multi_label_classification")
-        if self.problem_type is not None and self.problem_type not in allowed_problem_types:
+        allowed_problem_types = (
+            "regression",
+            "single_label_classification",
+            "multi_label_classification",
+        )
+        if (
+            self.problem_type is not None
+            and self.problem_type not in allowed_problem_types
+        ):
             raise ValueError(
                 f"The config parameter `problem_type` was not understood: received {self.problem_type} "
                 "but only 'regression', 'single_label_classification' and 'multi_label_classification' are valid."
@@ -384,7 +406,9 @@ class PretrainedConfig(PushToHubMixin):
 
     @name_or_path.setter
     def name_or_path(self, value):
-        self._name_or_path = str(value)  # Make sure that name_or_path is a string (for JSON encoding)
+        self._name_or_path = str(
+            value
+        )  # Make sure that name_or_path is a string (for JSON encoding)
 
     @property
     def use_return_dict(self) -> bool:
@@ -403,11 +427,20 @@ class PretrainedConfig(PushToHubMixin):
 
     @num_labels.setter
     def num_labels(self, num_labels: int):
-        if not hasattr(self, "id2label") or self.id2label is None or len(self.id2label) != num_labels:
+        if (
+            not hasattr(self, "id2label")
+            or self.id2label is None
+            or len(self.id2label) != num_labels
+        ):
             self.id2label = {i: f"LABEL_{i}" for i in range(num_labels)}
             self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
 
-    def save_pretrained(self, save_directory: Union[str, os.PathLike], push_to_hub: bool = False, **kwargs):
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        push_to_hub: bool = False,
+        **kwargs,
+    ):
         """
         Save a configuration object to the directory `save_directory`, so that it can be re-loaded using the
         [`~PretrainedConfig.from_pretrained`] class method.
@@ -423,7 +456,9 @@ class PretrainedConfig(PushToHubMixin):
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
         if os.path.isfile(save_directory):
-            raise AssertionError(f"Provided path ({save_directory}) should be a directory, not a file")
+            raise AssertionError(
+                f"Provided path ({save_directory}) should be a directory, not a file"
+            )
 
         os.makedirs(save_directory, exist_ok=True)
 
@@ -446,11 +481,17 @@ class PretrainedConfig(PushToHubMixin):
 
         if push_to_hub:
             self._upload_modified_files(
-                save_directory, repo_id, files_timestamps, commit_message=commit_message, token=token
+                save_directory,
+                repo_id,
+                files_timestamps,
+                commit_message=commit_message,
+                token=token,
             )
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> "PretrainedConfig":
         r"""
         Instantiate a [`PretrainedConfig`] (or a derived class) from a pretrained model configuration.
 
@@ -526,8 +567,14 @@ class PretrainedConfig(PushToHubMixin):
         assert config.output_attentions == True
         assert unused_kwargs == {"foo": False}
         ```"""
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
-        if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
+        if (
+            "model_type" in config_dict
+            and hasattr(cls, "model_type")
+            and config_dict["model_type"] != cls.model_type
+        ):
             logger.warning(
                 f"You are using a model of type {config_dict['model_type']} to instantiate a model of type "
                 f"{cls.model_type}. This is not supported for all configurations of models and can yield errors."
@@ -553,15 +600,21 @@ class PretrainedConfig(PushToHubMixin):
         """
         original_kwargs = copy.deepcopy(kwargs)
         # Get config dict associated with the base config file
-        config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls._get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
         if "_commit_hash" in config_dict:
             original_kwargs["_commit_hash"] = config_dict["_commit_hash"]
 
         # That config file may point us toward another config file to use.
         if "configuration_files" in config_dict:
-            configuration_file = get_configuration_file(config_dict["configuration_files"])
+            configuration_file = get_configuration_file(
+                config_dict["configuration_files"]
+            )
             config_dict, kwargs = cls._get_config_dict(
-                pretrained_model_name_or_path, _configuration_file=configuration_file, **original_kwargs
+                pretrained_model_name_or_path,
+                _configuration_file=configuration_file,
+                **original_kwargs,
             )
 
         return config_dict, kwargs
@@ -648,7 +701,9 @@ class PretrainedConfig(PushToHubMixin):
         if is_local:
             logger.info(f"loading configuration file {resolved_config_file}")
         else:
-            logger.info(f"loading configuration file {configuration_file} from cache at {resolved_config_file}")
+            logger.info(
+                f"loading configuration file {configuration_file} from cache at {resolved_config_file}"
+            )
 
         return config_dict, kwargs
 
@@ -679,7 +734,9 @@ class PretrainedConfig(PushToHubMixin):
         config = cls(**config_dict)
 
         if hasattr(config, "pruned_heads"):
-            config.pruned_heads = dict((int(key), value) for key, value in config.pruned_heads.items())
+            config.pruned_heads = dict(
+                (int(key), value) for key, value in config.pruned_heads.items()
+            )
 
         # Update config with kwargs if needed
         if "num_labels" in kwargs and "id2label" in kwargs:
@@ -748,7 +805,9 @@ class PretrainedConfig(PushToHubMixin):
         default_config_dict = PretrainedConfig().to_dict()
 
         # get class specific config dict
-        class_config_dict = self.__class__().to_dict() if not self.is_composition else {}
+        class_config_dict = (
+            self.__class__().to_dict() if not self.is_composition else {}
+        )
 
         serializable_config_dict = {}
 
@@ -806,7 +865,9 @@ class PretrainedConfig(PushToHubMixin):
             config_dict = self.to_dict()
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
-    def to_json_file(self, json_file_path: Union[str, os.PathLike], use_diff: bool = True):
+    def to_json_file(
+        self, json_file_path: Union[str, os.PathLike], use_diff: bool = True
+    ):
         """
         Save this instance to a JSON file.
 
@@ -874,7 +935,9 @@ class PretrainedConfig(PushToHubMixin):
         converts torch.dtype to a string of just the type. For example, `torch.float32` get converted into *"float32"*
         string, which can then be stored in the json format.
         """
-        if d.get("torch_dtype", None) is not None and not isinstance(d["torch_dtype"], str):
+        if d.get("torch_dtype", None) is not None and not isinstance(
+            d["torch_dtype"], str
+        ):
             d["torch_dtype"] = str(d["torch_dtype"]).split(".")[1]
         for value in d.values():
             if isinstance(value, dict):

@@ -50,7 +50,9 @@ if is_torch_available():
     from torch import nn
 
     from transformers import CLIPModel, CLIPTextModel, CLIPVisionModel
-    from transformers.models.clip.modeling_clip import CLIP_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.clip.modeling_clip import (
+        CLIP_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -105,7 +107,9 @@ class CLIPVisionModelTester:
         self.seq_length = num_patches + 1
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
         config = self.get_config()
 
         return config, pixel_values
@@ -133,9 +137,16 @@ class CLIPVisionModelTester:
         # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, num_patches + 1, self.hidden_size))
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, num_patches + 1, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooler_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -159,7 +170,9 @@ class CLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = CLIPVisionModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=CLIPVisionConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=CLIPVisionConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -199,11 +212,15 @@ class CLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_training_gradient_checkpointing(self):
         pass
 
-    @unittest.skip(reason="CLIPVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="CLIPVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="CLIPVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="CLIPVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -289,8 +306,13 @@ class CLIPTextModelTester:
         with torch.no_grad():
             result = model(input_ids, attention_mask=input_mask)
             result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooler_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -309,7 +331,9 @@ class CLIPTextModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = CLIPTextModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=CLIPTextConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=CLIPTextConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -328,11 +352,15 @@ class CLIPTextModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip(reason="CLIPTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="CLIPTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="CLIPTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="CLIPTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -351,8 +379,12 @@ class CLIPModelTester:
         self.is_training = is_training
 
     def prepare_config_and_inputs(self):
-        text_config, input_ids, attention_mask = self.text_model_tester.prepare_config_and_inputs()
-        vision_config, pixel_values = self.vision_model_tester.prepare_config_and_inputs()
+        text_config, input_ids, attention_mask = (
+            self.text_model_tester.prepare_config_and_inputs()
+        )
+        vision_config, pixel_values = (
+            self.vision_model_tester.prepare_config_and_inputs()
+        )
 
         config = self.get_config()
 
@@ -360,7 +392,9 @@ class CLIPModelTester:
 
     def get_config(self):
         return CLIPConfig.from_text_vision_configs(
-            self.text_model_tester.get_config(), self.vision_model_tester.get_config(), projection_dim=64
+            self.text_model_tester.get_config(),
+            self.vision_model_tester.get_config(),
+            projection_dim=64,
         )
 
     def create_and_check_model(self, config, input_ids, attention_mask, pixel_values):
@@ -368,10 +402,12 @@ class CLIPModelTester:
         with torch.no_grad():
             result = model(input_ids, pixel_values, attention_mask)
         self.parent.assertEqual(
-            result.logits_per_image.shape, (self.vision_model_tester.batch_size, self.text_model_tester.batch_size)
+            result.logits_per_image.shape,
+            (self.vision_model_tester.batch_size, self.text_model_tester.batch_size),
         )
         self.parent.assertEqual(
-            result.logits_per_text.shape, (self.text_model_tester.batch_size, self.vision_model_tester.batch_size)
+            result.logits_per_text.shape,
+            (self.text_model_tester.batch_size, self.vision_model_tester.batch_size),
         )
 
     def prepare_config_and_inputs_for_common(self):
@@ -483,7 +519,9 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(
+                set(model_state_dict.keys()), set(loaded_model_state_dict.keys())
+            )
 
             models_equal = True
             for layer_name, p1 in model_state_dict.items():
@@ -500,7 +538,9 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             config.save_pretrained(tmp_dir_name)
             vision_config = CLIPVisionConfig.from_pretrained(tmp_dir_name)
-            self.assertDictEqual(config.vision_config.to_dict(), vision_config.to_dict())
+            self.assertDictEqual(
+                config.vision_config.to_dict(), vision_config.to_dict()
+            )
 
         # Save CLIPConfig and check if we can load CLIPTextConfig from it
         with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -541,28 +581,42 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
                 # remove function args that don't exist in Flax
                 pt_inputs = {k: v for k, v in pt_inputs.items() if k in fx_input_keys}
 
-                fx_state = convert_pytorch_state_dict_to_flax(pt_model.state_dict(), fx_model)
+                fx_state = convert_pytorch_state_dict_to_flax(
+                    pt_model.state_dict(), fx_model
+                )
                 fx_model.params = fx_state
 
                 with torch.no_grad():
                     pt_outputs = pt_model(**pt_inputs).to_tuple()
 
                 # convert inputs to Flax
-                fx_inputs = {k: np.array(v) for k, v in pt_inputs.items() if torch.is_tensor(v)}
+                fx_inputs = {
+                    k: np.array(v) for k, v in pt_inputs.items() if torch.is_tensor(v)
+                }
                 fx_outputs = fx_model(**fx_inputs).to_tuple()
-                self.assertEqual(len(fx_outputs), len(pt_outputs), "Output lengths differ between Flax and PyTorch")
+                self.assertEqual(
+                    len(fx_outputs),
+                    len(pt_outputs),
+                    "Output lengths differ between Flax and PyTorch",
+                )
                 for fx_output, pt_output in zip(fx_outputs[:4], pt_outputs[:4]):
                     self.assert_almost_equals(fx_output, pt_output.numpy(), 4e-2)
 
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     pt_model.save_pretrained(tmpdirname)
-                    fx_model_loaded = fx_model_class.from_pretrained(tmpdirname, from_pt=True)
+                    fx_model_loaded = fx_model_class.from_pretrained(
+                        tmpdirname, from_pt=True
+                    )
 
                 fx_outputs_loaded = fx_model_loaded(**fx_inputs).to_tuple()
                 self.assertEqual(
-                    len(fx_outputs_loaded), len(pt_outputs), "Output lengths differ between Flax and PyTorch"
+                    len(fx_outputs_loaded),
+                    len(pt_outputs),
+                    "Output lengths differ between Flax and PyTorch",
                 )
-                for fx_output_loaded, pt_output in zip(fx_outputs_loaded[:4], pt_outputs[:4]):
+                for fx_output_loaded, pt_output in zip(
+                    fx_outputs_loaded[:4], pt_outputs[:4]
+                ):
                     self.assert_almost_equals(fx_output_loaded, pt_output.numpy(), 4e-2)
 
     # overwrite from common since FlaxCLIPModel returns nested output
@@ -606,23 +660,33 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
                 with torch.no_grad():
                     pt_outputs = pt_model(**pt_inputs).to_tuple()
 
-                fx_inputs = {k: np.array(v) for k, v in pt_inputs.items() if torch.is_tensor(v)}
+                fx_inputs = {
+                    k: np.array(v) for k, v in pt_inputs.items() if torch.is_tensor(v)
+                }
 
                 fx_outputs = fx_model(**fx_inputs).to_tuple()
-                self.assertEqual(len(fx_outputs), len(pt_outputs), "Output lengths differ between Flax and PyTorch")
+                self.assertEqual(
+                    len(fx_outputs),
+                    len(pt_outputs),
+                    "Output lengths differ between Flax and PyTorch",
+                )
 
                 for fx_output, pt_output in zip(fx_outputs[:4], pt_outputs[:4]):
                     self.assert_almost_equals(fx_output, pt_output.numpy(), 4e-2)
 
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     fx_model.save_pretrained(tmpdirname)
-                    pt_model_loaded = model_class.from_pretrained(tmpdirname, from_flax=True)
+                    pt_model_loaded = model_class.from_pretrained(
+                        tmpdirname, from_flax=True
+                    )
 
                 with torch.no_grad():
                     pt_outputs_loaded = pt_model_loaded(**pt_inputs).to_tuple()
 
                 self.assertEqual(
-                    len(fx_outputs), len(pt_outputs_loaded), "Output lengths differ between Flax and PyTorch"
+                    len(fx_outputs),
+                    len(pt_outputs_loaded),
+                    "Output lengths differ between Flax and PyTorch",
                 )
                 for fx_output, pt_output in zip(fx_outputs[:4], pt_outputs_loaded[:4]):
                     self.assert_almost_equals(fx_output, pt_output.numpy(), 4e-2)
@@ -652,7 +716,10 @@ class CLIPModelIntegrationTest(unittest.TestCase):
 
         image = prepare_img()
         inputs = processor(
-            text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="pt"
+            text=["a photo of a cat", "a photo of a dog"],
+            images=image,
+            padding=True,
+            return_tensors="pt",
         ).to(torch_device)
 
         # forward pass
@@ -671,4 +738,6 @@ class CLIPModelIntegrationTest(unittest.TestCase):
 
         expected_logits = torch.tensor([[24.5701, 19.3049]], device=torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3)
+        )

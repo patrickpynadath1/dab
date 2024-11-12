@@ -76,10 +76,14 @@ class LEDTokenizer(BartTokenizer):
         if return_attention_mask and "global_attention_mask" in encoded_inputs:
             required_input = encoded_inputs[self.model_input_names[0]]
             # `global_attention_mask` need to have the same length as other (sequential) inputs.
-            needs_to_be_padded = len(encoded_inputs["global_attention_mask"]) != len(required_input)
+            needs_to_be_padded = len(encoded_inputs["global_attention_mask"]) != len(
+                required_input
+            )
 
             if needs_to_be_padded:
-                difference = len(required_input) - len(encoded_inputs["global_attention_mask"])
+                difference = len(required_input) - len(
+                    encoded_inputs["global_attention_mask"]
+                )
 
                 if self.padding_side == "right":
                     # Use `-1` since `0` in `global_attention_mask` means `local attention` instead of `not to attend`
@@ -87,10 +91,12 @@ class LEDTokenizer(BartTokenizer):
                         encoded_inputs["global_attention_mask"] + [-1] * difference
                     )
                 elif self.padding_side == "left":
-                    encoded_inputs["global_attention_mask"] = [-1] * difference + encoded_inputs[
-                        "global_attention_mask"
-                    ]
+                    encoded_inputs["global_attention_mask"] = [
+                        -1
+                    ] * difference + encoded_inputs["global_attention_mask"]
                 else:
-                    raise ValueError("Invalid padding strategy:" + str(self.padding_side))
+                    raise ValueError(
+                        "Invalid padding strategy:" + str(self.padding_side)
+                    )
 
         return encoded_inputs

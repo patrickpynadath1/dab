@@ -23,8 +23,14 @@ import numpy as np
 from datasets import Dataset
 
 from transformers.models.realm.configuration_realm import RealmConfig
-from transformers.models.realm.retrieval_realm import _REALM_BLOCK_RECORDS_FILENAME, RealmRetriever
-from transformers.models.realm.tokenization_realm import VOCAB_FILES_NAMES, RealmTokenizer
+from transformers.models.realm.retrieval_realm import (
+    _REALM_BLOCK_RECORDS_FILENAME,
+    RealmRetriever,
+)
+from transformers.models.realm.tokenization_realm import (
+    VOCAB_FILES_NAMES,
+    RealmTokenizer,
+)
 
 
 class RealmRetrieverTest(TestCase):
@@ -63,7 +69,9 @@ class RealmRetrieverTest(TestCase):
         ]
         realm_tokenizer_path = os.path.join(self.tmpdirname, "realm_tokenizer")
         os.makedirs(realm_tokenizer_path, exist_ok=True)
-        self.vocab_file = os.path.join(realm_tokenizer_path, VOCAB_FILES_NAMES["vocab_file"])
+        self.vocab_file = os.path.join(
+            realm_tokenizer_path, VOCAB_FILES_NAMES["vocab_file"]
+        )
         with open(self.vocab_file, "w", encoding="utf-8") as vocab_writer:
             vocab_writer.write("".join([x + "\n" for x in vocab_tokens]))
 
@@ -71,7 +79,9 @@ class RealmRetrieverTest(TestCase):
         os.makedirs(realm_block_records_path, exist_ok=True)
 
     def get_tokenizer(self) -> RealmTokenizer:
-        return RealmTokenizer.from_pretrained(os.path.join(self.tmpdirname, "realm_tokenizer"))
+        return RealmTokenizer.from_pretrained(
+            os.path.join(self.tmpdirname, "realm_tokenizer")
+        )
 
     def tearDown(self):
         shutil.rmtree(self.tmpdirname)
@@ -127,7 +137,11 @@ class RealmRetrieverTest(TestCase):
         max_length = config.reader_seq_len
 
         has_answers, start_pos, end_pos, concat_inputs = retriever(
-            retrieved_block_ids, question_input_ids, answer_ids=answer_ids, max_length=max_length, return_tensors="np"
+            retrieved_block_ids,
+            question_input_ids,
+            answer_ids=answer_ids,
+            max_length=max_length,
+            return_tensors="np",
         )
 
         self.assertEqual(len(has_answers), 2)
@@ -139,11 +153,33 @@ class RealmRetrieverTest(TestCase):
         self.assertEqual(concat_inputs.special_tokens_mask.shape, (2, 10))
         self.assertEqual(
             tokenizer.convert_ids_to_tokens(concat_inputs.input_ids[0]),
-            ["[CLS]", "test", "question", "[SEP]", "this", "is", "the", "first", "record", "[SEP]"],
+            [
+                "[CLS]",
+                "test",
+                "question",
+                "[SEP]",
+                "this",
+                "is",
+                "the",
+                "first",
+                "record",
+                "[SEP]",
+            ],
         )
         self.assertEqual(
             tokenizer.convert_ids_to_tokens(concat_inputs.input_ids[1]),
-            ["[CLS]", "test", "question", "[SEP]", "this", "is", "the", "fourth", "record", "[SEP]"],
+            [
+                "[CLS]",
+                "test",
+                "question",
+                "[SEP]",
+                "this",
+                "is",
+                "the",
+                "fourth",
+                "record",
+                "[SEP]",
+            ],
         )
 
     def test_block_has_answer(self):
@@ -162,7 +198,11 @@ class RealmRetrieverTest(TestCase):
         max_length = config.reader_seq_len
 
         has_answers, start_pos, end_pos, _ = retriever(
-            retrieved_block_ids, question_input_ids, answer_ids=answer_ids, max_length=max_length, return_tensors="np"
+            retrieved_block_ids,
+            question_input_ids,
+            answer_ids=answer_ids,
+            max_length=max_length,
+            return_tensors="np",
         )
 
         self.assertEqual([False, True, True], has_answers)
@@ -174,14 +214,21 @@ class RealmRetrieverTest(TestCase):
         retriever.save_pretrained(os.path.join(self.tmpdirname, "realm_block_records"))
 
         # Test local path
-        retriever = retriever.from_pretrained(os.path.join(self.tmpdirname, "realm_block_records"))
+        retriever = retriever.from_pretrained(
+            os.path.join(self.tmpdirname, "realm_block_records")
+        )
         self.assertEqual(retriever.block_records[0], b"This is the first record")
 
         # Test mocked remote path
-        with patch("transformers.models.realm.retrieval_realm.hf_hub_download") as mock_hf_hub_download:
+        with patch(
+            "transformers.models.realm.retrieval_realm.hf_hub_download"
+        ) as mock_hf_hub_download:
             mock_hf_hub_download.return_value = os.path.join(
-                os.path.join(self.tmpdirname, "realm_block_records"), _REALM_BLOCK_RECORDS_FILENAME
+                os.path.join(self.tmpdirname, "realm_block_records"),
+                _REALM_BLOCK_RECORDS_FILENAME,
             )
-            retriever = RealmRetriever.from_pretrained("google/realm-cc-news-pretrained-openqa")
+            retriever = RealmRetriever.from_pretrained(
+                "google/realm-cc-news-pretrained-openqa"
+            )
 
         self.assertEqual(retriever.block_records[0], b"This is the first record")

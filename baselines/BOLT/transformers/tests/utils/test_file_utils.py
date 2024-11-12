@@ -80,15 +80,21 @@ class TestImportMechanisms(unittest.TestCase):
 class GetFromCacheTests(unittest.TestCase):
     def test_has_file(self):
         self.assertTrue(has_file("hf-internal-testing/tiny-bert-pt-only", WEIGHTS_NAME))
-        self.assertFalse(has_file("hf-internal-testing/tiny-bert-pt-only", TF2_WEIGHTS_NAME))
-        self.assertFalse(has_file("hf-internal-testing/tiny-bert-pt-only", FLAX_WEIGHTS_NAME))
+        self.assertFalse(
+            has_file("hf-internal-testing/tiny-bert-pt-only", TF2_WEIGHTS_NAME)
+        )
+        self.assertFalse(
+            has_file("hf-internal-testing/tiny-bert-pt-only", FLAX_WEIGHTS_NAME)
+        )
 
     def test_get_file_from_repo_distant(self):
         # `get_file_from_repo` returns None if the file does not exist
         self.assertIsNone(get_file_from_repo("bert-base-cased", "ahah.txt"))
 
         # The function raises if the repository does not exist.
-        with self.assertRaisesRegex(EnvironmentError, "is not a valid model identifier"):
+        with self.assertRaisesRegex(
+            EnvironmentError, "is not a valid model identifier"
+        ):
             get_file_from_repo("bert-base-case", "config.json")
 
         # The function raises if the revision does not exist.
@@ -122,29 +128,52 @@ class GenericUtilTests(unittest.TestCase):
         with ContextManagers([context_en()]):
             print("Transformers are awesome!")
         # The output should be wrapped with an English welcome and goodbye
-        self.assertEqual(mock_stdout.getvalue(), "Welcome!\nTransformers are awesome!\nBye!\n")
+        self.assertEqual(
+            mock_stdout.getvalue(), "Welcome!\nTransformers are awesome!\nBye!\n"
+        )
 
     @unittest.mock.patch("sys.stdout", new_callable=io.StringIO)
     def test_context_managers_two_context(self, mock_stdout):
         with ContextManagers([context_fr(), context_en()]):
             print("Transformers are awesome!")
         # The output should be wrapped with an English and French welcome and goodbye
-        self.assertEqual(mock_stdout.getvalue(), "Bonjour!\nWelcome!\nTransformers are awesome!\nBye!\nAu revoir!\n")
+        self.assertEqual(
+            mock_stdout.getvalue(),
+            "Bonjour!\nWelcome!\nTransformers are awesome!\nBye!\nAu revoir!\n",
+        )
 
     def test_find_labels(self):
         if is_torch_available():
-            from transformers import BertForPreTraining, BertForQuestionAnswering, BertForSequenceClassification
+            from transformers import (
+                BertForPreTraining,
+                BertForQuestionAnswering,
+                BertForSequenceClassification,
+            )
 
             self.assertEqual(find_labels(BertForSequenceClassification), ["labels"])
-            self.assertEqual(find_labels(BertForPreTraining), ["labels", "next_sentence_label"])
-            self.assertEqual(find_labels(BertForQuestionAnswering), ["start_positions", "end_positions"])
+            self.assertEqual(
+                find_labels(BertForPreTraining), ["labels", "next_sentence_label"]
+            )
+            self.assertEqual(
+                find_labels(BertForQuestionAnswering),
+                ["start_positions", "end_positions"],
+            )
 
         if is_tf_available():
-            from transformers import TFBertForPreTraining, TFBertForQuestionAnswering, TFBertForSequenceClassification
+            from transformers import (
+                TFBertForPreTraining,
+                TFBertForQuestionAnswering,
+                TFBertForSequenceClassification,
+            )
 
             self.assertEqual(find_labels(TFBertForSequenceClassification), ["labels"])
-            self.assertEqual(find_labels(TFBertForPreTraining), ["labels", "next_sentence_label"])
-            self.assertEqual(find_labels(TFBertForQuestionAnswering), ["start_positions", "end_positions"])
+            self.assertEqual(
+                find_labels(TFBertForPreTraining), ["labels", "next_sentence_label"]
+            )
+            self.assertEqual(
+                find_labels(TFBertForQuestionAnswering),
+                ["start_positions", "end_positions"],
+            )
 
         if is_flax_available():
             # Flax models don't have labels

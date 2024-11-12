@@ -74,6 +74,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         decoder (`pyctcdecode.BeamSearchDecoderCTC`):
             An instance of [`pyctcdecode.BeamSearchDecoderCTC`]. The decoder is a required input.
     """
+
     feature_extractor_class = "Wav2Vec2FeatureExtractor"
     tokenizer_class = "Wav2Vec2CTCTokenizer"
 
@@ -87,7 +88,9 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
         super().__init__(feature_extractor, tokenizer)
         if not isinstance(decoder, BeamSearchDecoderCTC):
-            raise ValueError(f"`decoder` has to be of type {BeamSearchDecoderCTC.__class__}, but is {type(decoder)}")
+            raise ValueError(
+                f"`decoder` has to be of type {BeamSearchDecoderCTC.__class__}, but is {type(decoder)}"
+            )
 
         # make sure that decoder's alphabet and tokenizer's vocab match in content
         missing_decoder_tokens = self.get_missing_alphabet_tokens(decoder, tokenizer)
@@ -140,9 +143,13 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         requires_backends(cls, "pyctcdecode")
         from pyctcdecode import BeamSearchDecoderCTC
 
-        feature_extractor, tokenizer = super()._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
+        feature_extractor, tokenizer = super()._get_arguments_from_pretrained(
+            pretrained_model_name_or_path, **kwargs
+        )
 
-        if os.path.isdir(pretrained_model_name_or_path) or os.path.isfile(pretrained_model_name_or_path):
+        if os.path.isdir(pretrained_model_name_or_path) or os.path.isfile(
+            pretrained_model_name_or_path
+        ):
             decoder = BeamSearchDecoderCTC.load_from_dir(pretrained_model_name_or_path)
         else:
             # BeamSearchDecoderCTC has no auto class
@@ -151,7 +158,9 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             kwargs.pop("trust_remote_code", None)
 
             # make sure that only relevant filenames are downloaded
-            language_model_filenames = os.path.join(BeamSearchDecoderCTC._LANGUAGE_MODEL_SERIALIZED_DIRECTORY, "*")
+            language_model_filenames = os.path.join(
+                BeamSearchDecoderCTC._LANGUAGE_MODEL_SERIALIZED_DIRECTORY, "*"
+            )
             alphabet_filename = BeamSearchDecoderCTC._ALPHABET_SERIALIZED_FILENAME
             allow_regex = [language_model_filenames, alphabet_filename]
 
@@ -175,10 +184,14 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
                 f"Make sure to include {missing_decoder_tokens} in the decoder's alphabet."
             )
 
-        return cls(feature_extractor=feature_extractor, tokenizer=tokenizer, decoder=decoder)
+        return cls(
+            feature_extractor=feature_extractor, tokenizer=tokenizer, decoder=decoder
+        )
 
     @staticmethod
-    def _set_language_model_attribute(decoder: "BeamSearchDecoderCTC", attribute: str, value: float):
+    def _set_language_model_attribute(
+        decoder: "BeamSearchDecoderCTC", attribute: str, value: float
+    ):
         setattr(decoder.model_container[decoder._model_key], attribute, value)
 
     @property
@@ -221,7 +234,9 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             return self.current_processor(*args, **kwargs)
 
         if "raw_speech" in kwargs:
-            warnings.warn("Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead.")
+            warnings.warn(
+                "Using `raw_speech` as a keyword argument is deprecated. Use `audio` instead."
+            )
             audio = kwargs.pop("raw_speech")
         else:
             audio = kwargs.pop("audio", None)
@@ -231,7 +246,9 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             args = args[1:]
 
         if audio is None and text is None:
-            raise ValueError("You need to specify either an `audio` or `text` input to process.")
+            raise ValueError(
+                "You need to specify either an `audio` or `text` input to process."
+            )
 
         if audio is not None:
             inputs = self.feature_extractor(audio, *args, **kwargs)
@@ -352,13 +369,22 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
         # set defaults
         beam_width = beam_width if beam_width is not None else DEFAULT_BEAM_WIDTH
-        beam_prune_logp = beam_prune_logp if beam_prune_logp is not None else DEFAULT_PRUNE_LOGP
-        token_min_logp = token_min_logp if token_min_logp is not None else DEFAULT_MIN_TOKEN_LOGP
-        hotword_weight = hotword_weight if hotword_weight is not None else DEFAULT_HOTWORD_WEIGHT
+        beam_prune_logp = (
+            beam_prune_logp if beam_prune_logp is not None else DEFAULT_PRUNE_LOGP
+        )
+        token_min_logp = (
+            token_min_logp if token_min_logp is not None else DEFAULT_MIN_TOKEN_LOGP
+        )
+        hotword_weight = (
+            hotword_weight if hotword_weight is not None else DEFAULT_HOTWORD_WEIGHT
+        )
 
         # reset params at every forward call. It's just a `set` method in pyctcdecode
         self.decoder.reset_params(
-            alpha=alpha, beta=beta, unk_score_offset=unk_score_offset, lm_score_boundary=lm_score_boundary
+            alpha=alpha,
+            beta=beta,
+            unk_score_offset=unk_score_offset,
+            lm_score_boundary=lm_score_boundary,
         )
 
         # create multiprocessing pool and list numpy arrays
@@ -386,12 +412,20 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             batch_texts.append(d[0][0])
             logit_scores.append(d[0][-2])
             lm_scores.append(d[0][-1])
-            word_offsets.append([{"word": t[0], "start_offset": t[1][0], "end_offset": t[1][1]} for t in d[0][1]])
+            word_offsets.append(
+                [
+                    {"word": t[0], "start_offset": t[1][0], "end_offset": t[1][1]}
+                    for t in d[0][1]
+                ]
+            )
 
         word_offsets = word_offsets if output_word_offsets else None
 
         return Wav2Vec2DecoderWithLMOutput(
-            text=batch_texts, logit_score=logit_scores, lm_score=lm_scores, word_offsets=word_offsets
+            text=batch_texts,
+            logit_score=logit_scores,
+            lm_score=lm_scores,
+            word_offsets=word_offsets,
         )
 
     def decode(
@@ -500,13 +534,22 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
 
         # set defaults
         beam_width = beam_width if beam_width is not None else DEFAULT_BEAM_WIDTH
-        beam_prune_logp = beam_prune_logp if beam_prune_logp is not None else DEFAULT_PRUNE_LOGP
-        token_min_logp = token_min_logp if token_min_logp is not None else DEFAULT_MIN_TOKEN_LOGP
-        hotword_weight = hotword_weight if hotword_weight is not None else DEFAULT_HOTWORD_WEIGHT
+        beam_prune_logp = (
+            beam_prune_logp if beam_prune_logp is not None else DEFAULT_PRUNE_LOGP
+        )
+        token_min_logp = (
+            token_min_logp if token_min_logp is not None else DEFAULT_MIN_TOKEN_LOGP
+        )
+        hotword_weight = (
+            hotword_weight if hotword_weight is not None else DEFAULT_HOTWORD_WEIGHT
+        )
 
         # reset params at every forward call. It's just a `set` method in pyctcdecode
         self.decoder.reset_params(
-            alpha=alpha, beta=beta, unk_score_offset=unk_score_offset, lm_score_boundary=lm_score_boundary
+            alpha=alpha,
+            beta=beta,
+            unk_score_offset=unk_score_offset,
+            lm_score_boundary=lm_score_boundary,
         )
 
         # pyctcdecode

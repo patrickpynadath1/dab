@@ -11,15 +11,25 @@ def main(args):
 
     print("loading model 1", args.model_name)
     to_model, to_tokenizer = get_model(
-        args.model_name, args.adapted_component, args.adaptor_class,
-        args.num_steers, args.rank, args.epsilon, args.init_var,
-        args.low_resource_mode
+        args.model_name,
+        args.adapted_component,
+        args.adaptor_class,
+        args.num_steers,
+        args.rank,
+        args.epsilon,
+        args.init_var,
+        args.low_resource_mode,
     )
     print("loading model 2", args.transfer_from)
     from_model, from_tokenizer = get_model(
-        args.transfer_from, args.adapted_component, args.adaptor_class,
-        args.num_steers, args.rank, args.epsilon, args.init_var,
-        args.low_resource_mode
+        args.transfer_from,
+        args.adapted_component,
+        args.adaptor_class,
+        args.num_steers,
+        args.rank,
+        args.epsilon,
+        args.init_var,
+        args.low_resource_mode,
     )
 
     print("starting to transfer")
@@ -30,8 +40,7 @@ def main(args):
 
     from_vocab_set = set(from_tokenizer.vocab.keys())
     shared_vocab = [
-        _v for _v in tqdm(to_tokenizer.vocab.keys())
-        if _v in from_vocab_set
+        _v for _v in tqdm(to_tokenizer.vocab.keys()) if _v in from_vocab_set
     ]
 
     print("from_embeddings shape:", from_embeddings.shape)
@@ -51,21 +60,38 @@ def main(args):
     # B_backward2 = torch.linalg.pinv(to_shared_embeddings).matmul(
     #     from_shared_embeddings).to(device)
 
-    B_forward = torch.randn((from_embeddings.shape[1], to_embeddings.shape[1]),
-                            requires_grad=True, device=device)
-    B_backward = torch.randn((to_embeddings.shape[1],
-                              from_embeddings.shape[1]),
-                             requires_grad=True, device=device)
+    B_forward = torch.randn(
+        (from_embeddings.shape[1], to_embeddings.shape[1]),
+        requires_grad=True,
+        device=device,
+    )
+    B_backward = torch.randn(
+        (to_embeddings.shape[1], from_embeddings.shape[1]),
+        requires_grad=True,
+        device=device,
+    )
     optimizer = Adam([B_forward, B_backward], lr=args.lr)
     top_k = 4000
 
     pbar = tqdm(range(args.n_steps))
     for step_i in pbar:
         optimizer.zero_grad()
-        loss1 = (from_shared_embeddings[:top_k].matmul(B_forward)
-                 - to_shared_embeddings[:top_k]).pow(2).mean()
-        loss2 = (to_shared_embeddings[:top_k].matmul(B_backward)
-                 - from_shared_embeddings[:top_k]).pow(2).mean()
+        loss1 = (
+            (
+                from_shared_embeddings[:top_k].matmul(B_forward)
+                - to_shared_embeddings[:top_k]
+            )
+            .pow(2)
+            .mean()
+        )
+        loss2 = (
+            (
+                to_shared_embeddings[:top_k].matmul(B_backward)
+                - from_shared_embeddings[:top_k]
+            )
+            .pow(2)
+            .mean()
+        )
         # loss1 = -F.cosine_similarity(
         #     from_shared_embeddings[:top_k].matmul(B_forward),
         #     to_shared_embeddings[:top_k]
@@ -85,10 +111,7 @@ def main(args):
     projector1 = B_backward.matmul(ckpt[1]["projector1"])
     projector2 = B_backward.matmul(ckpt[1]["projector2"])
 
-    save_ckpt = {
-        "projector1": projector1,
-        "projector2": projector2
-    }
+    save_ckpt = {"projector1": projector1, "projector2": projector2}
 
     torch.save([None, save_ckpt, ckpt[2]], args.output_file)
     print("written to:", args.output_file)

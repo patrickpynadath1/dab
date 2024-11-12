@@ -176,7 +176,7 @@ class XLNetConfig(PretrainedConfig):
         pad_token_id=5,
         bos_token_id=1,
         eos_token_id=2,
-        **kwargs
+        **kwargs,
     ):
         """Constructs XLNetConfig."""
         self.vocab_size = vocab_size
@@ -184,7 +184,9 @@ class XLNetConfig(PretrainedConfig):
         self.n_layer = n_layer
         self.n_head = n_head
         if d_model % n_head != 0:
-            raise ValueError(f"'d_model % n_head' ({d_model % n_head}) should be equal to 0")
+            raise ValueError(
+                f"'d_model % n_head' ({d_model % n_head}) should be equal to 0"
+            )
         if "d_head" in kwargs:
             if kwargs["d_head"] != d_model // n_head:
                 raise ValueError(
@@ -227,11 +229,18 @@ class XLNetConfig(PretrainedConfig):
 
         self.use_mems_eval = use_mems_eval
         self.use_mems_train = use_mems_train
-        super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs,
+        )
 
     @property
     def max_position_embeddings(self):
-        logger.info(f"The model {self.model_type} is one of the few models that has no sequence length limit.")
+        logger.info(
+            f"The model {self.model_type} is one of the few models that has no sequence length limit."
+        )
         return -1
 
     @max_position_embeddings.setter

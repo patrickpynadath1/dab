@@ -31,7 +31,12 @@ if is_torch_available():
     import torch
     from torch import nn
 
-    from transformers import MODEL_MAPPING, DPTForDepthEstimation, DPTForSemanticSegmentation, DPTModel
+    from transformers import (
+        MODEL_MAPPING,
+        DPTForDepthEstimation,
+        DPTForSemanticSegmentation,
+        DPTModel,
+    )
     from transformers.models.dpt.modeling_dpt import DPT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
@@ -86,11 +91,15 @@ class DPTModelTester:
         self.seq_length = num_patches + 1
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
-            labels = ids_tensor([self.batch_size, self.image_size, self.image_size], self.num_labels)
+            labels = ids_tensor(
+                [self.batch_size, self.image_size, self.image_size], self.num_labels
+            )
 
         config = self.get_config()
 
@@ -118,7 +127,10 @@ class DPTModelTester:
         model.to(torch_device)
         model.eval()
         result = model(pixel_values)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_depth_estimation(self, config, pixel_values, labels):
         config.num_labels = self.num_labels
@@ -126,7 +138,10 @@ class DPTModelTester:
         model.to(torch_device)
         model.eval()
         result = model(pixel_values)
-        self.parent.assertEqual(result.predicted_depth.shape, (self.batch_size, self.image_size, self.image_size))
+        self.parent.assertEqual(
+            result.predicted_depth.shape,
+            (self.batch_size, self.image_size, self.image_size),
+        )
 
     def create_and_check_for_semantic_segmentation(self, config, pixel_values, labels):
         config.num_labels = self.num_labels
@@ -135,7 +150,8 @@ class DPTModelTester:
         model.eval()
         result = model(pixel_values, labels=labels)
         self.parent.assertEqual(
-            result.logits.shape, (self.batch_size, self.num_labels, self.image_size, self.image_size)
+            result.logits.shape,
+            (self.batch_size, self.num_labels, self.image_size, self.image_size),
         )
 
     def prepare_config_and_inputs_for_common(self):
@@ -152,7 +168,11 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (DPTModel, DPTForDepthEstimation, DPTForSemanticSegmentation) if is_torch_available() else ()
+    all_model_classes = (
+        (DPTModel, DPTForDepthEstimation, DPTForSemanticSegmentation)
+        if is_torch_available()
+        else ()
+    )
 
     test_pruning = False
     test_resize_embeddings = False
@@ -160,7 +180,9 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = DPTModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=DPTConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=DPTConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -207,7 +229,9 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             if model_class.__name__ == "DPTForDepthEstimation":
                 continue
 
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+            config, inputs_dict = (
+                self.model_tester.prepare_config_and_inputs_for_common()
+            )
             config.return_dict = True
 
             if model_class in get_values(MODEL_MAPPING):
@@ -216,7 +240,9 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.to(torch_device)
             model.train()
-            inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
+            inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
             loss = model(**inputs).loss
             loss.backward()
 
@@ -225,17 +251,24 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             if model_class.__name__ == "DPTForDepthEstimation":
                 continue
 
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+            config, inputs_dict = (
+                self.model_tester.prepare_config_and_inputs_for_common()
+            )
             config.use_cache = False
             config.return_dict = True
 
-            if model_class in get_values(MODEL_MAPPING) or not model_class.supports_gradient_checkpointing:
+            if (
+                model_class in get_values(MODEL_MAPPING)
+                or not model_class.supports_gradient_checkpointing
+            ):
                 continue
             model = model_class(config)
             model.to(torch_device)
             model.gradient_checkpointing_enable()
             model.train()
-            inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
+            inputs = self._prepare_for_class(
+                inputs_dict, model_class, return_labels=True
+            )
             loss = model(**inputs).loss
             loss.backward()
 
@@ -258,7 +291,9 @@ def prepare_img():
 class DPTModelIntegrationTest(unittest.TestCase):
     def test_inference_depth_estimation(self):
         feature_extractor = DPTFeatureExtractor.from_pretrained("Intel/dpt-large")
-        model = DPTForDepthEstimation.from_pretrained("Intel/dpt-large").to(torch_device)
+        model = DPTForDepthEstimation.from_pretrained("Intel/dpt-large").to(
+            torch_device
+        )
 
         image = prepare_img()
         inputs = feature_extractor(images=image, return_tensors="pt").to(torch_device)
@@ -273,14 +308,24 @@ class DPTModelIntegrationTest(unittest.TestCase):
         self.assertEqual(predicted_depth.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[6.3199, 6.3629, 6.4148], [6.3850, 6.3615, 6.4166], [6.3519, 6.3176, 6.3575]]
+            [
+                [6.3199, 6.3629, 6.4148],
+                [6.3850, 6.3615, 6.4166],
+                [6.3519, 6.3176, 6.3575],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-4
+            )
+        )
 
     def test_inference_semantic_segmentation(self):
         feature_extractor = DPTFeatureExtractor.from_pretrained("Intel/dpt-large-ade")
-        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade").to(torch_device)
+        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade").to(
+            torch_device
+        )
 
         image = prepare_img()
         inputs = feature_extractor(images=image, return_tensors="pt").to(torch_device)
@@ -294,14 +339,22 @@ class DPTModelIntegrationTest(unittest.TestCase):
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[4.0480, 4.2420, 4.4360], [4.3124, 4.5693, 4.8261], [4.5768, 4.8965, 5.2163]]
+            [
+                [4.0480, 4.2420, 4.4360],
+                [4.3124, 4.5693, 4.8261],
+                [4.5768, 4.8965, 5.2163],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, 0, :3, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, 0, :3, :3], expected_slice, atol=1e-4)
+        )
 
     def test_post_processing_semantic_segmentation(self):
         feature_extractor = DPTFeatureExtractor.from_pretrained("Intel/dpt-large-ade")
-        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade").to(torch_device)
+        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade").to(
+            torch_device
+        )
 
         image = prepare_img()
         inputs = feature_extractor(images=image, return_tensors="pt").to(torch_device)
@@ -312,10 +365,14 @@ class DPTModelIntegrationTest(unittest.TestCase):
 
         outputs.logits = outputs.logits.detach().cpu()
 
-        segmentation = feature_extractor.post_process_semantic_segmentation(outputs=outputs, target_sizes=[(500, 300)])
+        segmentation = feature_extractor.post_process_semantic_segmentation(
+            outputs=outputs, target_sizes=[(500, 300)]
+        )
         expected_shape = torch.Size((500, 300))
         self.assertEqual(segmentation[0].shape, expected_shape)
 
-        segmentation = feature_extractor.post_process_semantic_segmentation(outputs=outputs)
+        segmentation = feature_extractor.post_process_semantic_segmentation(
+            outputs=outputs
+        )
         expected_shape = torch.Size((480, 480))
         self.assertEqual(segmentation[0].shape, expected_shape)

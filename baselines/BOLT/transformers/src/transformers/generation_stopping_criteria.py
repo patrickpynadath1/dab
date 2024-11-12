@@ -34,7 +34,9 @@ class StoppingCriteria(ABC):
     """Abstract base class for all stopping criteria that can be applied during generation."""
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         raise NotImplementedError("StoppingCriteria needs to be subclassed")
 
 
@@ -52,7 +54,9 @@ class MaxLengthCriteria(StoppingCriteria):
         self.max_length = max_length
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         return input_ids.shape[-1] >= self.max_length
 
 
@@ -81,7 +85,9 @@ class MaxNewTokensCriteria(StoppingCriteria):
         self.max_length = start_length + max_new_tokens
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         return input_ids.shape[-1] >= self.max_length
 
 
@@ -100,16 +106,22 @@ class MaxTimeCriteria(StoppingCriteria):
 
     def __init__(self, max_time: float, initial_timestamp: Optional[float] = None):
         self.max_time = max_time
-        self.initial_timestamp = time.time() if initial_timestamp is None else initial_timestamp
+        self.initial_timestamp = (
+            time.time() if initial_timestamp is None else initial_timestamp
+        )
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         return time.time() - self.initial_timestamp > self.max_time
 
 
 class StoppingCriteriaList(list):
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         return any(criteria(input_ids, scores) for criteria in self)
 
     @property
@@ -122,11 +134,16 @@ class StoppingCriteriaList(list):
         return None
 
 
-def validate_stopping_criteria(stopping_criteria: StoppingCriteriaList, max_length: int) -> StoppingCriteriaList:
+def validate_stopping_criteria(
+    stopping_criteria: StoppingCriteriaList, max_length: int
+) -> StoppingCriteriaList:
     stopping_max_length = stopping_criteria.max_length
     new_stopping_criteria = deepcopy(stopping_criteria)
     if stopping_max_length is not None and stopping_max_length != max_length:
-        warnings.warn("You set different `max_length` for stopping criteria and `max_length` parameter", UserWarning)
+        warnings.warn(
+            "You set different `max_length` for stopping criteria and `max_length` parameter",
+            UserWarning,
+        )
     elif stopping_max_length is None:
         new_stopping_criteria.append(MaxLengthCriteria(max_length=max_length))
     return new_stopping_criteria

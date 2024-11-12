@@ -34,7 +34,14 @@ if is_torch_available():
 logger = logging.get_logger(__name__)
 
 
-ImageInput = Union[Image.Image, np.ndarray, "torch.Tensor", List[Image.Image], List[np.ndarray], List["torch.Tensor"]]
+ImageInput = Union[
+    Image.Image,
+    np.ndarray,
+    "torch.Tensor",
+    List[Image.Image],
+    List[np.ndarray],
+    List["torch.Tensor"],
+]
 
 
 # Copied from transformers.models.detr.feature_extraction_detr.center_to_corners_format
@@ -120,7 +127,9 @@ def id_to_rgb(id_map):
     return color
 
 
-class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
+class DeformableDetrFeatureExtractor(
+    FeatureExtractionMixin, ImageFeatureExtractionMixin
+):
     r"""
     Constructs a Deformable DETR feature extractor. Differs only in the postprocessing of object detection compared to
     DETR.
@@ -162,7 +171,7 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         do_normalize=True,
         image_mean=None,
         image_std=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.format = self._is_valid_format(format)
@@ -170,8 +179,12 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         self.size = size
         self.max_size = max_size
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else [0.485, 0.456, 0.406]  # ImageNet mean
-        self.image_std = image_std if image_std is not None else [0.229, 0.224, 0.225]  # ImageNet std
+        self.image_mean = (
+            image_mean if image_mean is not None else [0.485, 0.456, 0.406]
+        )  # ImageNet mean
+        self.image_std = (
+            image_std if image_std is not None else [0.229, 0.224, 0.225]
+        )  # ImageNet std
 
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor._is_valid_format
     def _is_valid_format(self, format):
@@ -182,7 +195,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor.prepare
     def prepare(self, image, target, return_segmentation_masks=False, masks_path=None):
         if self.format == "coco_detection":
-            image, target = self.prepare_coco_detection(image, target, return_segmentation_masks)
+            image, target = self.prepare_coco_detection(
+                image, target, return_segmentation_masks
+            )
             return image, target
         elif self.format == "coco_panoptic":
             image, target = self.prepare_coco_panoptic(image, target, masks_path)
@@ -270,7 +285,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
 
         # for conversion to coco api
         area = np.asarray([obj["area"] for obj in anno], dtype=np.float32)
-        iscrowd = np.asarray([obj["iscrowd"] if "iscrowd" in obj else 0 for obj in anno], dtype=np.int64)
+        iscrowd = np.asarray(
+            [obj["iscrowd"] if "iscrowd" in obj else 0 for obj in anno], dtype=np.int64
+        )
         target["area"] = area[keep]
         target["iscrowd"] = iscrowd[keep]
 
@@ -293,11 +310,15 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             masks = masks == ids[:, None, None]
             masks = np.asarray(masks, dtype=np.uint8)
 
-            labels = np.asarray([ann["category_id"] for ann in ann_info["segments_info"]], dtype=np.int64)
+            labels = np.asarray(
+                [ann["category_id"] for ann in ann_info["segments_info"]],
+                dtype=np.int64,
+            )
 
         target = {}
         target["image_id"] = np.asarray(
-            [ann_info["image_id"] if "image_id" in ann_info else ann_info["id"]], dtype=np.int64
+            [ann_info["image_id"] if "image_id" in ann_info else ann_info["id"]],
+            dtype=np.int64,
         )
         if return_masks:
             target["masks"] = masks
@@ -308,8 +329,12 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         target["size"] = np.asarray([int(h), int(w)], dtype=np.int64)
         target["orig_size"] = np.asarray([int(h), int(w)], dtype=np.int64)
         if "segments_info" in ann_info:
-            target["iscrowd"] = np.asarray([ann["iscrowd"] for ann in ann_info["segments_info"]], dtype=np.int64)
-            target["area"] = np.asarray([ann["area"] for ann in ann_info["segments_info"]], dtype=np.float32)
+            target["iscrowd"] = np.asarray(
+                [ann["iscrowd"] for ann in ann_info["segments_info"]], dtype=np.int64
+            )
+            target["area"] = np.asarray(
+                [ann["area"] for ann in ann_info["segments_info"]], dtype=np.float32
+            )
 
         return image, target
 
@@ -358,13 +383,18 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         if target is None:
             return rescaled_image, None
 
-        ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(rescaled_image.size, image.size))
+        ratios = tuple(
+            float(s) / float(s_orig)
+            for s, s_orig in zip(rescaled_image.size, image.size)
+        )
         ratio_width, ratio_height = ratios
 
         target = target.copy()
         if "boxes" in target:
             boxes = target["boxes"]
-            scaled_boxes = boxes * np.asarray([ratio_width, ratio_height, ratio_width, ratio_height], dtype=np.float32)
+            scaled_boxes = boxes * np.asarray(
+                [ratio_width, ratio_height, ratio_width, ratio_height], dtype=np.float32
+            )
             target["boxes"] = scaled_boxes
 
         if "area" in target:
@@ -379,7 +409,10 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             # use PyTorch as current workaround
             # TODO replace by self.resize
             masks = torch.from_numpy(target["masks"][:, None]).float()
-            interpolated_masks = nn.functional.interpolate(masks, size=(h, w), mode="nearest")[:, 0] > 0.5
+            interpolated_masks = (
+                nn.functional.interpolate(masks, size=(h, w), mode="nearest")[:, 0]
+                > 0.5
+            )
             target["masks"] = interpolated_masks.numpy()
 
         return rescaled_image, target
@@ -485,7 +518,11 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -496,20 +533,33 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         # Check that annotations has a valid type
         if annotations is not None:
             if not is_batched:
                 if self.format == "coco_detection":
-                    if isinstance(annotations, dict) and "image_id" in annotations and "annotations" in annotations:
+                    if (
+                        isinstance(annotations, dict)
+                        and "image_id" in annotations
+                        and "annotations" in annotations
+                    ):
                         if isinstance(annotations["annotations"], (list, tuple)):
                             # an image can have no annotations
-                            if len(annotations["annotations"]) == 0 or isinstance(annotations["annotations"][0], dict):
+                            if len(annotations["annotations"]) == 0 or isinstance(
+                                annotations["annotations"][0], dict
+                            ):
                                 valid_annotations = True
                 elif self.format == "coco_panoptic":
-                    if isinstance(annotations, dict) and "image_id" in annotations and "segments_info" in annotations:
+                    if (
+                        isinstance(annotations, dict)
+                        and "image_id" in annotations
+                        and "segments_info" in annotations
+                    ):
                         if isinstance(annotations["segments_info"], (list, tuple)):
                             # an image can have no segments (?)
                             if len(annotations["segments_info"]) == 0 or isinstance(
@@ -519,13 +569,17 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             else:
                 if isinstance(annotations, (list, tuple)):
                     if len(images) != len(annotations):
-                        raise ValueError("There must be as many annotations as there are images")
+                        raise ValueError(
+                            "There must be as many annotations as there are images"
+                        )
                     if isinstance(annotations[0], Dict):
                         if self.format == "coco_detection":
                             if isinstance(annotations[0]["annotations"], (list, tuple)):
                                 valid_annotations = True
                         elif self.format == "coco_panoptic":
-                            if isinstance(annotations[0]["segments_info"], (list, tuple)):
+                            if isinstance(
+                                annotations[0]["segments_info"], (list, tuple)
+                            ):
                                 valid_annotations = True
 
             if not valid_annotations:
@@ -560,7 +614,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             for idx, (image, target) in enumerate(zip(images, annotations)):
                 if not isinstance(image, Image.Image):
                     image = self.to_pil_image(image)
-                image, target = self.prepare(image, target, return_segmentation_masks, masks_path)
+                image, target = self.prepare(
+                    image, target, return_segmentation_masks, masks_path
+                )
                 images[idx] = image
                 annotations[idx] = target
 
@@ -568,24 +624,37 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         if self.do_resize and self.size is not None:
             if annotations is not None:
                 for idx, (image, target) in enumerate(zip(images, annotations)):
-                    image, target = self._resize(image=image, target=target, size=self.size, max_size=self.max_size)
+                    image, target = self._resize(
+                        image=image,
+                        target=target,
+                        size=self.size,
+                        max_size=self.max_size,
+                    )
                     images[idx] = image
                     annotations[idx] = target
             else:
                 for idx, image in enumerate(images):
-                    images[idx] = self._resize(image=image, target=None, size=self.size, max_size=self.max_size)[0]
+                    images[idx] = self._resize(
+                        image=image, target=None, size=self.size, max_size=self.max_size
+                    )[0]
 
         if self.do_normalize:
             if annotations is not None:
                 for idx, (image, target) in enumerate(zip(images, annotations)):
                     image, target = self._normalize(
-                        image=image, mean=self.image_mean, std=self.image_std, target=target
+                        image=image,
+                        mean=self.image_mean,
+                        std=self.image_std,
+                        target=target,
                     )
                     images[idx] = image
                     annotations[idx] = target
             else:
                 images = [
-                    self._normalize(image=image, mean=self.image_mean, std=self.image_std)[0] for image in images
+                    self._normalize(
+                        image=image, mean=self.image_mean, std=self.image_std
+                    )[0]
+                    for image in images
                 ]
 
         if pad_and_return_pixel_mask:
@@ -597,7 +666,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             for image in images:
                 # create padded image
                 padded_image = np.zeros((c, h, w), dtype=np.float32)
-                padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = np.copy(image)
+                padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = (
+                    np.copy(image)
+                )
                 padded_images.append(padded_image)
                 # create pixel mask
                 mask = np.zeros((h, w), dtype=np.int64)
@@ -622,10 +693,13 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
                 raise ValueError("Only PyTorch is supported for the moment.")
             else:
                 if not is_torch_available():
-                    raise ImportError("Unable to convert output to PyTorch tensors format, PyTorch is not installed.")
+                    raise ImportError(
+                        "Unable to convert output to PyTorch tensors format, PyTorch is not installed."
+                    )
 
                 encoded_inputs["labels"] = [
-                    {k: torch.from_numpy(v) for k, v in target.items()} for target in annotations
+                    {k: torch.from_numpy(v) for k, v in target.items()}
+                    for target in annotations
                 ]
 
         return encoded_inputs
@@ -641,7 +715,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
 
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor.pad_and_create_pixel_mask
     def pad_and_create_pixel_mask(
-        self, pixel_values_list: List["torch.Tensor"], return_tensors: Optional[Union[str, TensorType]] = None
+        self,
+        pixel_values_list: List["torch.Tensor"],
+        return_tensors: Optional[Union[str, TensorType]] = None,
     ):
         """
         Pad images up to the largest image in a batch and create a corresponding `pixel_mask`.
@@ -669,7 +745,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         for image in pixel_values_list:
             # create padded image
             padded_image = np.zeros((c, h, w), dtype=np.float32)
-            padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = np.copy(image)
+            padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = (
+                np.copy(image)
+            )
             padded_images.append(padded_image)
             # create pixel mask
             mask = np.zeros((h, w), dtype=np.int64)
@@ -701,12 +779,18 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         out_logits, out_bbox = outputs.logits, outputs.pred_boxes
 
         if len(out_logits) != len(target_sizes):
-            raise ValueError("Make sure that you pass in as many target sizes as the batch dimension of the logits")
+            raise ValueError(
+                "Make sure that you pass in as many target sizes as the batch dimension of the logits"
+            )
         if target_sizes.shape[1] != 2:
-            raise ValueError("Each element of target_sizes must contain the size (h, w) of each image of the batch")
+            raise ValueError(
+                "Each element of target_sizes must contain the size (h, w) of each image of the batch"
+            )
 
         prob = out_logits.sigmoid()
-        topk_values, topk_indexes = torch.topk(prob.view(out_logits.shape[0], -1), 100, dim=1)
+        topk_values, topk_indexes = torch.topk(
+            prob.view(out_logits.shape[0], -1), 100, dim=1
+        )
         scores = topk_values
         topk_boxes = topk_indexes // out_logits.shape[2]
         labels = topk_indexes % out_logits.shape[2]
@@ -718,12 +802,17 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = boxes * scale_fct[:, None, :]
 
-        results = [{"scores": s, "labels": l, "boxes": b} for s, l, b in zip(scores, labels, boxes)]
+        results = [
+            {"scores": s, "labels": l, "boxes": b}
+            for s, l, b in zip(scores, labels, boxes)
+        ]
 
         return results
 
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor.post_process_segmentation with Detr->DeformableDetr
-    def post_process_segmentation(self, outputs, target_sizes, threshold=0.9, mask_threshold=0.5):
+    def post_process_segmentation(
+        self, outputs, target_sizes, threshold=0.9, mask_threshold=0.5
+    ):
         """
         Converts the output of [`DeformableDetrForSegmentation`] into image segmentation predictions. Only supports
         PyTorch.
@@ -758,15 +847,23 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             cur_scores = cur_scores[keep]
             cur_classes = cur_classes[keep]
             cur_masks = cur_masks[keep]
-            cur_masks = nn.functional.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
+            cur_masks = nn.functional.interpolate(
+                cur_masks[:, None], to_tuple(size), mode="bilinear"
+            ).squeeze(1)
             cur_masks = (cur_masks.sigmoid() > mask_threshold) * 1
 
-            predictions = {"scores": cur_scores, "labels": cur_classes, "masks": cur_masks}
+            predictions = {
+                "scores": cur_scores,
+                "labels": cur_classes,
+                "masks": cur_masks,
+            }
             preds.append(predictions)
         return preds
 
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor.post_process_instance with Detr->DeformableDetr
-    def post_process_instance(self, results, outputs, orig_target_sizes, max_target_sizes, threshold=0.5):
+    def post_process_instance(
+        self, results, outputs, orig_target_sizes, max_target_sizes, threshold=0.5
+    ):
         """
         Converts the output of [`DeformableDetrForSegmentation`] into actual instance segmentation predictions. Only
         supports PyTorch.
@@ -792,7 +889,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         """
 
         if len(orig_target_sizes) != len(max_target_sizes):
-            raise ValueError("Make sure to pass in as many orig_target_sizes as max_target_sizes")
+            raise ValueError(
+                "Make sure to pass in as many orig_target_sizes as max_target_sizes"
+            )
         max_h, max_w = max_target_sizes.max(0)[0].tolist()
         outputs_masks = outputs.pred_masks.squeeze(2)
         outputs_masks = nn.functional.interpolate(
@@ -800,7 +899,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         )
         outputs_masks = (outputs_masks.sigmoid() > threshold).cpu()
 
-        for i, (cur_mask, t, tt) in enumerate(zip(outputs_masks, max_target_sizes, orig_target_sizes)):
+        for i, (cur_mask, t, tt) in enumerate(
+            zip(outputs_masks, max_target_sizes, orig_target_sizes)
+        ):
             img_h, img_w = t[0], t[1]
             results[i]["masks"] = cur_mask[:, :img_h, :img_w].unsqueeze(1)
             results[i]["masks"] = nn.functional.interpolate(
@@ -810,7 +911,14 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         return results
 
     # Copied from transformers.models.detr.feature_extraction_detr.DetrFeatureExtractor.post_process_panoptic with Detr->DeformableDetr
-    def post_process_panoptic(self, outputs, processed_sizes, target_sizes=None, is_thing_map=None, threshold=0.85):
+    def post_process_panoptic(
+        self,
+        outputs,
+        processed_sizes,
+        target_sizes=None,
+        is_thing_map=None,
+        threshold=0.85,
+    ):
         """
         Converts the output of [`DeformableDetrForSegmentation`] into actual panoptic predictions. Only supports
         PyTorch.
@@ -837,13 +945,19 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
         if target_sizes is None:
             target_sizes = processed_sizes
         if len(processed_sizes) != len(target_sizes):
-            raise ValueError("Make sure to pass in as many processed_sizes as target_sizes")
+            raise ValueError(
+                "Make sure to pass in as many processed_sizes as target_sizes"
+            )
 
         if is_thing_map is None:
             # default to is_thing_map of COCO panoptic
             is_thing_map = {i: i <= 90 for i in range(201)}
 
-        out_logits, raw_masks, raw_boxes = outputs.logits, outputs.pred_masks, outputs.pred_boxes
+        out_logits, raw_masks, raw_boxes = (
+            outputs.logits,
+            outputs.pred_masks,
+            outputs.pred_boxes,
+        )
         if not len(out_logits) == len(raw_masks) == len(target_sizes):
             raise ValueError(
                 "Make sure that you pass in as many target sizes as the batch dimension of the logits and masks"
@@ -865,7 +979,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             cur_scores = cur_scores[keep]
             cur_classes = cur_classes[keep]
             cur_masks = cur_masks[keep]
-            cur_masks = nn.functional.interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
+            cur_masks = nn.functional.interpolate(
+                cur_masks[:, None], to_tuple(size), mode="bilinear"
+            ).squeeze(1)
             cur_boxes = center_to_corners_format(cur_boxes[keep])
 
             h, w = cur_masks.shape[-2:]
@@ -902,9 +1018,13 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
                 final_h, final_w = to_tuple(target_size)
 
                 seg_img = Image.fromarray(id_to_rgb(m_id.view(h, w).cpu().numpy()))
-                seg_img = seg_img.resize(size=(final_w, final_h), resample=Image.NEAREST)
+                seg_img = seg_img.resize(
+                    size=(final_w, final_h), resample=Image.NEAREST
+                )
 
-                np_seg_img = torch.ByteTensor(torch.ByteStorage.from_buffer(seg_img.tobytes()))
+                np_seg_img = torch.ByteTensor(
+                    torch.ByteStorage.from_buffer(seg_img.tobytes())
+                )
                 np_seg_img = np_seg_img.view(final_h, final_w, 3)
                 np_seg_img = np_seg_img.numpy()
 
@@ -920,7 +1040,9 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
                 # We know filter empty masks as long as we find some
                 while True:
                     filtered_small = torch.as_tensor(
-                        [area[i] <= 4 for i, c in enumerate(cur_classes)], dtype=torch.bool, device=keep.device
+                        [area[i] <= 4 for i, c in enumerate(cur_classes)],
+                        dtype=torch.bool,
+                        device=keep.device,
                     )
                     if filtered_small.any().item():
                         cur_scores = cur_scores[~filtered_small]
@@ -936,11 +1058,21 @@ class DeformableDetrFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtract
             segments_info = []
             for i, a in enumerate(area):
                 cat = cur_classes[i].item()
-                segments_info.append({"id": i, "isthing": is_thing_map[cat], "category_id": cat, "area": a})
+                segments_info.append(
+                    {
+                        "id": i,
+                        "isthing": is_thing_map[cat],
+                        "category_id": cat,
+                        "area": a,
+                    }
+                )
             del cur_classes
 
             with io.BytesIO() as out:
                 seg_img.save(out, format="PNG")
-                predictions = {"png_string": out.getvalue(), "segments_info": segments_info}
+                predictions = {
+                    "png_string": out.getvalue(),
+                    "segments_info": segments_info,
+                }
             preds.append(predictions)
         return preds

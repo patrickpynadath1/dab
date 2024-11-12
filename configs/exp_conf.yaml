@@ -6,6 +6,7 @@ base_model_args:
 sentiment_prompts: prompts/sentiment_prompts_15.txt 
 detoxic_prompts: prompts/detoxic_prompts_1k.txt
 keyword_prompts: prompts/keywords_prompts_15.txt
+selective_biasing_prompts: prompts/sentiment_prompts_15.txt
 batch_size: 20
 seq_len: 20
 num_steps: 20

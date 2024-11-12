@@ -21,7 +21,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import tensorflow as tf
 
-from ...modeling_tf_outputs import TFBaseModelOutputWithPast, TFCausalLMOutputWithPast, TFSequenceClassifierOutput
+from ...modeling_tf_outputs import (
+    TFBaseModelOutputWithPast,
+    TFCausalLMOutputWithPast,
+    TFSequenceClassifierOutput,
+)
 from ...modeling_tf_utils import (
     TFCausalLanguageModelingLoss,
     TFModelInputType,
@@ -33,7 +37,12 @@ from ...modeling_tf_utils import (
     unpack_inputs,
 )
 from ...tf_utils import shape_list, stable_softmax
-from ...utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward, logging
+from ...utils import (
+    add_code_sample_docstrings,
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+    logging,
+)
 from .configuration_ctrl import CTRLConfig
 
 
@@ -56,7 +65,11 @@ def angle_defn(pos, i, d_model_size):
 
 def positional_encoding(position, d_model_size):
     # create the sinusoidal pattern for the positional encoding
-    angle_rads = angle_defn(np.arange(position)[:, np.newaxis], np.arange(d_model_size)[np.newaxis, :], d_model_size)
+    angle_rads = angle_defn(
+        np.arange(position)[:, np.newaxis],
+        np.arange(d_model_size)[np.newaxis, :],
+        d_model_size,
+    )
 
     sines = np.sin(angle_rads[:, 0::2])
     cosines = np.cos(angle_rads[:, 1::2])
@@ -73,7 +86,9 @@ def scaled_dot_product_attention(q, k, v, mask, attention_mask=None, head_mask=N
     scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
 
     if mask is not None:
-        scaled_attention_logits += tf.cast(mask * -1e4, dtype=scaled_attention_logits.dtype)
+        scaled_attention_logits += tf.cast(
+            mask * -1e4, dtype=scaled_attention_logits.dtype
+        )
 
     if attention_mask is not None:
         # Apply the attention mask
@@ -110,7 +125,19 @@ class TFMultiHeadAttention(tf.keras.layers.Layer):
         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
-    def call(self, v, k, q, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions, training=False):
+    def call(
+        self,
+        v,
+        k,
+        q,
+        mask,
+        layer_past,
+        attention_mask,
+        head_mask,
+        use_cache,
+        output_attentions,
+        training=False,
+    ):
         batch_size = shape_list(q)[0]
 
         q = self.Wq(q)
@@ -134,7 +161,9 @@ class TFMultiHeadAttention(tf.keras.layers.Layer):
         output = scaled_dot_product_attention(q, k, v, mask, attention_mask, head_mask)
         scaled_attention = tf.transpose(output[0], perm=[0, 2, 1, 3])
         attn = output[1]
-        original_size_attention = tf.reshape(scaled_attention, (batch_size, -1, self.d_model_size))
+        original_size_attention = tf.reshape(
+            scaled_attention, (batch_size, -1, self.d_model_size)
+        )
         output = self.dense(original_size_attention)
         outputs = (output, present)
 
@@ -160,24 +189,48 @@ class TFPointWiseFeedForwardLayer(tf.keras.layers.Layer):
 
 class TFEncoderLayer(tf.keras.layers.Layer):
     def __init__(
-        self, d_model_size, num_heads, dff, rate=0.1, layer_norm_epsilon=1e-6, output_attentions=False, **kwargs
+        self,
+        d_model_size,
+        num_heads,
+        dff,
+        rate=0.1,
+        layer_norm_epsilon=1e-6,
+        output_attentions=False,
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.output_attentions = output_attentions
 
         self.multi_head_attention = TFMultiHeadAttention(
-            d_model_size, num_heads, output_attentions=self.output_attentions, name="multi_head_attention"
+            d_model_size,
+            num_heads,
+            output_attentions=self.output_attentions,
+            name="multi_head_attention",
         )
         self.ffn = TFPointWiseFeedForwardLayer(d_model_size, dff, name="ffn")
 
-        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=layer_norm_epsilon, name="layernorm1")
-        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=layer_norm_epsilon, name="layernorm2")
+        self.layernorm1 = tf.keras.layers.LayerNormalization(
+            epsilon=layer_norm_epsilon, name="layernorm1"
+        )
+        self.layernorm2 = tf.keras.layers.LayerNormalization(
+            epsilon=layer_norm_epsilon, name="layernorm2"
+        )
 
         self.dropout1 = tf.keras.layers.Dropout(rate)
         self.dropout2 = tf.keras.layers.Dropout(rate)
 
-    def call(self, x, mask, layer_past, attention_mask, head_mask, use_cache, output_attentions, training=False):
+    def call(
+        self,
+        x,
+        mask,
+        layer_past,
+        attention_mask,
+        head_mask,
+        use_cache,
+        output_attentions,
+        training=False,
+    ):
         normed = self.layernorm1(x)
         attn_outputs = self.multi_head_attention(
             normed,
@@ -223,7 +276,10 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
         self.pos_encoding = positional_encoding(config.n_positions, self.d_model_size)
 
         self.w = TFSharedEmbeddings(
-            config.vocab_size, config.n_embd, initializer_range=config.initializer_range, name="w"
+            config.vocab_size,
+            config.n_embd,
+            initializer_range=config.initializer_range,
+            name="w",
         )
 
         self.dropout = tf.keras.layers.Dropout(config.embd_pdrop)
@@ -239,7 +295,9 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
             )
             for i in range(config.n_layer)
         ]
-        self.layernorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_epsilon, name="layernorm")
+        self.layernorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_epsilon, name="layernorm"
+        )
 
     def get_input_embeddings(self):
         return self.w
@@ -282,7 +340,9 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
                 token_type_ids = token_type_ids[:, -1:]
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = shape_list(input_ids)
             input_ids = tf.reshape(input_ids, [-1, input_shape[-1]])
@@ -297,7 +357,10 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
         else:
             past_length = shape_list(past_key_values[0][0])[-2]
         if position_ids is None:
-            position_ids = tf.expand_dims(tf.range(past_length, input_shape[-1] + past_length, dtype=tf.int32), axis=0)
+            position_ids = tf.expand_dims(
+                tf.range(past_length, input_shape[-1] + past_length, dtype=tf.int32),
+                axis=0,
+            )
             position_ids = tf.tile(position_ids, [input_shape[0], 1])
 
         # Attention mask.
@@ -307,7 +370,9 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
             # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
             # this attention mask is more simple than the triangular masking of causal attention
             # used in OpenAI GPT, we just need to prepare the broadcast dimension here.
-            attention_mask = tf.reshape(attention_mask, (input_shape[0], 1, 1, input_shape[1]))
+            attention_mask = tf.reshape(
+                attention_mask, (input_shape[0], 1, 1, input_shape[1])
+            )
 
             # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
             # masked positions, this operation will create a tensor which is 0.0 for
@@ -318,7 +383,9 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
             one_cst = tf.constant(1.0)
             ten_thousand_cst = tf.constant(-10000.0)
             attention_mask = tf.cast(attention_mask, dtype=one_cst.dtype)
-            attention_mask = tf.multiply(tf.subtract(one_cst, attention_mask), ten_thousand_cst)
+            attention_mask = tf.multiply(
+                tf.subtract(one_cst, attention_mask), ten_thousand_cst
+            )
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -330,9 +397,13 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
             head_mask = [None] * self.num_layers
 
         if token_type_ids is not None:
-            token_type_ids = tf.reshape(token_type_ids, [-1, shape_list(token_type_ids)[-1]])
+            token_type_ids = tf.reshape(
+                token_type_ids, [-1, shape_list(token_type_ids)[-1]]
+            )
             token_type_embeds = self.w(token_type_ids, mode="embedding")
-            token_type_embeds *= tf.math.sqrt(tf.cast(self.d_model_size, dtype=token_type_embeds.dtype))
+            token_type_embeds *= tf.math.sqrt(
+                tf.cast(self.d_model_size, dtype=token_type_embeds.dtype)
+            )
         else:
             token_type_embeds = tf.constant(0.0)
         position_ids = tf.reshape(position_ids, [-1, shape_list(position_ids)[-1]])
@@ -366,7 +437,9 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
         all_attentions = () if output_attentions else None
         for i, (h, layer_past) in enumerate(zip(self.h, past_key_values)):
             if output_hidden_states:
-                all_hidden_states = all_hidden_states + (tf.reshape(hidden_states, output_shape),)
+                all_hidden_states = all_hidden_states + (
+                    tf.reshape(hidden_states, output_shape),
+                )
             outputs = h(
                 hidden_states,
                 mask,
@@ -392,11 +465,19 @@ class TFCTRLMainLayer(tf.keras.layers.Layer):
 
         if output_attentions:
             # let the number of heads free (-1) so we can extract attention even after head pruning
-            attention_output_shape = input_shape[:-1] + [-1] + shape_list(all_attentions[0])[-2:]
-            all_attentions = tuple(tf.reshape(t, attention_output_shape) for t in all_attentions)
+            attention_output_shape = (
+                input_shape[:-1] + [-1] + shape_list(all_attentions[0])[-2:]
+            )
+            all_attentions = tuple(
+                tf.reshape(t, attention_output_shape) for t in all_attentions
+            )
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, presents, all_hidden_states, all_attentions]
+                if v is not None
+            )
 
         return TFBaseModelOutputWithPast(
             last_hidden_state=hidden_states,
@@ -574,12 +655,27 @@ class TFCTRLModel(TFCTRLPreTrainedModel):
         return outputs
 
     def serving_output(self, output):
-        pkv = tf.convert_to_tensor(output.past_key_values) if self.config.use_cache else None
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        pkv = (
+            tf.convert_to_tensor(output.past_key_values)
+            if self.config.use_cache
+            else None
+        )
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFBaseModelOutputWithPast(
-            last_hidden_state=output.last_hidden_state, past_key_values=pkv, hidden_states=hs, attentions=attns
+            last_hidden_state=output.last_hidden_state,
+            past_key_values=pkv,
+            hidden_states=hs,
+            attentions=attns,
         )
 
 
@@ -595,7 +691,9 @@ class TFCTRLLMHead(tf.keras.layers.Layer):
         self.input_embeddings = input_embeddings
 
     def build(self, input_shape):
-        self.bias = self.add_weight(shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias")
+        self.bias = self.add_weight(
+            shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias"
+        )
         super().build(input_shape)
 
     def get_output_embeddings(self):
@@ -638,10 +736,15 @@ class TFCTRLLMHeadModel(TFCTRLPreTrainedModel, TFCausalLanguageModelingLoss):
         return self.lm_head
 
     def get_prefix_bias_name(self):
-        warnings.warn("The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.", FutureWarning)
+        warnings.warn(
+            "The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.",
+            FutureWarning,
+        )
         return self.name + "/" + self.lm_head.name
 
-    def prepare_inputs_for_generation(self, input_ids, past=None, use_cache=None, **kwargs):
+    def prepare_inputs_for_generation(
+        self, input_ids, past=None, use_cache=None, **kwargs
+    ):
         # only last token for inputs_ids if past is defined in kwargs
         if past:
             input_ids = tf.expand_dims(input_ids[:, -1], -1)
@@ -716,16 +819,36 @@ class TFCTRLLMHeadModel(TFCTRLPreTrainedModel, TFCausalLanguageModelingLoss):
         )
 
     def serving_output(self, output):
-        pkv = tf.convert_to_tensor(output.past_key_values) if self.config.use_cache else None
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        pkv = (
+            tf.convert_to_tensor(output.past_key_values)
+            if self.config.use_cache
+            else None
+        )
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFCausalLMOutputWithPast(logits=output.logits, past_key_values=pkv, hidden_states=hs, attentions=attns)
+        return TFCausalLMOutputWithPast(
+            logits=output.logits,
+            past_key_values=pkv,
+            hidden_states=hs,
+            attentions=attns,
+        )
 
     @staticmethod
-    def _reorder_cache(past: Tuple[Tuple[tf.Tensor]], beam_idx: tf.Tensor) -> Tuple[Tuple[tf.Tensor]]:
+    def _reorder_cache(
+        past: Tuple[Tuple[tf.Tensor]], beam_idx: tf.Tensor
+    ) -> Tuple[Tuple[tf.Tensor]]:
         return tuple(
-            tuple(tf.gather(past_state, beam_idx, axis=0) for past_state in layer_past) for layer_past in past
+            tuple(tf.gather(past_state, beam_idx, axis=0) for past_state in layer_past)
+            for layer_past in past
         )
 
 
@@ -744,7 +867,9 @@ class TFCTRLLMHeadModel(TFCTRLPreTrainedModel, TFCausalLanguageModelingLoss):
     """,
     CTRL_START_DOCSTRING,
 )
-class TFCTRLForSequenceClassification(TFCTRLPreTrainedModel, TFSequenceClassificationLoss):
+class TFCTRLForSequenceClassification(
+    TFCTRLPreTrainedModel, TFSequenceClassificationLoss
+):
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
         self.num_labels = config.num_labels
@@ -837,12 +962,17 @@ class TFCTRLForSequenceClassification(TFCTRLPreTrainedModel, TFSequenceClassific
             else:
                 batch_size, sequence_length = shape_list(inputs_embeds)[:2]
             if self.config.pad_token_id is None and batch_size != 1:
-                raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
+                raise ValueError(
+                    "Cannot handle batch sizes > 1 if no padding token is defined."
+                )
 
             if not tf.is_tensor(sequence_lengths):
                 in_logits = logits[0:batch_size, sequence_lengths]
 
-            loss = self.hf_compute_loss(tf.reshape(labels, [-1, 1]), tf.reshape(in_logits, [-1, self.num_labels]))
+            loss = self.hf_compute_loss(
+                tf.reshape(labels, [-1, 1]),
+                tf.reshape(in_logits, [-1, self.num_labels]),
+            )
 
         pooled_logits = in_logits if in_logits is not None else logits
 
@@ -858,8 +988,20 @@ class TFCTRLForSequenceClassification(TFCTRLPreTrainedModel, TFSequenceClassific
         )
 
     # Copied from transformers.models.bert.modeling_tf_bert.TFBertForSequenceClassification.serving_output
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFSequenceClassifierOutput
+    ) -> TFSequenceClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFSequenceClassifierOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )

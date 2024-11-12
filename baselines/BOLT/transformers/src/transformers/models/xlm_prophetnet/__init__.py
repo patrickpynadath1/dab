@@ -17,11 +17,19 @@
 # limitations under the License.
 from typing import TYPE_CHECKING
 
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_sentencepiece_available, is_torch_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_sentencepiece_available,
+    is_torch_available,
+)
 
 
 _import_structure = {
-    "configuration_xlm_prophetnet": ["XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "XLMProphetNetConfig"],
+    "configuration_xlm_prophetnet": [
+        "XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "XLMProphetNetConfig",
+    ],
 }
 
 try:
@@ -49,7 +57,10 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_xlm_prophetnet import XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMProphetNetConfig
+    from .configuration_xlm_prophetnet import (
+        XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        XLMProphetNetConfig,
+    )
 
     try:
         if not is_sentencepiece_available():
@@ -77,4 +88,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

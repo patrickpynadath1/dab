@@ -17,11 +17,18 @@
 # limitations under the License.
 from typing import TYPE_CHECKING
 
-from ...file_utils import _LazyModule, is_tokenizers_available, is_torch_available, is_vision_available
+from ...file_utils import (
+    _LazyModule,
+    is_tokenizers_available,
+    is_torch_available,
+    is_vision_available,
+)
 from ...utils import OptionalDependencyNotAvailable
 
 
-_import_structure = {"configuration_dpt": ["DPT_PRETRAINED_CONFIG_ARCHIVE_MAP", "DPTConfig"]}
+_import_structure = {
+    "configuration_dpt": ["DPT_PRETRAINED_CONFIG_ARCHIVE_MAP", "DPTConfig"]
+}
 
 try:
     if not is_vision_available():
@@ -75,4 +82,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

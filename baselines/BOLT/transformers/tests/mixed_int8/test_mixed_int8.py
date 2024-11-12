@@ -51,9 +51,7 @@ class BaseMixedInt8Test(unittest.TestCase):
     model_name = "bigscience/bloom-1b7"
 
     # Constant values
-    EXPECTED_RELATIVE_DIFFERENCE = (
-        1.540025  # This was obtained on a Quadro RTX 8000 so the number might slightly change
-    )
+    EXPECTED_RELATIVE_DIFFERENCE = 1.540025  # This was obtained on a Quadro RTX 8000 so the number might slightly change
 
     input_text = "Hello my name is"
     EXPECTED_OUTPUT = "Hello my name is John.\nI am a friend of the family.\n"
@@ -69,8 +67,12 @@ class MixedInt8Test(BaseMixedInt8Test):
         super().setUp()
 
         # Models and tokenizer
-        self.model_fp16 = AutoModelForCausalLM.from_pretrained(self.model_name, torch_dtype="auto", device_map="auto")
-        self.model_8bit = AutoModelForCausalLM.from_pretrained(self.model_name, load_in_8bit=True, device_map="auto")
+        self.model_fp16 = AutoModelForCausalLM.from_pretrained(
+            self.model_name, torch_dtype="auto", device_map="auto"
+        )
+        self.model_8bit = AutoModelForCausalLM.from_pretrained(
+            self.model_name, load_in_8bit=True, device_map="auto"
+        )
 
     def tearDown(self):
         r"""
@@ -94,7 +96,10 @@ class MixedInt8Test(BaseMixedInt8Test):
         mem_8bit = self.model_8bit.get_memory_footprint()
 
         self.assertAlmostEqual(mem_fp16 / mem_8bit, self.EXPECTED_RELATIVE_DIFFERENCE)
-        self.assertTrue(self.model_8bit.transformer.h[0].mlp.dense_4h_to_h.weight.__class__ == Int8Params)
+        self.assertTrue(
+            self.model_8bit.transformer.h[0].mlp.dense_4h_to_h.weight.__class__
+            == Int8Params
+        )
 
     def test_generate_quality(self):
         r"""
@@ -103,9 +108,14 @@ class MixedInt8Test(BaseMixedInt8Test):
         the same output across GPUs. So we'll generate few tokens (5-10) and check their output.
         """
         encoded_input = self.tokenizer(self.input_text, return_tensors="pt")
-        output_sequences = self.model_8bit.generate(input_ids=encoded_input["input_ids"].to(0), max_new_tokens=10)
+        output_sequences = self.model_8bit.generate(
+            input_ids=encoded_input["input_ids"].to(0), max_new_tokens=10
+        )
 
-        self.assertEqual(self.tokenizer.decode(output_sequences[0], skip_special_tokens=True), self.EXPECTED_OUTPUT)
+        self.assertEqual(
+            self.tokenizer.decode(output_sequences[0], skip_special_tokens=True),
+            self.EXPECTED_OUTPUT,
+        )
 
 
 class MixedInt8ModelClassesTest(BaseMixedInt8Test):
@@ -117,13 +127,17 @@ class MixedInt8ModelClassesTest(BaseMixedInt8Test):
 
         # Different types of model
 
-        self.base_model = AutoModel.from_pretrained(self.model_name, load_in_8bit=True, device_map="auto")
+        self.base_model = AutoModel.from_pretrained(
+            self.model_name, load_in_8bit=True, device_map="auto"
+        )
         # Sequence classification model
         self.sequence_model = AutoModelForSequenceClassification.from_pretrained(
             self.model_name, load_in_8bit=True, device_map="auto"
         )
         # CausalLM model
-        self.model_8bit = AutoModelForCausalLM.from_pretrained(self.model_name, load_in_8bit=True, device_map="auto")
+        self.model_8bit = AutoModelForCausalLM.from_pretrained(
+            self.model_name, load_in_8bit=True, device_map="auto"
+        )
         # Seq2seq model
         self.seq_to_seq_model = AutoModelForSeq2SeqLM.from_pretrained(
             self.seq_to_seq_name, load_in_8bit=True, device_map="auto"
@@ -150,12 +164,18 @@ class MixedInt8ModelClassesTest(BaseMixedInt8Test):
         from bitsandbytes.nn import Int8Params
 
         # last param of a base model should be a linear8bit module
-        self.assertTrue(self.base_model.h[-1].mlp.dense_4h_to_h.weight.__class__ == Int8Params)
+        self.assertTrue(
+            self.base_model.h[-1].mlp.dense_4h_to_h.weight.__class__ == Int8Params
+        )
 
         # Other heads should be nn.Parameter
         self.assertTrue(self.model_8bit.lm_head.weight.__class__ == torch.nn.Parameter)
-        self.assertTrue(self.sequence_model.score.weight.__class__ == torch.nn.Parameter)
-        self.assertTrue(self.seq_to_seq_model.lm_head.weight.__class__ == torch.nn.Parameter)
+        self.assertTrue(
+            self.sequence_model.score.weight.__class__ == torch.nn.Parameter
+        )
+        self.assertTrue(
+            self.seq_to_seq_model.lm_head.weight.__class__ == torch.nn.Parameter
+        )
 
 
 class MixedInt8TestPipeline(BaseMixedInt8Test):
@@ -204,7 +224,10 @@ class MixedInt8TestMultiGpu(BaseMixedInt8Test):
 
         memory_mapping = {0: "1GB", 1: "2GB"}
         model_parallel = AutoModelForCausalLM.from_pretrained(
-            self.model_name, load_in_8bit=True, max_memory=memory_mapping, device_map="auto"
+            self.model_name,
+            load_in_8bit=True,
+            max_memory=memory_mapping,
+            device_map="auto",
         )
 
         def get_list_devices(model):
@@ -229,5 +252,10 @@ class MixedInt8TestMultiGpu(BaseMixedInt8Test):
         encoded_input = self.tokenizer(self.input_text, return_tensors="pt")
 
         # Second real batch
-        output_parallel = model_parallel.generate(input_ids=encoded_input["input_ids"].to(0), max_new_tokens=10)
-        self.assertEqual(self.tokenizer.decode(output_parallel[0], skip_special_tokens=True), self.EXPECTED_OUTPUT)
+        output_parallel = model_parallel.generate(
+            input_ids=encoded_input["input_ids"].to(0), max_new_tokens=10
+        )
+        self.assertEqual(
+            self.tokenizer.decode(output_parallel[0], skip_special_tokens=True),
+            self.EXPECTED_OUTPUT,
+        )

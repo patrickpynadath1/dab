@@ -6,15 +6,19 @@ import sentencepiece as spm
 
 tok = TreebankWordTokenizer()
 
-model = torch.load('/projects/tir5/users/sachink/embed-style-transfer/evaluation_models/weiting_sim/sim.pt')
-state_dict = model['state_dict']
-vocab_words = model['vocab_words']
-args = model['args']
+model = torch.load(
+    "/projects/tir5/users/sachink/embed-style-transfer/evaluation_models/weiting_sim/sim.pt"
+)
+state_dict = model["state_dict"]
+vocab_words = model["vocab_words"]
+args = model["args"]
 # turn off gpu
 model = WordAveraging(args, vocab_words)
 model.load_state_dict(state_dict, strict=True)
 sp = spm.SentencePieceProcessor()
-sp.Load('/projects/tir5/users/sachink/embed-style-transfer/evaluation_models/weiting_sim/sim.sp.30k.model')
+sp.Load(
+    "/projects/tir5/users/sachink/embed-style-transfer/evaluation_models/weiting_sim/sim.sp.30k.model"
+)
 model.eval()
 
 
@@ -26,6 +30,7 @@ def make_example(sentence, model):
     wp1.populate_embeddings(model.vocab)
     return wp1
 
+
 def find_similarity(s1, s2):
     with torch.no_grad():
         s1 = [make_example(x, model) for x in s1]
@@ -34,6 +39,7 @@ def find_similarity(s1, s2):
         wx2, wl2, wm2 = model.torchify_batch(s2)
         scores = model.scoring_function(wx1, wm1, wl1, wx2, wm2, wl2)
         return [x.item() for x in scores]
+
 
 # s1 = "the dog ran outsideddd."
 # s2 = "the puppy escape into the trees."

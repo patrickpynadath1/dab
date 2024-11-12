@@ -32,7 +32,7 @@ class RunningMean:
             self._value = value
         else:
             w1 = self.gamma * (1 - self.gamma ** (self.count - 1))
-            w2 = (1 - self.gamma)
+            w2 = 1 - self.gamma
             wt = w1 + w2
             w1 = w1 / wt
             w2 = w2 / wt

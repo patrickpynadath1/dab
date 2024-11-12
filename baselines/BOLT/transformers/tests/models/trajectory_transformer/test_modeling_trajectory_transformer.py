@@ -25,7 +25,11 @@ from transformers.testing_utils import require_torch, slow, torch_device
 
 from ...generation.test_generation_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, _config_zero_init, random_attention_mask
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    _config_zero_init,
+    random_attention_mask,
+)
 
 
 if is_torch_available():
@@ -38,7 +42,15 @@ if is_torch_available():
 
 
 class TrajectoryTransformerModelTester:
-    def __init__(self, parent, batch_size=13, n_embd=128, action_dim=6, observation_dim=17, is_training=True):
+    def __init__(
+        self,
+        parent,
+        batch_size=13,
+        n_embd=128,
+        action_dim=6,
+        observation_dim=17,
+        is_training=True,
+    ):
         self.parent = parent
         self.batch_size = batch_size
         self.n_embd = n_embd
@@ -48,13 +60,15 @@ class TrajectoryTransformerModelTester:
         self.seq_length = self.action_dim + self.observation_dim + 1
 
     def prepare_config_and_inputs(self):
-        trajectories = torch.LongTensor([np.random.permutation(self.seq_length) for _ in range(self.batch_size)]).to(
+        trajectories = torch.LongTensor(
+            [np.random.permutation(self.seq_length) for _ in range(self.batch_size)]
+        ).to(torch_device)
+        attention_mask = random_attention_mask((self.batch_size, self.seq_length)).to(
             torch_device
         )
-        attention_mask = random_attention_mask((self.batch_size, self.seq_length)).to(torch_device)
-        targets = torch.LongTensor([np.random.permutation(self.seq_length) for _ in range(self.batch_size)]).to(
-            torch_device
-        )
+        targets = torch.LongTensor(
+            [np.random.permutation(self.seq_length) for _ in range(self.batch_size)]
+        ).to(torch_device)
 
         config = self.get_config()
         return config, trajectories, attention_mask, targets
@@ -72,7 +86,10 @@ class TrajectoryTransformerModelTester:
         model.to(torch_device)
         model.eval()
 
-        result = model(trajectories=input_dict["trajectories"], attention_mask=input_dict["attention_mask"])
+        result = model(
+            trajectories=input_dict["trajectories"],
+            attention_mask=input_dict["attention_mask"],
+        )
         result = model(
             trajectories=input_dict["trajectories"],
             output_hidden_states=True,
@@ -81,17 +98,26 @@ class TrajectoryTransformerModelTester:
             return_dict=True,
         )
 
-        self.parent.assertEqual(result.hidden_states[-1].shape, (self.batch_size, self.seq_length, self.n_embd))
+        self.parent.assertEqual(
+            result.hidden_states[-1].shape,
+            (self.batch_size, self.seq_length, self.n_embd),
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         (config, trajectories, attention_mask, targets) = config_and_inputs
-        inputs_dict = {"trajectories": trajectories, "attention_mask": attention_mask, "targets": targets}
+        inputs_dict = {
+            "trajectories": trajectories,
+            "attention_mask": attention_mask,
+            "targets": targets,
+        }
         return config, inputs_dict
 
 
 @require_torch
-class TrajectoryTransformerModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class TrajectoryTransformerModelTest(
+    ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
+):
 
     all_model_classes = (TrajectoryTransformerModel,) if is_torch_available() else ()
 
@@ -110,7 +136,9 @@ class TrajectoryTransformerModelTest(ModelTesterMixin, GenerationTesterMixin, un
 
     def setUp(self):
         self.model_tester = TrajectoryTransformerModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=TrajectoryTransformerConfig, n_embd=37)
+        self.config_tester = ConfigTester(
+            self, config_class=TrajectoryTransformerConfig, n_embd=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -137,10 +165,14 @@ class TrajectoryTransformerModelTest(ModelTesterMixin, GenerationTesterMixin, un
 
     # # Input is 'trajectories' not 'input_ids'
     def test_model_main_input_name(self):
-        model_signature = inspect.signature(getattr(TrajectoryTransformerModel, "forward"))
+        model_signature = inspect.signature(
+            getattr(TrajectoryTransformerModel, "forward")
+        )
         # The main input is the name of the argument after `self`
         observed_main_input_name = list(model_signature.parameters.keys())[1]
-        self.assertEqual(TrajectoryTransformerModel.main_input_name, observed_main_input_name)
+        self.assertEqual(
+            TrajectoryTransformerModel.main_input_name, observed_main_input_name
+        )
 
     def test_retain_grad_hidden_states_attentions(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -243,7 +275,9 @@ class TrajectoryTransformerModelIntegrationTest(unittest.TestCase):
     def test_prediction(self):
         batch_size = 1
 
-        config = TrajectoryTransformerConfig.from_pretrained("CarlCochet/trajectory-transformer-halfcheetah-medium-v2")
+        config = TrajectoryTransformerConfig.from_pretrained(
+            "CarlCochet/trajectory-transformer-halfcheetah-medium-v2"
+        )
         model = TrajectoryTransformerModel.from_pretrained(
             "CarlCochet/trajectory-transformer-halfcheetah-medium-v2", config=config
         )
@@ -253,7 +287,34 @@ class TrajectoryTransformerModelIntegrationTest(unittest.TestCase):
         seq_length = model.config.action_dim + model.config.observation_dim + 1
 
         trajectories = torch.LongTensor(
-            [[3, 19, 20, 22, 9, 7, 23, 10, 18, 14, 13, 4, 17, 11, 5, 6, 15, 21, 2, 8, 1, 0, 12, 16]]
+            [
+                [
+                    3,
+                    19,
+                    20,
+                    22,
+                    9,
+                    7,
+                    23,
+                    10,
+                    18,
+                    14,
+                    13,
+                    4,
+                    17,
+                    11,
+                    5,
+                    6,
+                    15,
+                    21,
+                    2,
+                    8,
+                    1,
+                    0,
+                    12,
+                    16,
+                ]
+            ]
         ).to(torch_device)
         outputs = model(
             trajectories=trajectories,
@@ -265,9 +326,17 @@ class TrajectoryTransformerModelIntegrationTest(unittest.TestCase):
 
         output = outputs.logits
 
-        expected_shape = torch.Size((batch_size, seq_length, model.config.vocab_size + 1))
+        expected_shape = torch.Size(
+            (batch_size, seq_length, model.config.vocab_size + 1)
+        )
         expected_slice = torch.tensor(
-            [[[-0.7193, -0.2532, -0.0898], [1.9429, 2.0434, 2.3975], [-3.3651, -2.8744, -2.4532]]]
+            [
+                [
+                    [-0.7193, -0.2532, -0.0898],
+                    [1.9429, 2.0434, 2.3975],
+                    [-3.3651, -2.8744, -2.4532],
+                ]
+            ]
         ).to(torch_device)
         output_slice = output[:, :3, :3]
 

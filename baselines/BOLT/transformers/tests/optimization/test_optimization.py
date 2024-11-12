@@ -163,4 +163,6 @@ class ScheduleInitTest(unittest.TestCase):
 
             scheduler = scheduler_func(self.optimizer, **kwargs)
             lrs_2 = unwrap_and_save_reload_schedule(scheduler, self.num_steps)
-            self.assertListEqual(lrs_1, lrs_2, msg=f"failed for {scheduler_func} in save and reload")
+            self.assertListEqual(
+                lrs_1, lrs_2, msg=f"failed for {scheduler_func} in save and reload"
+            )

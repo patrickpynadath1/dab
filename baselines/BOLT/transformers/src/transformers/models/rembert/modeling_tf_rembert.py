@@ -79,7 +79,9 @@ class TFRemBertEmbeddings(tf.keras.layers.Layer):
         self.input_embedding_size = config.input_embedding_size
         self.max_position_embeddings = config.max_position_embeddings
         self.initializer_range = config.initializer_range
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
     def build(self, input_shape: tf.TensorShape):
@@ -143,11 +145,19 @@ class TFRemBertEmbeddings(tf.keras.layers.Layer):
 
         if position_ids is None:
             position_ids = tf.expand_dims(
-                tf.range(start=past_key_values_length, limit=input_shape[1] + past_key_values_length), axis=0
+                tf.range(
+                    start=past_key_values_length,
+                    limit=input_shape[1] + past_key_values_length,
+                ),
+                axis=0,
             )
 
-        position_embeds = tf.gather(params=self.position_embeddings, indices=position_ids)
-        token_type_embeds = tf.gather(params=self.token_type_embeddings, indices=token_type_ids)
+        position_embeds = tf.gather(
+            params=self.position_embeddings, indices=position_ids
+        )
+        token_type_embeds = tf.gather(
+            params=self.token_type_embeddings, indices=token_type_ids
+        )
         final_embeddings = inputs_embeds + position_embeds + token_type_embeds
         final_embeddings = self.LayerNorm(inputs=final_embeddings)
         final_embeddings = self.dropout(inputs=final_embeddings, training=training)
@@ -172,13 +182,19 @@ class TFRemBertSelfAttention(tf.keras.layers.Layer):
         self.sqrt_att_head_size = math.sqrt(self.attention_head_size)
 
         self.query = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="query",
         )
         self.key = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="key"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="key",
         )
         self.value = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="value",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.attention_probs_dropout_prob)
 
@@ -186,7 +202,10 @@ class TFRemBertSelfAttention(tf.keras.layers.Layer):
 
     def transpose_for_scores(self, tensor: tf.Tensor, batch_size: int) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size] to [batch_size, seq_length, num_attention_heads, attention_head_size]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size] to [batch_size, num_attention_heads, seq_length, attention_head_size]
         return tf.transpose(tensor, perm=[0, 2, 1, 3])
@@ -216,17 +235,29 @@ class TFRemBertSelfAttention(tf.keras.layers.Layer):
             value_layer = past_key_value[1]
             attention_mask = encoder_attention_mask
         elif is_cross_attention:
-            key_layer = self.transpose_for_scores(self.key(inputs=encoder_hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=encoder_hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=encoder_hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=encoder_hidden_states), batch_size
+            )
             attention_mask = encoder_attention_mask
         elif past_key_value is not None:
-            key_layer = self.transpose_for_scores(self.key(inputs=hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=hidden_states), batch_size
+            )
             key_layer = tf.concat([past_key_value[0], key_layer], axis=2)
             value_layer = tf.concat([past_key_value[1], value_layer], axis=2)
         else:
-            key_layer = self.transpose_for_scores(self.key(inputs=hidden_states), batch_size)
-            value_layer = self.transpose_for_scores(self.value(inputs=hidden_states), batch_size)
+            key_layer = self.transpose_for_scores(
+                self.key(inputs=hidden_states), batch_size
+            )
+            value_layer = self.transpose_for_scores(
+                self.value(inputs=hidden_states), batch_size
+            )
 
         query_layer = self.transpose_for_scores(mixed_query_layer, batch_size)
 
@@ -265,8 +296,14 @@ class TFRemBertSelfAttention(tf.keras.layers.Layer):
         attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
 
         # (batch_size, seq_len_q, all_head_size)
-        attention_output = tf.reshape(tensor=attention_output, shape=(batch_size, -1, self.all_head_size))
-        outputs = (attention_output, attention_probs) if output_attentions else (attention_output,)
+        attention_output = tf.reshape(
+            tensor=attention_output, shape=(batch_size, -1, self.all_head_size)
+        )
+        outputs = (
+            (attention_output, attention_probs)
+            if output_attentions
+            else (attention_output,)
+        )
 
         if self.is_decoder:
             outputs = outputs + (past_key_value,)
@@ -279,12 +316,18 @@ class TFRemBertSelfOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
         hidden_states = self.LayerNorm(inputs=hidden_states + input_tensor)
@@ -339,7 +382,9 @@ class TFRemBertIntermediate(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.intermediate_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
 
         if isinstance(config.hidden_act, str):
@@ -360,12 +405,18 @@ class TFRemBertOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
         hidden_states = self.LayerNorm(inputs=hidden_states + input_tensor)
@@ -383,7 +434,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
         self.add_cross_attention = config.add_cross_attention
         if self.add_cross_attention:
             if not self.is_decoder:
-                raise ValueError(f"{self} should be used as a decoder model if cross attention is added")
+                raise ValueError(
+                    f"{self} should be used as a decoder model if cross attention is added"
+                )
             self.crossattention = TFRemBertAttention(config, name="crossattention")
         self.intermediate = TFRemBertIntermediate(config, name="intermediate")
         self.bert_output = TFRemBertOutput(config, name="output")
@@ -400,7 +453,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
         training: bool = False,
     ) -> Tuple[tf.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
+        self_attn_past_key_value = (
+            past_key_value[:2] if past_key_value is not None else None
+        )
         self_attention_outputs = self.attention(
             input_tensor=hidden_states,
             attention_mask=attention_mask,
@@ -418,7 +473,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
             outputs = self_attention_outputs[1:-1]
             present_key_value = self_attention_outputs[-1]
         else:
-            outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+            outputs = self_attention_outputs[
+                1:
+            ]  # add self attentions if we output attention weights
 
         cross_attn_present_key_value = None
         if self.is_decoder and encoder_hidden_states is not None:
@@ -429,7 +486,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
                 )
 
             # cross_attn cached key/values tuple is at positions 3,4 of past_key_value tuple
-            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
+            cross_attn_past_key_value = (
+                past_key_value[-2:] if past_key_value is not None else None
+            )
             cross_attention_outputs = self.crossattention(
                 input_tensor=attention_output,
                 attention_mask=attention_mask,
@@ -441,7 +500,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
                 training=training,
             )
             attention_output = cross_attention_outputs[0]
-            outputs = outputs + cross_attention_outputs[1:-1]  # add cross attentions if we output attention weights
+            outputs = (
+                outputs + cross_attention_outputs[1:-1]
+            )  # add cross attentions if we output attention weights
 
             # add cross-attn cache to positions 3,4 of present_key_value tuple
             cross_attn_present_key_value = cross_attention_outputs[-1]
@@ -449,7 +510,9 @@ class TFRemBertLayer(tf.keras.layers.Layer):
 
         intermediate_output = self.intermediate(hidden_states=attention_output)
         layer_output = self.bert_output(
-            hidden_states=intermediate_output, input_tensor=attention_output, training=training
+            hidden_states=intermediate_output,
+            input_tensor=attention_output,
+            training=training,
         )
         outputs = (layer_output,) + outputs  # add attentions if we output them
 
@@ -470,7 +533,10 @@ class TFRemBertEncoder(tf.keras.layers.Layer):
             kernel_initializer=get_initializer(config.initializer_range),
             name="embedding_hidden_mapping_in",
         )
-        self.layer = [TFRemBertLayer(config, name="layer_._{}".format(i)) for i in range(config.num_hidden_layers)]
+        self.layer = [
+            TFRemBertLayer(config, name="layer_._{}".format(i))
+            for i in range(config.num_hidden_layers)
+        ]
 
     def call(
         self,
@@ -489,7 +555,9 @@ class TFRemBertEncoder(tf.keras.layers.Layer):
         hidden_states = self.embedding_hidden_mapping_in(inputs=hidden_states)
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+        all_cross_attentions = (
+            () if output_attentions and self.config.add_cross_attention else None
+        )
 
         next_decoder_cache = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
@@ -515,7 +583,10 @@ class TFRemBertEncoder(tf.keras.layers.Layer):
 
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)
-                if self.config.add_cross_attention and encoder_hidden_states is not None:
+                if (
+                    self.config.add_cross_attention
+                    and encoder_hidden_states is not None
+                ):
                     all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
 
         # Add last layer
@@ -524,7 +595,14 @@ class TFRemBertEncoder(tf.keras.layers.Layer):
 
         if not return_dict:
             return tuple(
-                v for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions] if v is not None
+                v
+                for v in [
+                    hidden_states,
+                    all_hidden_states,
+                    all_attentions,
+                    all_cross_attentions,
+                ]
+                if v is not None
             )
 
         return TFBaseModelOutputWithPastAndCrossAttentions(
@@ -558,20 +636,26 @@ class TFRemBertPooler(tf.keras.layers.Layer):
 
 
 class TFRemBertLMPredictionHead(tf.keras.layers.Layer):
-    def __init__(self, config: RemBertConfig, input_embeddings: tf.keras.layers.Layer, **kwargs):
+    def __init__(
+        self, config: RemBertConfig, input_embeddings: tf.keras.layers.Layer, **kwargs
+    ):
         super().__init__(**kwargs)
 
         self.vocab_size = config.vocab_size
         self.initializer_range = config.initializer_range
         self.output_embedding_size = config.output_embedding_size
         self.dense = tf.keras.layers.Dense(
-            config.output_embedding_size, kernel_initializer=get_initializer(self.initializer_range), name="dense"
+            config.output_embedding_size,
+            kernel_initializer=get_initializer(self.initializer_range),
+            name="dense",
         )
         if isinstance(config.hidden_act, str):
             self.activation = get_tf_activation(config.hidden_act)
         else:
             self.activation = config.hidden_act
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
 
     def build(self, input_shape: tf.TensorShape):
         self.decoder = self.add_weight(
@@ -580,7 +664,10 @@ class TFRemBertLMPredictionHead(tf.keras.layers.Layer):
             initializer=get_initializer(self.initializer_range),
         )
         self.decoder_bias = self.add_weight(
-            shape=(self.vocab_size,), initializer="zeros", trainable=True, name="decoder/bias"
+            shape=(self.vocab_size,),
+            initializer="zeros",
+            trainable=True,
+            name="decoder/bias",
         )
 
         super().build(input_shape)
@@ -603,20 +690,28 @@ class TFRemBertLMPredictionHead(tf.keras.layers.Layer):
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.activation(hidden_states)
         seq_length = shape_list(tensor=hidden_states)[1]
-        hidden_states = tf.reshape(tensor=hidden_states, shape=[-1, self.output_embedding_size])
+        hidden_states = tf.reshape(
+            tensor=hidden_states, shape=[-1, self.output_embedding_size]
+        )
         hidden_states = self.LayerNorm(hidden_states)
         hidden_states = tf.matmul(a=hidden_states, b=self.decoder, transpose_b=True)
-        hidden_states = tf.reshape(tensor=hidden_states, shape=[-1, seq_length, self.vocab_size])
+        hidden_states = tf.reshape(
+            tensor=hidden_states, shape=[-1, seq_length, self.vocab_size]
+        )
         hidden_states = tf.nn.bias_add(value=hidden_states, bias=self.decoder_bias)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_tf_bert.TFBertMLMHead with Bert->RemBert
 class TFRemBertMLMHead(tf.keras.layers.Layer):
-    def __init__(self, config: RemBertConfig, input_embeddings: tf.keras.layers.Layer, **kwargs):
+    def __init__(
+        self, config: RemBertConfig, input_embeddings: tf.keras.layers.Layer, **kwargs
+    ):
         super().__init__(**kwargs)
 
-        self.predictions = TFRemBertLMPredictionHead(config, input_embeddings, name="predictions")
+        self.predictions = TFRemBertLMPredictionHead(
+            config, input_embeddings, name="predictions"
+        )
 
     def call(self, sequence_output: tf.Tensor) -> tf.Tensor:
         prediction_scores = self.predictions(hidden_states=sequence_output)
@@ -636,7 +731,9 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
 
         self.embeddings = TFRemBertEmbeddings(config, name="embeddings")
         self.encoder = TFRemBertEncoder(config, name="encoder")
-        self.pooler = TFRemBertPooler(config, name="pooler") if add_pooling_layer else None
+        self.pooler = (
+            TFRemBertPooler(config, name="pooler") if add_pooling_layer else None
+        )
 
     def get_input_embeddings(self) -> tf.keras.layers.Layer:
         return self.embeddings
@@ -676,7 +773,9 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
             use_cache = False
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = shape_list(input_ids)
         elif inputs_embeds is not None:
@@ -693,7 +792,9 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
             past_key_values_length = shape_list(past_key_values[0][0])[-2]
 
         if attention_mask is None:
-            attention_mask = tf.fill(dims=(batch_size, seq_length + past_key_values_length), value=1)
+            attention_mask = tf.fill(
+                dims=(batch_size, seq_length + past_key_values_length), value=1
+            )
 
         if token_type_ids is None:
             token_type_ids = tf.fill(dims=input_shape, value=0)
@@ -729,7 +830,13 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
             extended_attention_mask = causal_mask * attention_mask[:, None, :]
             attention_mask_shape = shape_list(extended_attention_mask)
             extended_attention_mask = tf.reshape(
-                extended_attention_mask, (attention_mask_shape[0], 1, attention_mask_shape[1], attention_mask_shape[2])
+                extended_attention_mask,
+                (
+                    attention_mask_shape[0],
+                    1,
+                    attention_mask_shape[1],
+                    attention_mask_shape[2],
+                ),
             )
             if past_key_values[0] is not None:
                 # attention_mask needs to be sliced to the shape `[batch_size, 1, from_seq_length - cached_seq_length, to_seq_length]
@@ -744,29 +851,39 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = tf.cast(extended_attention_mask, dtype=embedding_output.dtype)
+        extended_attention_mask = tf.cast(
+            extended_attention_mask, dtype=embedding_output.dtype
+        )
         one_cst = tf.constant(1.0, dtype=embedding_output.dtype)
         ten_thousand_cst = tf.constant(-10000.0, dtype=embedding_output.dtype)
-        extended_attention_mask = tf.multiply(tf.subtract(one_cst, extended_attention_mask), ten_thousand_cst)
+        extended_attention_mask = tf.multiply(
+            tf.subtract(one_cst, extended_attention_mask), ten_thousand_cst
+        )
 
         # Copied from `modeling_tf_t5.py` with -1e9 -> -10000
         if self.is_decoder and encoder_attention_mask is not None:
             # If a 2D ou 3D attention mask is provided for the cross-attention
             # we need to make broadcastable to [batch_size, num_heads, mask_seq_length, mask_seq_length]
             # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
-            encoder_attention_mask = tf.cast(encoder_attention_mask, dtype=extended_attention_mask.dtype)
+            encoder_attention_mask = tf.cast(
+                encoder_attention_mask, dtype=extended_attention_mask.dtype
+            )
             num_dims_encoder_attention_mask = len(shape_list(encoder_attention_mask))
             if num_dims_encoder_attention_mask == 3:
                 encoder_extended_attention_mask = encoder_attention_mask[:, None, :, :]
             if num_dims_encoder_attention_mask == 2:
-                encoder_extended_attention_mask = encoder_attention_mask[:, None, None, :]
+                encoder_extended_attention_mask = encoder_attention_mask[
+                    :, None, None, :
+                ]
 
             # T5 has a mask that can compare sequence ids, we can simulate this here with this transposition
             # Cf. https://github.com/tensorflow/mesh/blob/8d2465e9bc93129b913b5ccc6a59aa97abd96ec6/mesh_tensorflow/transformer/transformer_layers.py#L270
             # encoder_extended_attention_mask = tf.math.equal(encoder_extended_attention_mask,
             #                                         tf.transpose(encoder_extended_attention_mask, perm=(-1, -2)))
 
-            encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -10000.0
+            encoder_extended_attention_mask = (
+                1.0 - encoder_extended_attention_mask
+            ) * -10000.0
         else:
             encoder_extended_attention_mask = None
 
@@ -795,7 +912,11 @@ class TFRemBertMainLayer(tf.keras.layers.Layer):
         )
 
         sequence_output = encoder_outputs[0]
-        pooled_output = self.pooler(hidden_states=sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(hidden_states=sequence_output)
+            if self.pooler is not None
+            else None
+        )
 
         if not return_dict:
             return (
@@ -950,7 +1071,9 @@ class TFRemBertModel(TFRemBertPreTrainedModel):
         self.rembert = TFRemBertMainLayer(config, name="rembert")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1019,9 +1142,21 @@ class TFRemBertModel(TFRemBertPreTrainedModel):
     ) -> TFBaseModelOutputWithPoolingAndCrossAttentions:
         output_cache = self.config.use_cache and self.config.is_decoder
         pkv = tf.convert_to_tensor(output.past_key_values) if output_cache else None
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
-        cross_attns = tf.convert_to_tensor(output.cross_attentions) if output.cross_attentions is not None else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
+        cross_attns = (
+            tf.convert_to_tensor(output.cross_attentions)
+            if output.cross_attentions is not None
+            else None
+        )
         if not (self.config.output_attentions and self.config.add_cross_attention):
             cross_attns = None
 
@@ -1035,7 +1170,9 @@ class TFRemBertModel(TFRemBertPreTrainedModel):
         )
 
 
-@add_start_docstrings("""RemBERT Model with a `language modeling` head on top.""", REMBERT_START_DOCSTRING)
+@add_start_docstrings(
+    """RemBERT Model with a `language modeling` head on top.""", REMBERT_START_DOCSTRING
+)
 class TFRemBertForMaskedLM(TFRemBertPreTrainedModel, TFMaskedLanguageModelingLoss):
     def __init__(self, config: RemBertConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
@@ -1046,14 +1183,20 @@ class TFRemBertForMaskedLM(TFRemBertPreTrainedModel, TFMaskedLanguageModelingLos
                 "bi-directional self-attention."
             )
 
-        self.rembert = TFRemBertMainLayer(config, name="rembert", add_pooling_layer=False)
-        self.mlm = TFRemBertMLMHead(config, input_embeddings=self.rembert.embeddings, name="mlm___cls")
+        self.rembert = TFRemBertMainLayer(
+            config, name="rembert", add_pooling_layer=False
+        )
+        self.mlm = TFRemBertMLMHead(
+            config, input_embeddings=self.rembert.embeddings, name="mlm___cls"
+        )
 
     def get_lm_head(self) -> tf.keras.layers.Layer:
         return self.mlm.predictions
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1094,7 +1237,11 @@ class TFRemBertForMaskedLM(TFRemBertPreTrainedModel, TFMaskedLanguageModelingLos
         )
         sequence_output = outputs[0]
         prediction_scores = self.mlm(sequence_output=sequence_output, training=training)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=prediction_scores)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=prediction_scores)
+        )
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1108,30 +1255,49 @@ class TFRemBertForMaskedLM(TFRemBertPreTrainedModel, TFMaskedLanguageModelingLos
         )
 
     def serving_output(self, output: TFMaskedLMOutput) -> TFMaskedLMOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFMaskedLMOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFMaskedLMOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
-    """RemBERT Model with a `language modeling` head on top for CLM fine-tuning.""", REMBERT_START_DOCSTRING
+    """RemBERT Model with a `language modeling` head on top for CLM fine-tuning.""",
+    REMBERT_START_DOCSTRING,
 )
 class TFRemBertForCausalLM(TFRemBertPreTrainedModel, TFCausalLanguageModelingLoss):
     def __init__(self, config: RemBertConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
         if not config.is_decoder:
-            logger.warning("If you want to use `TFRemBertForCausalLM` as a standalone, add `is_decoder=True.`")
+            logger.warning(
+                "If you want to use `TFRemBertForCausalLM` as a standalone, add `is_decoder=True.`"
+            )
 
-        self.rembert = TFRemBertMainLayer(config, name="rembert", add_pooling_layer=False)
-        self.mlm = TFRemBertMLMHead(config, input_embeddings=self.rembert.embeddings, name="mlm___cls")
+        self.rembert = TFRemBertMainLayer(
+            config, name="rembert", add_pooling_layer=False
+        )
+        self.mlm = TFRemBertMLMHead(
+            config, input_embeddings=self.rembert.embeddings, name="mlm___cls"
+        )
 
     def get_lm_head(self) -> tf.keras.layers.Layer:
         return self.mlm.predictions
 
     # Copied from transformers.models.bert.modeling_tf_bert.TFBertLMHeadModel.prepare_inputs_for_generation
-    def prepare_inputs_for_generation(self, input_ids, past=None, attention_mask=None, **model_kwargs):
+    def prepare_inputs_for_generation(
+        self, input_ids, past=None, attention_mask=None, **model_kwargs
+    ):
         input_shape = input_ids.shape
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
@@ -1141,7 +1307,11 @@ class TFRemBertForCausalLM(TFRemBertPreTrainedModel, TFCausalLanguageModelingLos
         if past is not None:
             input_ids = input_ids[:, -1:]
 
-        return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past}
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "past_key_values": past,
+        }
 
     @unpack_inputs
     @add_code_sample_docstrings(
@@ -1231,17 +1401,35 @@ class TFRemBertForCausalLM(TFRemBertPreTrainedModel, TFCausalLanguageModelingLos
         )
 
     # Copied from transformers.models.bert.modeling_tf_bert.TFBertLMHeadModel.serving_output
-    def serving_output(self, output: TFCausalLMOutputWithCrossAttentions) -> TFCausalLMOutputWithCrossAttentions:
+    def serving_output(
+        self, output: TFCausalLMOutputWithCrossAttentions
+    ) -> TFCausalLMOutputWithCrossAttentions:
         output_cache = self.config.use_cache and self.config.is_decoder
         pkv = tf.convert_to_tensor(output.past_key_values) if output_cache else None
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
-        cross_attns = tf.convert_to_tensor(output.cross_attentions) if output.cross_attentions is not None else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
+        cross_attns = (
+            tf.convert_to_tensor(output.cross_attentions)
+            if output.cross_attentions is not None
+            else None
+        )
         if not (self.config.output_attentions and self.config.add_cross_attention):
             cross_attns = None
 
         return TFCausalLMOutputWithCrossAttentions(
-            logits=output.logits, past_key_values=pkv, hidden_states=hs, attentions=attns, cross_attentions=cross_attns
+            logits=output.logits,
+            past_key_values=pkv,
+            hidden_states=hs,
+            attentions=attns,
+            cross_attentions=cross_attns,
         )
 
     @staticmethod
@@ -1249,7 +1437,11 @@ class TFRemBertForCausalLM(TFRemBertPreTrainedModel, TFCausalLanguageModelingLos
     def _reorder_cache(past, beam_idx):
         reordered_past = ()
         for layer_past in past:
-            reordered_past += (tuple(tf.gather(past_state, beam_idx, axis=0) for past_state in layer_past),)
+            reordered_past += (
+                tuple(
+                    tf.gather(past_state, beam_idx, axis=0) for past_state in layer_past
+                ),
+            )
         return reordered_past
 
 
@@ -1259,7 +1451,9 @@ class TFRemBertForCausalLM(TFRemBertPreTrainedModel, TFCausalLanguageModelingLos
     """,
     REMBERT_START_DOCSTRING,
 )
-class TFRemBertForSequenceClassification(TFRemBertPreTrainedModel, TFSequenceClassificationLoss):
+class TFRemBertForSequenceClassification(
+    TFRemBertPreTrainedModel, TFSequenceClassificationLoss
+):
     def __init__(self, config: RemBertConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
@@ -1274,7 +1468,9 @@ class TFRemBertForSequenceClassification(TFRemBertPreTrainedModel, TFSequenceCla
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1316,7 +1512,11 @@ class TFRemBertForSequenceClassification(TFRemBertPreTrainedModel, TFSequenceCla
         pooled_output = outputs[1]
         pooled_output = self.dropout(inputs=pooled_output, training=training)
         logits = self.classifier(inputs=pooled_output)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1329,11 +1529,23 @@ class TFRemBertForSequenceClassification(TFRemBertPreTrainedModel, TFSequenceCla
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFSequenceClassifierOutput
+    ) -> TFSequenceClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFSequenceClassifierOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1350,7 +1562,9 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
         self.rembert = TFRemBertMainLayer(config, name="rembert")
         self.dropout = tf.keras.layers.Dropout(rate=config.classifier_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            units=1, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            units=1,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="classifier",
         )
 
     @property
@@ -1364,7 +1578,9 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
         return {"input_ids": tf.constant(MULTIPLE_CHOICE_DUMMY_INPUTS)}
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1398,18 +1614,31 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
             num_choices = shape_list(inputs_embeds)[1]
             seq_length = shape_list(inputs_embeds)[2]
 
-        flat_input_ids = tf.reshape(tensor=input_ids, shape=(-1, seq_length)) if input_ids is not None else None
+        flat_input_ids = (
+            tf.reshape(tensor=input_ids, shape=(-1, seq_length))
+            if input_ids is not None
+            else None
+        )
         flat_attention_mask = (
-            tf.reshape(tensor=attention_mask, shape=(-1, seq_length)) if attention_mask is not None else None
+            tf.reshape(tensor=attention_mask, shape=(-1, seq_length))
+            if attention_mask is not None
+            else None
         )
         flat_token_type_ids = (
-            tf.reshape(tensor=token_type_ids, shape=(-1, seq_length)) if token_type_ids is not None else None
+            tf.reshape(tensor=token_type_ids, shape=(-1, seq_length))
+            if token_type_ids is not None
+            else None
         )
         flat_position_ids = (
-            tf.reshape(tensor=position_ids, shape=(-1, seq_length)) if position_ids is not None else None
+            tf.reshape(tensor=position_ids, shape=(-1, seq_length))
+            if position_ids is not None
+            else None
         )
         flat_inputs_embeds = (
-            tf.reshape(tensor=inputs_embeds, shape=(-1, seq_length, shape_list(inputs_embeds)[3]))
+            tf.reshape(
+                tensor=inputs_embeds,
+                shape=(-1, seq_length, shape_list(inputs_embeds)[3]),
+            )
             if inputs_embeds is not None
             else None
         )
@@ -1429,7 +1658,11 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
         pooled_output = self.dropout(inputs=pooled_output, training=training)
         logits = self.classifier(inputs=pooled_output)
         reshaped_logits = tf.reshape(tensor=logits, shape=(-1, num_choices))
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=reshaped_logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=reshaped_logits)
+        )
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1445,9 +1678,15 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
     @tf.function(
         input_signature=[
             {
-                "input_ids": tf.TensorSpec((None, None, None), tf.int64, name="input_ids"),
-                "attention_mask": tf.TensorSpec((None, None, None), tf.int64, name="attention_mask"),
-                "token_type_ids": tf.TensorSpec((None, None, None), tf.int64, name="token_type_ids"),
+                "input_ids": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="input_ids"
+                ),
+                "attention_mask": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="attention_mask"
+                ),
+                "token_type_ids": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="token_type_ids"
+                ),
             }
         ]
     )
@@ -1456,11 +1695,23 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
 
         return self.serving_output(output)
 
-    def serving_output(self, output: TFMultipleChoiceModelOutput) -> TFMultipleChoiceModelOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFMultipleChoiceModelOutput
+    ) -> TFMultipleChoiceModelOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFMultipleChoiceModelOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFMultipleChoiceModelOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1470,20 +1721,28 @@ class TFRemBertForMultipleChoice(TFRemBertPreTrainedModel, TFMultipleChoiceLoss)
     """,
     REMBERT_START_DOCSTRING,
 )
-class TFRemBertForTokenClassification(TFRemBertPreTrainedModel, TFTokenClassificationLoss):
+class TFRemBertForTokenClassification(
+    TFRemBertPreTrainedModel, TFTokenClassificationLoss
+):
     def __init__(self, config: RemBertConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
         self.num_labels = config.num_labels
 
-        self.rembert = TFRemBertMainLayer(config, name="rembert", add_pooling_layer=False)
+        self.rembert = TFRemBertMainLayer(
+            config, name="rembert", add_pooling_layer=False
+        )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
         self.classifier = tf.keras.layers.Dense(
-            units=config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            units=config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="classifier",
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1523,7 +1782,11 @@ class TFRemBertForTokenClassification(TFRemBertPreTrainedModel, TFTokenClassific
         sequence_output = outputs[0]
         sequence_output = self.dropout(inputs=sequence_output, training=training)
         logits = self.classifier(inputs=sequence_output)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1536,11 +1799,23 @@ class TFRemBertForTokenClassification(TFRemBertPreTrainedModel, TFTokenClassific
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFTokenClassifierOutput) -> TFTokenClassifierOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFTokenClassifierOutput
+    ) -> TFTokenClassifierOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFTokenClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
+        return TFTokenClassifierOutput(
+            logits=output.logits, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1556,13 +1831,19 @@ class TFRemBertForQuestionAnswering(TFRemBertPreTrainedModel, TFQuestionAnswerin
 
         self.num_labels = config.num_labels
 
-        self.rembert = TFRemBertMainLayer(config, add_pooling_layer=False, name="rembert")
+        self.rembert = TFRemBertMainLayer(
+            config, add_pooling_layer=False, name="rembert"
+        )
         self.qa_outputs = tf.keras.layers.Dense(
-            units=config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            units=config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="qa_outputs",
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        REMBERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint="google/rembert",
@@ -1616,7 +1897,9 @@ class TFRemBertForQuestionAnswering(TFRemBertPreTrainedModel, TFQuestionAnswerin
         if start_positions is not None and end_positions is not None:
             labels = {"start_position": start_positions}
             labels["end_position"] = end_positions
-            loss = self.hf_compute_loss(labels=labels, logits=(start_logits, end_logits))
+            loss = self.hf_compute_loss(
+                labels=labels, logits=(start_logits, end_logits)
+            )
 
         if not return_dict:
             output = (start_logits, end_logits) + outputs[2:]
@@ -1630,10 +1913,23 @@ class TFRemBertForQuestionAnswering(TFRemBertPreTrainedModel, TFQuestionAnswerin
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFQuestionAnsweringModelOutput) -> TFQuestionAnsweringModelOutput:
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFQuestionAnsweringModelOutput
+    ) -> TFQuestionAnsweringModelOutput:
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFQuestionAnsweringModelOutput(
-            start_logits=output.start_logits, end_logits=output.end_logits, hidden_states=hs, attentions=attns
+            start_logits=output.start_logits,
+            end_logits=output.end_logits,
+            hidden_states=hs,
+            attentions=attns,
         )

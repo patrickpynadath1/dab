@@ -32,7 +32,11 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+from ...pytorch_utils import (
+    apply_chunking_to_forward,
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
 from ...utils import (
     ModelOutput,
     add_start_docstrings,
@@ -57,7 +61,7 @@ VISUAL_BERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "uclanlp/visualbert-vcr-coco-pre",
     "uclanlp/visualbert-nlvr2",
     "uclanlp/visualbert-nlvr2-pre",
-    "uclanlp/visualbert-nlvr2-coco-pre"
+    "uclanlp/visualbert-nlvr2-coco-pre",
     # See all VisualBERT models at https://huggingface.co/models?filter=visual_bert
 ]
 
@@ -67,9 +71,15 @@ class VisualBertEmbeddings(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.word_embeddings = nn.Embedding(
+            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id
+        )
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
+        self.token_type_embeddings = nn.Embedding(
+            config.type_vocab_size, config.hidden_size
+        )
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
@@ -78,12 +88,18 @@ class VisualBertEmbeddings(nn.Module):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer(
+            "position_ids", torch.arange(config.max_position_embeddings).expand((1, -1))
+        )
 
         # For Visual Features
         # Token type and position embedding for image features
-        self.visual_token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
-        self.visual_position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.visual_token_type_embeddings = nn.Embedding(
+            config.type_vocab_size, config.hidden_size
+        )
+        self.visual_position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
 
         if config.special_visual_initialize:
             self.visual_token_type_embeddings.weight.data = nn.Parameter(
@@ -93,7 +109,9 @@ class VisualBertEmbeddings(nn.Module):
                 self.position_embeddings.weight.data.clone(), requires_grad=True
             )
 
-        self.visual_projection = nn.Linear(config.visual_embedding_dim, config.hidden_size)
+        self.visual_projection = nn.Linear(
+            config.visual_embedding_dim, config.hidden_size
+        )
 
     def forward(
         self,
@@ -119,7 +137,9 @@ class VisualBertEmbeddings(nn.Module):
             inputs_embeds = self.word_embeddings(input_ids)
 
         if token_type_ids is None:
-            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
+            token_type_ids = torch.zeros(
+                input_shape, dtype=torch.long, device=self.position_ids.device
+            )
 
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
@@ -132,11 +152,15 @@ class VisualBertEmbeddings(nn.Module):
         if visual_embeds is not None:
             if visual_token_type_ids is None:
                 visual_token_type_ids = torch.ones(
-                    visual_embeds.size()[:-1], dtype=torch.long, device=self.position_ids.device
+                    visual_embeds.size()[:-1],
+                    dtype=torch.long,
+                    device=self.position_ids.device,
                 )
 
             visual_embeds = self.visual_projection(visual_embeds)
-            visual_token_type_embeddings = self.visual_token_type_embeddings(visual_token_type_ids)
+            visual_token_type_embeddings = self.visual_token_type_embeddings(
+                visual_token_type_ids
+            )
 
             if image_text_alignment is not None:
                 # image_text_alignment = Batch x image_length x alignment_number.
@@ -148,23 +172,35 @@ class VisualBertEmbeddings(nn.Module):
                 image_text_alignment = image_text_alignment_mask * image_text_alignment
 
                 # Batch x image_length x alignment length x dim
-                visual_position_embeddings = self.position_embeddings(image_text_alignment)
-                visual_position_embeddings *= image_text_alignment_mask.to(dtype=dtype).unsqueeze(-1)
+                visual_position_embeddings = self.position_embeddings(
+                    image_text_alignment
+                )
+                visual_position_embeddings *= image_text_alignment_mask.to(
+                    dtype=dtype
+                ).unsqueeze(-1)
                 visual_position_embeddings = visual_position_embeddings.sum(2)
 
                 # We want to averge along the alignment_number dimension.
-                image_text_alignment_mask = image_text_alignment_mask.to(dtype=dtype).sum(2)
+                image_text_alignment_mask = image_text_alignment_mask.to(
+                    dtype=dtype
+                ).sum(2)
 
                 if (image_text_alignment_mask == 0).sum() != 0:
-                    image_text_alignment_mask[image_text_alignment_mask == 0] = 1  # Avoid divide by zero error
+                    image_text_alignment_mask[image_text_alignment_mask == 0] = (
+                        1  # Avoid divide by zero error
+                    )
                     logger.warning(
                         "Found 0 values in `image_text_alignment_mask`. Setting them to 1 to avoid divide-by-zero"
                         " error."
                     )
-                visual_position_embeddings = visual_position_embeddings / image_text_alignment_mask.unsqueeze(-1)
+                visual_position_embeddings = (
+                    visual_position_embeddings / image_text_alignment_mask.unsqueeze(-1)
+                )
 
                 visual_position_ids = torch.zeros(
-                    *visual_embeds.size()[:-1], dtype=torch.long, device=visual_embeds.device
+                    *visual_embeds.size()[:-1],
+                    dtype=torch.long,
+                    device=visual_embeds.device,
                 )
 
                 # When fine-tuning the detector , the image_text_alignment is sometimes padded too long.
@@ -174,18 +210,29 @@ class VisualBertEmbeddings(nn.Module):
                             f"Visual position embeddings length: {visual_position_embeddings.size(1)} "
                             f"should be the same as `visual_embeds` length: {visual_embeds.size(1)}"
                         )
-                    visual_position_embeddings = visual_position_embeddings[:, : visual_embeds.size(1), :]
+                    visual_position_embeddings = visual_position_embeddings[
+                        :, : visual_embeds.size(1), :
+                    ]
 
-                visual_position_embeddings = visual_position_embeddings + self.visual_position_embeddings(
-                    visual_position_ids
+                visual_position_embeddings = (
+                    visual_position_embeddings
+                    + self.visual_position_embeddings(visual_position_ids)
                 )
             else:
                 visual_position_ids = torch.zeros(
-                    *visual_embeds.size()[:-1], dtype=torch.long, device=visual_embeds.device
+                    *visual_embeds.size()[:-1],
+                    dtype=torch.long,
+                    device=visual_embeds.device,
                 )
-                visual_position_embeddings = self.visual_position_embeddings(visual_position_ids)
+                visual_position_embeddings = self.visual_position_embeddings(
+                    visual_position_ids
+                )
 
-            visual_embeddings = visual_embeds + visual_position_embeddings + visual_token_type_embeddings
+            visual_embeddings = (
+                visual_embeds
+                + visual_position_embeddings
+                + visual_token_type_embeddings
+            )
 
             embeddings = torch.cat((embeddings, visual_embeddings), dim=1)
 
@@ -197,7 +244,9 @@ class VisualBertEmbeddings(nn.Module):
 class VisualBertSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
                 f"heads ({config.num_attention_heads})"
@@ -214,7 +263,10 @@ class VisualBertSelfAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -257,7 +309,9 @@ class VisualBertSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
 
         return outputs
 
@@ -270,7 +324,9 @@ class VisualBertSelfOutput(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -288,7 +344,10 @@ class VisualBertAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
+            heads,
+            self.self.num_attention_heads,
+            self.self.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
@@ -299,7 +358,9 @@ class VisualBertAttention(nn.Module):
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
-        self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
+        self.self.all_head_size = (
+            self.self.attention_head_size * self.self.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
@@ -316,7 +377,9 @@ class VisualBertAttention(nn.Module):
             output_attentions,
         )
         attention_output = self.output(self_outputs[0], hidden_states)
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
@@ -344,7 +407,9 @@ class VisualBertOutput(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -375,10 +440,15 @@ class VisualBertLayer(nn.Module):
         )
         attention_output = self_attention_outputs[0]
 
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
+            self.feed_forward_chunk,
+            self.chunk_size_feed_forward,
+            self.seq_len_dim,
+            attention_output,
         )
         outputs = (layer_output,) + outputs
 
@@ -394,7 +464,9 @@ class VisualBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.ModuleList([VisualBertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList(
+            [VisualBertLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
     def forward(
@@ -430,7 +502,9 @@ class VisualBertEncoder(nn.Module):
                     layer_head_mask,
                 )
             else:
-                layer_outputs = layer_module(hidden_states, attention_mask, layer_head_mask, output_attentions)
+                layer_outputs = layer_module(
+                    hidden_states, attention_mask, layer_head_mask, output_attentions
+                )
 
             hidden_states = layer_outputs[0]
             if output_attentions:
@@ -450,7 +524,9 @@ class VisualBertEncoder(nn.Module):
                 if v is not None
             )
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_self_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
         )
 
 
@@ -713,8 +789,12 @@ class VisualBertModel(VisualBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    @add_start_docstrings_to_model_forward(VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -763,14 +843,24 @@ class VisualBertModel(VisualBertPreTrainedModel):
         last_hidden_states = outputs.last_hidden_state
         ```"""
 
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = input_ids.size()
         elif inputs_embeds is not None:
@@ -793,7 +883,9 @@ class VisualBertModel(VisualBertPreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         if visual_embeds is not None:
-            combined_attention_mask = torch.cat((attention_mask, visual_attention_mask), dim=-1)
+            combined_attention_mask = torch.cat(
+                (attention_mask, visual_attention_mask), dim=-1
+            )
             extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(
                 combined_attention_mask, (batch_size, input_shape + visual_input_shape)
             )
@@ -825,7 +917,9 @@ class VisualBertModel(VisualBertPreTrainedModel):
             text_embedding_output = embedding_output[:, :text_length, :]
             visual_embedding_output = embedding_output[:, text_length:, :]
 
-            text_extended_attention_mask = extended_attention_mask[:, :, text_length, :text_length]
+            text_extended_attention_mask = extended_attention_mask[
+                :, :, text_length, :text_length
+            ]
 
             encoded_outputs = self.encoder(
                 text_embedding_output,
@@ -835,9 +929,15 @@ class VisualBertModel(VisualBertPreTrainedModel):
                 return_dict=return_dict,
             )
             sequence_output = encoded_outputs[0]
-            concatenated_input = torch.cat((sequence_output, visual_embedding_output), dim=1)
-            sequence_output = self.additional_layer(concatenated_input, extended_attention_mask)
-            pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+            concatenated_input = torch.cat(
+                (sequence_output, visual_embedding_output), dim=1
+            )
+            sequence_output = self.additional_layer(
+                concatenated_input, extended_attention_mask
+            )
+            pooled_output = (
+                self.pooler(sequence_output) if self.pooler is not None else None
+            )
 
         else:
             encoder_outputs = self.encoder(
@@ -850,7 +950,9 @@ class VisualBertModel(VisualBertPreTrainedModel):
             )
             sequence_output = encoder_outputs[0]
 
-            pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+            pooled_output = (
+                self.pooler(sequence_output) if self.pooler is not None else None
+            )
 
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
@@ -886,8 +988,12 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.cls.predictions.decoder = new_embeddings
 
-    @add_start_docstrings_to_model_forward(VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=VisualBertForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=VisualBertForPreTrainingOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -953,7 +1059,9 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
         prediction_logits = outputs.prediction_logits
         seq_relationship_logits = outputs.seq_relationship_logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.visual_bert(
             input_ids,
@@ -972,7 +1080,9 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
         )
 
         sequence_output, pooled_output = outputs[:2]
-        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+        prediction_scores, seq_relationship_score = self.cls(
+            sequence_output, pooled_output
+        )
 
         total_loss = None
         if labels is not None and sentence_image_labels is not None:
@@ -984,8 +1094,12 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                 )
 
             loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            sentence_image_loss = loss_fct(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
+            masked_lm_loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+            )
+            sentence_image_loss = loss_fct(
+                seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1)
+            )
             total_loss = masked_lm_loss + sentence_image_loss
 
         if labels is not None and sentence_image_labels is None:
@@ -997,7 +1111,9 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                 )
 
             loss_fct = CrossEntropyLoss()
-            total_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            total_loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+            )
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
@@ -1033,7 +1149,9 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
     @add_start_docstrings_to_model_forward(
         VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length")
     )
-    @replace_return_docstrings(output_type=MultipleChoiceModelOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=MultipleChoiceModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1097,13 +1215,31 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
         loss = outputs.loss
         logits = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+        num_choices = (
+            input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        )
 
-        input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
-        attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
+        input_ids = (
+            input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
+        )
+        attention_mask = (
+            attention_mask.view(-1, attention_mask.size(-1))
+            if attention_mask is not None
+            else None
+        )
+        token_type_ids = (
+            token_type_ids.view(-1, token_type_ids.size(-1))
+            if token_type_ids is not None
+            else None
+        )
+        position_ids = (
+            position_ids.view(-1, position_ids.size(-1))
+            if position_ids is not None
+            else None
+        )
         inputs_embeds = (
             inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
             if inputs_embeds is not None
@@ -1184,8 +1320,12 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @add_start_docstrings_to_model_forward(VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1240,7 +1380,9 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         loss = outputs.loss
         scores = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # Get the index of the last text token
         index_to_gather = attention_mask.sum(1) - 2  # as in original code
@@ -1265,7 +1407,9 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
 
         # TO-CHECK: From the original code
         index_to_gather = (
-            index_to_gather.unsqueeze(-1).unsqueeze(-1).expand(index_to_gather.size(0), 1, sequence_output.size(-1))
+            index_to_gather.unsqueeze(-1)
+            .unsqueeze(-1)
+            .expand(index_to_gather.size(0), 1, sequence_output.size(-1))
         )
         pooled_output = torch.gather(sequence_output, 1, index_to_gather)
 
@@ -1310,8 +1454,12 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @add_start_docstrings_to_model_forward(VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1366,7 +1514,9 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
         loss = outputs.loss
         scores = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.visual_bert(
             input_ids,
@@ -1426,7 +1576,10 @@ class VisualBertRegionToPhraseAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -1470,8 +1623,12 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @add_start_docstrings_to_model_forward(VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        VISUAL_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=SequenceClassifierOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1535,9 +1692,13 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         scores = outputs.logits
         ```"""
         if region_to_phrase_position is None:
-            raise ValueError("`region_to_phrase_position` should not be None when using Flickr Model.")
+            raise ValueError(
+                "`region_to_phrase_position` should not be None when using Flickr Model."
+            )
 
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.visual_bert(
             input_ids,
@@ -1560,13 +1721,21 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         region_to_phrase_position_mask = (region_to_phrase_position != -1).long()
 
         # Make the -1 become 0
-        region_to_phrase_position = region_to_phrase_position * region_to_phrase_position_mask
+        region_to_phrase_position = (
+            region_to_phrase_position * region_to_phrase_position_mask
+        )
 
         # Selected_positions = batch x selected position x dim
-        expanded_region_to_phrase_positions = region_to_phrase_position.unsqueeze(2).expand(
-            region_to_phrase_position.size(0), region_to_phrase_position.size(1), sequence_output.size(2)
+        expanded_region_to_phrase_positions = region_to_phrase_position.unsqueeze(
+            2
+        ).expand(
+            region_to_phrase_position.size(0),
+            region_to_phrase_position.size(1),
+            sequence_output.size(2),
         )
-        selected_positions = sequence_output.gather(1, expanded_region_to_phrase_positions)
+        selected_positions = sequence_output.gather(
+            1, expanded_region_to_phrase_positions
+        )
 
         # Visual Features = batch x visual_feature_length x dim
         # This will need separate image and visual masks.
@@ -1578,7 +1747,9 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
                 f" as visual attention mask length: {visual_attention_mask.size(1)}."
             )
 
-        logits = self.attention(selected_positions, visual_features, visual_attention_mask)
+        logits = self.attention(
+            selected_positions, visual_features, visual_attention_mask
+        )
 
         loss = None
 

@@ -104,7 +104,29 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
             ids,
             [
                 value + tokenizer.fairseq_offset
-                for value in [8, 21, 84, 55, 24, 19, 7, 2, 602, 347, 347, 347, 3, 12, 66, 46, 72, 80, 6, 2, 4]
+                for value in [
+                    8,
+                    21,
+                    84,
+                    55,
+                    24,
+                    19,
+                    7,
+                    2,
+                    602,
+                    347,
+                    347,
+                    347,
+                    3,
+                    12,
+                    66,
+                    46,
+                    72,
+                    80,
+                    6,
+                    2,
+                    4,
+                ]
             ],
         )
 
@@ -138,11 +160,19 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     # overwrite from test_tokenization_common to speed up test
     def test_save_pretrained(self):
-        self.tokenizers_list[0] = (self.rust_tokenizer_class, "hf-internal-testing/tiny-random-nllb", {})
+        self.tokenizers_list[0] = (
+            self.rust_tokenizer_class,
+            "hf-internal-testing/tiny-random-nllb",
+            {},
+        )
         for tokenizer, pretrained_name, kwargs in self.tokenizers_list:
             with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
-                tokenizer_r = self.rust_tokenizer_class.from_pretrained(pretrained_name, **kwargs)
-                tokenizer_p = self.tokenizer_class.from_pretrained(pretrained_name, **kwargs)
+                tokenizer_r = self.rust_tokenizer_class.from_pretrained(
+                    pretrained_name, **kwargs
+                )
+                tokenizer_p = self.tokenizer_class.from_pretrained(
+                    pretrained_name, **kwargs
+                )
 
                 tmpdirname2 = tempfile.mkdtemp()
 
@@ -151,7 +181,9 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
                 # Checks it save with the same files + the tokenizer.json file for the fast one
                 self.assertTrue(any("tokenizer.json" in f for f in tokenizer_r_files))
-                tokenizer_r_files = tuple(f for f in tokenizer_r_files if "tokenizer.json" not in f)
+                tokenizer_r_files = tuple(
+                    f for f in tokenizer_r_files if "tokenizer.json" not in f
+                )
                 self.assertSequenceEqual(tokenizer_r_files, tokenizer_p_files)
 
                 # Checks everything loads correctly in the same way
@@ -167,7 +199,9 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 # Save tokenizer rust, legacy_format=True
                 tmpdirname2 = tempfile.mkdtemp()
 
-                tokenizer_r_files = tokenizer_r.save_pretrained(tmpdirname2, legacy_format=True)
+                tokenizer_r_files = tokenizer_r.save_pretrained(
+                    tmpdirname2, legacy_format=True
+                )
                 tokenizer_p_files = tokenizer_p.save_pretrained(tmpdirname2)
 
                 # Checks it save with the same files
@@ -186,7 +220,9 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 # Save tokenizer rust, legacy_format=False
                 tmpdirname2 = tempfile.mkdtemp()
 
-                tokenizer_r_files = tokenizer_r.save_pretrained(tmpdirname2, legacy_format=False)
+                tokenizer_r_files = tokenizer_r.save_pretrained(
+                    tmpdirname2, legacy_format=False
+                )
                 tokenizer_p_files = tokenizer_p.save_pretrained(tmpdirname2)
 
                 # Checks it saved the tokenizer.json file
@@ -245,7 +281,10 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertEqual(batch.labels.shape[1], 3)
 
                 batch_encoder_only = tokenizer.prepare_seq2seq_batch(
-                    src_texts=src_text, max_length=3, max_target_length=10, return_tensors="pt"
+                    src_texts=src_text,
+                    max_length=3,
+                    max_target_length=10,
+                    return_tensors="pt",
                 )
                 self.assertEqual(batch_encoder_only.input_ids.shape[1], 3)
                 self.assertEqual(batch_encoder_only.attention_mask.shape[1], 3)
@@ -266,7 +305,9 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 )
                 r_output = tokenizer_r.encode("Hey this is a <special> token")
 
-                special_token_id = tokenizer_r.encode("<special>", add_special_tokens=False)[0]
+                special_token_id = tokenizer_r.encode(
+                    "<special>", add_special_tokens=False
+                )[0]
 
                 self.assertTrue(special_token_id in r_output)
 
@@ -277,7 +318,9 @@ class NllbTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                         **kwargs,  # , from_slow=True <- unfortunately too slow to convert
                     )
                     tokenizer_p = self.tokenizer_class.from_pretrained(
-                        pretrained_name, additional_special_tokens=added_tokens, **kwargs
+                        pretrained_name,
+                        additional_special_tokens=added_tokens,
+                        **kwargs,
                     )
 
                     p_output = tokenizer_p.encode("Hey this is a <special> token")
@@ -347,7 +390,9 @@ class NllbDistilledIntegrationTest(unittest.TestCase):
         # fmt: on
 
         result = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-        expected_romanian = self.tokenizer.decode(generated_ids[1:], skip_special_tokens=True)
+        expected_romanian = self.tokenizer.decode(
+            generated_ids[1:], skip_special_tokens=True
+        )
         self.assertEqual(result, expected_romanian)
         self.assertNotIn(self.tokenizer.eos_token, result)
 
@@ -355,13 +400,17 @@ class NllbDistilledIntegrationTest(unittest.TestCase):
         src_text = ["this is gunna be a long sentence " * 20]
         assert isinstance(src_text[0], str)
         desired_max_length = 10
-        ids = self.tokenizer(src_text, max_length=desired_max_length, truncation=True).input_ids[0]
+        ids = self.tokenizer(
+            src_text, max_length=desired_max_length, truncation=True
+        ).input_ids[0]
         self.assertEqual(ids[-2], 2)
         self.assertEqual(ids[-1], EN_CODE)
         self.assertEqual(len(ids), desired_max_length)
 
     def test_mask_token(self):
-        self.assertListEqual(self.tokenizer.convert_tokens_to_ids(["<mask>", "ar_AR"]), [256203, 3])
+        self.assertListEqual(
+            self.tokenizer.convert_tokens_to_ids(["<mask>", "ar_AR"]), [256203, 3]
+        )
 
     def test_special_tokens_unaffacted_by_save_load(self):
         tmpdirname = tempfile.mkdtemp()
@@ -381,7 +430,9 @@ class NllbDistilledIntegrationTest(unittest.TestCase):
             return_tensors="pt",
         )
         batch["decoder_input_ids"] = shift_tokens_right(
-            batch["labels"], self.tokenizer.pad_token_id, self.tokenizer.lang_code_to_id["ron_Latn"]
+            batch["labels"],
+            self.tokenizer.pad_token_id,
+            self.tokenizer.lang_code_to_id["ron_Latn"],
         )
 
         self.assertIsInstance(batch, BatchEncoding)
@@ -393,18 +444,32 @@ class NllbDistilledIntegrationTest(unittest.TestCase):
         self.assertEqual(2, batch.decoder_input_ids[0, -1])  # EOS
         # Test that special tokens are reset
         self.assertEqual(self.tokenizer.prefix_tokens, [])
-        self.assertEqual(self.tokenizer.suffix_tokens, [self.tokenizer.eos_token_id, EN_CODE])
+        self.assertEqual(
+            self.tokenizer.suffix_tokens, [self.tokenizer.eos_token_id, EN_CODE]
+        )
 
     def test_seq2seq_max_length(self):
-        batch = self.tokenizer(self.src_text, padding=True, truncation=True, max_length=3, return_tensors="pt")
+        batch = self.tokenizer(
+            self.src_text,
+            padding=True,
+            truncation=True,
+            max_length=3,
+            return_tensors="pt",
+        )
         targets = self.tokenizer(
-            text_target=self.tgt_text, padding=True, truncation=True, max_length=10, return_tensors="pt"
+            text_target=self.tgt_text,
+            padding=True,
+            truncation=True,
+            max_length=10,
+            return_tensors="pt",
         )
         labels = targets["input_ids"]
         batch["decoder_input_ids"] = shift_tokens_right(
             labels,
             self.tokenizer.pad_token_id,
-            decoder_start_token_id=self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang],
+            decoder_start_token_id=self.tokenizer.lang_code_to_id[
+                self.tokenizer.tgt_lang
+            ],
         )
 
         self.assertEqual(batch.input_ids.shape[1], 3)

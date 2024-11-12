@@ -29,7 +29,11 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_electra": ["ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP", "ElectraConfig", "ElectraOnnxConfig"],
+    "configuration_electra": [
+        "ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "ElectraConfig",
+        "ElectraOnnxConfig",
+    ],
     "tokenization_electra": ["ElectraTokenizer"],
 }
 
@@ -99,7 +103,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_electra import ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP, ElectraConfig, ElectraOnnxConfig
+    from .configuration_electra import (
+        ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        ElectraConfig,
+        ElectraOnnxConfig,
+    )
     from .tokenization_electra import ElectraTokenizer
 
     try:
@@ -169,4 +177,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

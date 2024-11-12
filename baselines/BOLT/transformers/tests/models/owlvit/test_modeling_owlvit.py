@@ -42,8 +42,15 @@ if is_torch_available():
     import torch
     from torch import nn
 
-    from transformers import OwlViTForObjectDetection, OwlViTModel, OwlViTTextModel, OwlViTVisionModel
-    from transformers.models.owlvit.modeling_owlvit import OWLVIT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers import (
+        OwlViTForObjectDetection,
+        OwlViTModel,
+        OwlViTTextModel,
+        OwlViTVisionModel,
+    )
+    from transformers.models.owlvit.modeling_owlvit import (
+        OWLVIT_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -90,7 +97,9 @@ class OwlViTVisionModelTester:
         self.seq_length = num_patches + 1
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
         config = self.get_config()
 
         return config, pixel_values
@@ -119,8 +128,14 @@ class OwlViTVisionModelTester:
             result = model(pixel_values)
         # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         num_patches = (self.image_size // self.patch_size) ** 2
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, num_patches + 1, self.hidden_size))
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, num_patches + 1, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, num_patches + 1, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooler_output.shape,
+            (self.batch_size, num_patches + 1, self.hidden_size),
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -145,7 +160,10 @@ class OwlViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def setUp(self):
         self.model_tester = OwlViTVisionModelTester(self)
         self.config_tester = ConfigTester(
-            self, config_class=OwlViTVisionConfig, has_text_modality=False, hidden_size=37
+            self,
+            config_class=OwlViTVisionConfig,
+            has_text_modality=False,
+            hidden_size=37,
         )
 
     def test_config(self):
@@ -188,11 +206,15 @@ class OwlViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_training_gradient_checkpointing(self):
         pass
 
-    @unittest.skip(reason="OwlViTVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="OwlViTVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="OwlViTVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="OwlViTVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -243,11 +265,15 @@ class OwlViTTextModelTester:
         self.scope = scope
 
     def prepare_config_and_inputs(self):
-        input_ids = ids_tensor([self.batch_size * self.num_queries, self.seq_length], self.vocab_size)
+        input_ids = ids_tensor(
+            [self.batch_size * self.num_queries, self.seq_length], self.vocab_size
+        )
         input_mask = None
 
         if self.use_input_mask:
-            input_mask = random_attention_mask([self.batch_size * self.num_queries, self.seq_length])
+            input_mask = random_attention_mask(
+                [self.batch_size * self.num_queries, self.seq_length]
+            )
 
         if input_mask is not None:
             num_text, seq_length = input_mask.shape
@@ -281,9 +307,13 @@ class OwlViTTextModelTester:
             result = model(input_ids=input_ids, attention_mask=input_mask)
 
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size * self.num_queries, self.seq_length, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size * self.num_queries, self.seq_length, self.hidden_size),
         )
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size * self.num_queries, self.hidden_size))
+        self.parent.assertEqual(
+            result.pooler_output.shape,
+            (self.batch_size * self.num_queries, self.hidden_size),
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -302,7 +332,9 @@ class OwlViTTextModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = OwlViTTextModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=OwlViTTextConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=OwlViTTextConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -323,11 +355,15 @@ class OwlViTTextModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip(reason="OwlViTTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="OwlViTTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="OwlViTTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="OwlViTTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -348,13 +384,19 @@ class OwlViTModelTester:
         self.vision_config = self.vision_model_tester.get_config().to_dict()
 
     def prepare_config_and_inputs(self):
-        text_config, input_ids, attention_mask = self.text_model_tester.prepare_config_and_inputs()
-        vision_config, pixel_values = self.vision_model_tester.prepare_config_and_inputs()
+        text_config, input_ids, attention_mask = (
+            self.text_model_tester.prepare_config_and_inputs()
+        )
+        vision_config, pixel_values = (
+            self.vision_model_tester.prepare_config_and_inputs()
+        )
         config = self.get_config()
         return config, input_ids, attention_mask, pixel_values
 
     def get_config(self):
-        return OwlViTConfig.from_text_vision_configs(self.text_config, self.vision_config, projection_dim=64)
+        return OwlViTConfig.from_text_vision_configs(
+            self.text_config, self.vision_config, projection_dim=64
+        )
 
     def create_and_check_model(self, config, input_ids, attention_mask, pixel_values):
         model = OwlViTModel(config).to(torch_device).eval()
@@ -482,7 +524,9 @@ class OwlViTModelTest(ModelTesterMixin, unittest.TestCase):
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(
+                set(model_state_dict.keys()), set(loaded_model_state_dict.keys())
+            )
 
             models_equal = True
             for layer_name, p1 in model_state_dict.items():
@@ -499,7 +543,9 @@ class OwlViTModelTest(ModelTesterMixin, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             config.save_pretrained(tmp_dir_name)
             vision_config = OwlViTVisionConfig.from_pretrained(tmp_dir_name)
-            self.assertDictEqual(config.vision_config.to_dict(), vision_config.to_dict())
+            self.assertDictEqual(
+                config.vision_config.to_dict(), vision_config.to_dict()
+            )
 
         # Save OwlViTConfig and check if we can load OwlViTTextConfig from it
         with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -524,13 +570,19 @@ class OwlViTForObjectDetectionTester:
         self.vision_config = self.vision_model_tester.get_config().to_dict()
 
     def prepare_config_and_inputs(self):
-        text_config, input_ids, attention_mask = self.text_model_tester.prepare_config_and_inputs()
-        vision_config, pixel_values = self.vision_model_tester.prepare_config_and_inputs()
+        text_config, input_ids, attention_mask = (
+            self.text_model_tester.prepare_config_and_inputs()
+        )
+        vision_config, pixel_values = (
+            self.vision_model_tester.prepare_config_and_inputs()
+        )
         config = self.get_config()
         return config, pixel_values, input_ids, attention_mask
 
     def get_config(self):
-        return OwlViTConfig.from_text_vision_configs(self.text_config, self.vision_config, projection_dim=64)
+        return OwlViTConfig.from_text_vision_configs(
+            self.text_config, self.vision_config, projection_dim=64
+        )
 
     def create_and_check_model(self, config, pixel_values, input_ids, attention_mask):
         model = OwlViTForObjectDetection(config).to(torch_device).eval()
@@ -544,17 +596,20 @@ class OwlViTForObjectDetectionTester:
 
         pred_boxes_size = (
             self.vision_model_tester.batch_size,
-            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size) ** 2,
+            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size)
+            ** 2,
             4,
         )
         pred_logits_size = (
             self.vision_model_tester.batch_size,
-            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size) ** 2,
+            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size)
+            ** 2,
             4,
         )
         pred_class_embeds_size = (
             self.vision_model_tester.batch_size,
-            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size) ** 2,
+            (self.vision_model_tester.image_size // self.vision_model_tester.patch_size)
+            ** 2,
             self.text_model_tester.hidden_size,
         )
         self.parent.assertEqual(result.pred_boxes.shape, pred_boxes_size)
@@ -612,7 +667,9 @@ class OwlViTForObjectDetectionTest(ModelTesterMixin, unittest.TestCase):
     def test_forward_signature(self):
         pass
 
-    @unittest.skip(reason="Test_save_load_fast_init_from_base is tested in individual model tests")
+    @unittest.skip(
+        reason="Test_save_load_fast_init_from_base is tested in individual model tests"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
@@ -661,7 +718,9 @@ class OwlViTForObjectDetectionTest(ModelTesterMixin, unittest.TestCase):
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(
+                set(model_state_dict.keys()), set(loaded_model_state_dict.keys())
+            )
 
             models_equal = True
             for layer_name, p1 in model_state_dict.items():
@@ -680,12 +739,18 @@ class OwlViTForObjectDetectionTest(ModelTesterMixin, unittest.TestCase):
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
             with torch.no_grad():
-                tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-                dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs).to_tuple()
+                tuple_output = model(
+                    **tuple_inputs, return_dict=False, **additional_kwargs
+                )
+                dict_output = model(
+                    **dict_inputs, return_dict=True, **additional_kwargs
+                ).to_tuple()
 
                 def recursive_check(tuple_object, dict_object):
                     if isinstance(tuple_object, (List, Tuple)):
-                        for tuple_iterable_value, dict_iterable_value in zip(tuple_object, dict_object):
+                        for tuple_iterable_value, dict_iterable_value in zip(
+                            tuple_object, dict_object
+                        ):
                             recursive_check(tuple_iterable_value, dict_iterable_value)
                     elif isinstance(tuple_object, Dict):
                         for tuple_iterable_value, dict_iterable_value in zip(
@@ -697,7 +762,9 @@ class OwlViTForObjectDetectionTest(ModelTesterMixin, unittest.TestCase):
                     else:
                         self.assertTrue(
                             torch.allclose(
-                                set_nan_tensor_to_zero(tuple_object), set_nan_tensor_to_zero(dict_object), atol=1e-5
+                                set_nan_tensor_to_zero(tuple_object),
+                                set_nan_tensor_to_zero(dict_object),
+                                atol=1e-5,
                             ),
                             msg=(
                                 "Tuple and dict output are not equal. Difference:"
@@ -763,7 +830,9 @@ class OwlViTModelIntegrationTest(unittest.TestCase):
             torch.Size((inputs.input_ids.shape[0], inputs.pixel_values.shape[0])),
         )
         expected_logits = torch.tensor([[3.4613, 0.9403]], device=torch_device)
-        self.assertTrue(torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3)
+        )
 
     @slow
     def test_inference_object_detection(self):
@@ -784,10 +853,24 @@ class OwlViTModelIntegrationTest(unittest.TestCase):
         with torch.no_grad():
             outputs = model(**inputs)
 
-        num_queries = int((model.config.vision_config.image_size / model.config.vision_config.patch_size) ** 2)
+        num_queries = int(
+            (
+                model.config.vision_config.image_size
+                / model.config.vision_config.patch_size
+            )
+            ** 2
+        )
         self.assertEqual(outputs.pred_boxes.shape, torch.Size((1, num_queries, 4)))
 
         expected_slice_boxes = torch.tensor(
-            [[0.0691, 0.0445, 0.1373], [0.1592, 0.0456, 0.3192], [0.1632, 0.0423, 0.2478]]
+            [
+                [0.0691, 0.0445, 0.1373],
+                [0.1592, 0.0456, 0.3192],
+                [0.1632, 0.0423, 0.2478],
+            ]
         ).to(torch_device)
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4
+            )
+        )

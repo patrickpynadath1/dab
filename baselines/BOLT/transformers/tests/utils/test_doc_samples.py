@@ -51,7 +51,11 @@ class TestCodeExamples(unittest.TestCase):
             n_identifier (`str` or `List[str]`): Will not parse files containing this/these identifiers.
             only_modules (`bool`): Whether to only analyze modules
         """
-        files = [file for file in os.listdir(directory) if os.path.isfile(os.path.join(directory, file))]
+        files = [
+            file
+            for file in os.listdir(directory)
+            if os.path.isfile(os.path.join(directory, file))
+        ]
 
         if identifier is not None:
             files = [file for file in files if identifier in file]
@@ -81,7 +85,9 @@ class TestCodeExamples(unittest.TestCase):
                 except AttributeError:
                     logger.info(f"{module_identifier} is not a module.")
             else:
-                result = doctest.testfile(str(".." / directory / file), optionflags=doctest.ELLIPSIS)
+                result = doctest.testfile(
+                    str(".." / directory / file), optionflags=doctest.ELLIPSIS
+                )
                 self.assertIs(result.failed, 0)
 
     def test_modeling_examples(self):
@@ -91,7 +97,9 @@ class TestCodeExamples(unittest.TestCase):
             "modeling_ctrl.py",
             "modeling_tf_ctrl.py",
         ]
-        self.analyze_directory(transformers_directory, identifier=files, ignore_files=ignore_files)
+        self.analyze_directory(
+            transformers_directory, identifier=files, ignore_files=ignore_files
+        )
 
     def test_tokenization_examples(self):
         transformers_directory = Path("src/transformers")
@@ -111,4 +119,6 @@ class TestCodeExamples(unittest.TestCase):
     def test_doc_sources(self):
         doc_source_directory = Path("docs/source")
         ignore_files = ["favicon.ico"]
-        self.analyze_directory(doc_source_directory, ignore_files=ignore_files, only_modules=False)
+        self.analyze_directory(
+            doc_source_directory, ignore_files=ignore_files, only_modules=False
+        )

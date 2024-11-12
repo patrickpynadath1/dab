@@ -71,7 +71,9 @@ MOBILEVIT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-def make_divisible(value: int, divisor: int = 8, min_value: Optional[int] = None) -> int:
+def make_divisible(
+    value: int, divisor: int = 8, min_value: Optional[int] = None
+) -> int:
     """
     Ensure that all layers have a channel count that is divisible by `divisor`. This function is taken from the
     original TensorFlow repo. It can be seen here:
@@ -104,9 +106,13 @@ class MobileViTConvLayer(nn.Module):
         padding = int((kernel_size - 1) / 2) * dilation
 
         if in_channels % groups != 0:
-            raise ValueError(f"Input channels ({in_channels}) are not divisible by {groups} groups.")
+            raise ValueError(
+                f"Input channels ({in_channels}) are not divisible by {groups} groups."
+            )
         if out_channels % groups != 0:
-            raise ValueError(f"Output channels ({out_channels}) are not divisible by {groups} groups.")
+            raise ValueError(
+                f"Output channels ({out_channels}) are not divisible by {groups} groups."
+            )
 
         self.convolution = nn.Conv2d(
             in_channels=in_channels,
@@ -156,10 +162,17 @@ class MobileViTInvertedResidual(nn.Module):
     """
 
     def __init__(
-        self, config: MobileViTConfig, in_channels: int, out_channels: int, stride: int, dilation: int = 1
+        self,
+        config: MobileViTConfig,
+        in_channels: int,
+        out_channels: int,
+        stride: int,
+        dilation: int = 1,
     ) -> None:
         super().__init__()
-        expanded_channels = make_divisible(int(round(in_channels * config.expand_ratio)), 8)
+        expanded_channels = make_divisible(
+            int(round(in_channels * config.expand_ratio)), 8
+        )
 
         if stride not in [1, 2]:
             raise ValueError(f"Invalid stride {stride}.")
@@ -167,7 +180,10 @@ class MobileViTInvertedResidual(nn.Module):
         self.use_residual = (stride == 1) and (in_channels == out_channels)
 
         self.expand_1x1 = MobileViTConvLayer(
-            config, in_channels=in_channels, out_channels=expanded_channels, kernel_size=1
+            config,
+            in_channels=in_channels,
+            out_channels=expanded_channels,
+            kernel_size=1,
         )
 
         self.conv_3x3 = MobileViTConvLayer(
@@ -200,7 +216,12 @@ class MobileViTInvertedResidual(nn.Module):
 
 class MobileViTMobileNetLayer(nn.Module):
     def __init__(
-        self, config: MobileViTConfig, in_channels: int, out_channels: int, stride: int = 1, num_stages: int = 1
+        self,
+        config: MobileViTConfig,
+        in_channels: int,
+        out_channels: int,
+        stride: int = 1,
+        num_stages: int = 1,
     ) -> None:
         super().__init__()
 
@@ -242,7 +263,10 @@ class MobileViTSelfAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -295,7 +319,10 @@ class MobileViTAttention(nn.Module):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.attention.num_attention_heads, self.attention.attention_head_size, self.pruned_heads
+            heads,
+            self.attention.num_attention_heads,
+            self.attention.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
@@ -305,8 +332,12 @@ class MobileViTAttention(nn.Module):
         self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
-        self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
-        self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
+        self.attention.num_attention_heads = self.attention.num_attention_heads - len(
+            heads
+        )
+        self.attention.all_head_size = (
+            self.attention.attention_head_size * self.attention.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -316,7 +347,9 @@ class MobileViTAttention(nn.Module):
 
 
 class MobileViTIntermediate(nn.Module):
-    def __init__(self, config: MobileViTConfig, hidden_size: int, intermediate_size: int) -> None:
+    def __init__(
+        self, config: MobileViTConfig, hidden_size: int, intermediate_size: int
+    ) -> None:
         super().__init__()
         self.dense = nn.Linear(hidden_size, intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -331,12 +364,16 @@ class MobileViTIntermediate(nn.Module):
 
 
 class MobileViTOutput(nn.Module):
-    def __init__(self, config: MobileViTConfig, hidden_size: int, intermediate_size: int) -> None:
+    def __init__(
+        self, config: MobileViTConfig, hidden_size: int, intermediate_size: int
+    ) -> None:
         super().__init__()
         self.dense = nn.Linear(intermediate_size, hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: torch.Tensor, input_tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor
+    ) -> torch.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = hidden_states + input_tensor
@@ -344,10 +381,14 @@ class MobileViTOutput(nn.Module):
 
 
 class MobileViTTransformerLayer(nn.Module):
-    def __init__(self, config: MobileViTConfig, hidden_size: int, intermediate_size: int) -> None:
+    def __init__(
+        self, config: MobileViTConfig, hidden_size: int, intermediate_size: int
+    ) -> None:
         super().__init__()
         self.attention = MobileViTAttention(config, hidden_size)
-        self.intermediate = MobileViTIntermediate(config, hidden_size, intermediate_size)
+        self.intermediate = MobileViTIntermediate(
+            config, hidden_size, intermediate_size
+        )
         self.output = MobileViTOutput(config, hidden_size, intermediate_size)
         self.layernorm_before = nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
         self.layernorm_after = nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
@@ -363,7 +404,9 @@ class MobileViTTransformerLayer(nn.Module):
 
 
 class MobileViTTransformer(nn.Module):
-    def __init__(self, config: MobileViTConfig, hidden_size: int, num_stages: int) -> None:
+    def __init__(
+        self, config: MobileViTConfig, hidden_size: int, num_stages: int
+    ) -> None:
         super().__init__()
 
         self.layer = nn.ModuleList()
@@ -441,7 +484,10 @@ class MobileViTLayer(nn.Module):
         )
 
         self.fusion = MobileViTConvLayer(
-            config, in_channels=2 * in_channels, out_channels=in_channels, kernel_size=config.conv_kernel_size
+            config,
+            in_channels=2 * in_channels,
+            out_channels=in_channels,
+            kernel_size=config.conv_kernel_size,
         )
 
     def unfolding(self, features: torch.Tensor) -> Tuple[torch.Tensor, Dict]:
@@ -457,7 +503,10 @@ class MobileViTLayer(nn.Module):
         if new_width != orig_width or new_height != orig_height:
             # Note: Padding can be done, but then it needs to be handled in attention function.
             features = nn.functional.interpolate(
-                features, size=(new_height, new_width), mode="bilinear", align_corners=False
+                features,
+                size=(new_height, new_width),
+                mode="bilinear",
+                align_corners=False,
             )
             interpolate = True
 
@@ -469,7 +518,10 @@ class MobileViTLayer(nn.Module):
         # convert from shape (batch_size, channels, orig_height, orig_width)
         # to the shape (batch_size * patch_area, num_patches, channels)
         patches = features.reshape(
-            batch_size * channels * num_patch_height, patch_height, num_patch_width, patch_width
+            batch_size * channels * num_patch_height,
+            patch_height,
+            num_patch_width,
+            patch_width,
         )
         patches = patches.transpose(1, 2)
         patches = patches.reshape(batch_size, channels, num_patches, patch_area)
@@ -502,16 +554,25 @@ class MobileViTLayer(nn.Module):
         features = patches.contiguous().view(batch_size, patch_area, num_patches, -1)
         features = features.transpose(1, 3)
         features = features.reshape(
-            batch_size * channels * num_patch_height, num_patch_width, patch_height, patch_width
+            batch_size * channels * num_patch_height,
+            num_patch_width,
+            patch_height,
+            patch_width,
         )
         features = features.transpose(1, 2)
         features = features.reshape(
-            batch_size, channels, num_patch_height * patch_height, num_patch_width * patch_width
+            batch_size,
+            channels,
+            num_patch_height * patch_height,
+            num_patch_width * patch_width,
         )
 
         if info_dict["interpolate"]:
             features = nn.functional.interpolate(
-                features, size=info_dict["orig_size"], mode="bilinear", align_corners=False
+                features,
+                size=info_dict["orig_size"],
+                mode="bilinear",
+                align_corners=False,
             )
 
         return features
@@ -647,7 +708,9 @@ class MobileViTEncoder(nn.Module):
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states] if v is not None)
 
-        return BaseModelOutputWithNoAttention(last_hidden_state=hidden_states, hidden_states=all_hidden_states)
+        return BaseModelOutputWithNoAttention(
+            last_hidden_state=hidden_states, hidden_states=all_hidden_states
+        )
 
 
 class MobileViTPreTrainedModel(PreTrainedModel):
@@ -759,9 +822,13 @@ class MobileViTModel(MobileViTPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutputWithPoolingAndNoAttention]:
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -784,7 +851,11 @@ class MobileViTModel(MobileViTPreTrainedModel):
             pooled_output = None
 
         if not return_dict:
-            output = (last_hidden_state, pooled_output) if pooled_output is not None else (last_hidden_state,)
+            output = (
+                (last_hidden_state, pooled_output)
+                if pooled_output is not None
+                else (last_hidden_state,)
+            )
             return output + encoder_outputs[1:]
 
         return BaseModelOutputWithPoolingAndNoAttention(
@@ -811,7 +882,9 @@ class MobileViTForImageClassification(MobileViTPreTrainedModel):
         # Classifier head
         self.dropout = nn.Dropout(config.classifier_dropout_prob, inplace=True)
         self.classifier = (
-            nn.Linear(config.neck_hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.neck_hidden_sizes[-1], config.num_labels)
+            if config.num_labels > 0
+            else nn.Identity()
         )
 
         # Initialize weights and apply final processing
@@ -838,9 +911,15 @@ class MobileViTForImageClassification(MobileViTPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss). If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
-        outputs = self.mobilevit(pixel_values, output_hidden_states=output_hidden_states, return_dict=return_dict)
+        outputs = self.mobilevit(
+            pixel_values,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
         pooled_output = outputs.pooler_output if return_dict else outputs[1]
 
@@ -851,7 +930,9 @@ class MobileViTForImageClassification(MobileViTPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (
+                    labels.dtype == torch.long or labels.dtype == torch.int
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -881,7 +962,9 @@ class MobileViTForImageClassification(MobileViTPreTrainedModel):
 
 
 class MobileViTASPPPooling(nn.Module):
-    def __init__(self, config: MobileViTConfig, in_channels: int, out_channels: int) -> None:
+    def __init__(
+        self, config: MobileViTConfig, in_channels: int, out_channels: int
+    ) -> None:
         super().__init__()
 
         self.global_pool = nn.AdaptiveAvgPool2d(output_size=1)
@@ -900,7 +983,9 @@ class MobileViTASPPPooling(nn.Module):
         spatial_size = features.shape[-2:]
         features = self.global_pool(features)
         features = self.conv_1x1(features)
-        features = nn.functional.interpolate(features, size=spatial_size, mode="bilinear", align_corners=False)
+        features = nn.functional.interpolate(
+            features, size=spatial_size, mode="bilinear", align_corners=False
+        )
         return features
 
 
@@ -947,7 +1032,11 @@ class MobileViTASPP(nn.Module):
         self.convs.append(pool_layer)
 
         self.project = MobileViTConvLayer(
-            config, in_channels=5 * out_channels, out_channels=out_channels, kernel_size=1, use_activation="relu"
+            config,
+            in_channels=5 * out_channels,
+            out_channels=out_channels,
+            kernel_size=1,
+            use_activation="relu",
         )
 
         self.dropout = nn.Dropout(p=config.aspp_dropout_prob)
@@ -1009,7 +1098,9 @@ class MobileViTForSemanticSegmentation(MobileViTPreTrainedModel):
         self.post_init()
 
     @add_start_docstrings_to_model_forward(MOBILEVIT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=SemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC
+    )
     def forward(
         self,
         pixel_values: Optional[torch.Tensor] = None,
@@ -1046,9 +1137,13 @@ class MobileViTForSemanticSegmentation(MobileViTPreTrainedModel):
         >>> logits = outputs.logits
         ```"""
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.mobilevit(
             pixel_values,
@@ -1069,7 +1164,9 @@ class MobileViTForSemanticSegmentation(MobileViTPreTrainedModel):
                 upsampled_logits = nn.functional.interpolate(
                     logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
                 )
-                loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
+                loss_fct = CrossEntropyLoss(
+                    ignore_index=self.config.semantic_loss_ignore_index
+                )
                 loss = loss_fct(upsampled_logits, labels)
 
         if not return_dict:

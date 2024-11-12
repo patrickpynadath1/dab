@@ -1,4 +1,5 @@
 """ Optimizers class """
+
 import torch
 import torch.optim as optim
 from torch.nn.utils import clip_grad_norm_
@@ -12,6 +13,7 @@ import math
 import numpy as np
 
 import torch.nn.functional as F
+
 # from onmt.utils.misc import fn_args
 
 import logging
@@ -32,11 +34,39 @@ def build_torch_optimizer(model, opt):
     params = [p for p in model.parameters() if p.requires_grad]
     betas = eval(opt.adam_betas)
     if opt.optim == "sgd":
-        optimizer = optim.SGD(list(params), lr=opt.lr, momentum=opt.sgd_momentum, nesterov=opt.sgd_nesterov, weight_decay=opt.weight_decay)
+        optimizer = optim.SGD(
+            list(params),
+            lr=opt.lr,
+            momentum=opt.sgd_momentum,
+            nesterov=opt.sgd_nesterov,
+            weight_decay=opt.weight_decay,
+        )
     elif opt.optim == "expgd":
-        optimizer = ExpGD(list(params), lr=opt.lr, mw=opt.expgd_mw, momentum=opt.expgd_momentum)
+        optimizer = ExpGD(
+            list(params), lr=opt.lr, mw=opt.expgd_mw, momentum=opt.expgd_momentum
+        )
     elif opt.optim == "embedgd":
-        optimizer = EmbedGD(list(params), lr=opt.lr, momentum=opt.embedgd_momentum, embed_lut=model.tgt_emb, max_steps=opt.optim_steps, lr_pattern=opt.embedgd_lr_pattern, final_bias=model.final_bias, do_sample=opt.embedgd_do_sample == "true", top_p=opt.embedgd_top_p, top_k=opt.embedgd_top_k, noise_variance=opt.embedgd_noise_variance, gumbel_noise_max=opt.embedgd_gumbel_noise_max, repetition_penalty=opt.repetition_penalty, begintemp=opt.embedgd_begin_temperature, finaltemp=opt.embedgd_final_temperature, temp_reduction_steps=opt.embedgd_temperature_reduction_steps, grad_distance=opt.embedgd_grad_distance, time_decay_method=opt.embedgd_decay_method, step_decay_method=opt.embedgd_lr_pattern)
+        optimizer = EmbedGD(
+            list(params),
+            lr=opt.lr,
+            momentum=opt.embedgd_momentum,
+            embed_lut=model.tgt_emb,
+            max_steps=opt.optim_steps,
+            lr_pattern=opt.embedgd_lr_pattern,
+            final_bias=model.final_bias,
+            do_sample=opt.embedgd_do_sample == "true",
+            top_p=opt.embedgd_top_p,
+            top_k=opt.embedgd_top_k,
+            noise_variance=opt.embedgd_noise_variance,
+            gumbel_noise_max=opt.embedgd_gumbel_noise_max,
+            repetition_penalty=opt.repetition_penalty,
+            begintemp=opt.embedgd_begin_temperature,
+            finaltemp=opt.embedgd_final_temperature,
+            temp_reduction_steps=opt.embedgd_temperature_reduction_steps,
+            grad_distance=opt.embedgd_grad_distance,
+            time_decay_method=opt.embedgd_decay_method,
+            step_decay_method=opt.embedgd_lr_pattern,
+        )
     elif opt.optim == "sgld":
         optimizer = SGLD(list(params), lr=opt.lr, num_burn_in_steps=50)
     elif opt.optim == "lbfgs":
@@ -98,12 +128,16 @@ def build_torch_optimizer(model, opt):
     else:
         raise ValueError("Invalid optimizer type: " + opt.optim)
 
-    if opt.model_dtype == "fp16" and opt.optim != "ascentsgd" and opt.fp16_source == "apex":
+    if (
+        opt.model_dtype == "fp16"
+        and opt.optim != "ascentsgd"
+        and opt.fp16_source == "apex"
+    ):
         import apex
 
         if opt.optim != "fusedadam":
             # In this case use the new AMP API from apex
-            loss_scale = "dynamic" #if opt.loss_scale == 0 else opt.loss_scale
+            loss_scale = "dynamic"  # if opt.loss_scale == 0 else opt.loss_scale
             model, optimizer = apex.amp.initialize(
                 model,
                 optimizer,
@@ -199,10 +233,10 @@ def rsqrt_decay(step, warmup_steps):
 
 
 class MultipleOptimizer(object):
-    """ Implement multiple optimizers needed for sparse adam """
+    """Implement multiple optimizers needed for sparse adam"""
 
     def __init__(self, op):
-        """ ? """
+        """?"""
         self.optimizers = op
 
     @property
@@ -213,26 +247,26 @@ class MultipleOptimizer(object):
         return param_groups
 
     def zero_grad(self, set_to_none=False):
-        """ ? """
+        """?"""
         for op in self.optimizers:
             op.zero_grad(set_to_none=set_to_none)
 
     def step(self):
-        """ ? """
+        """?"""
         for op in self.optimizers:
             op.step()
 
     @property
     def state(self):
-        """ ? """
+        """?"""
         return {k: v for op in self.optimizers for k, v in op.state.items()}
 
     def state_dict(self):
-        """ ? """
+        """?"""
         return [op.state_dict() for op in self.optimizers]
 
     def load_state_dict(self, state_dicts):
-        """ ? """
+        """?"""
         assert len(state_dicts) == len(self.optimizers)
         for i in range(len(state_dicts)):
             self.optimizers[i].load_state_dict(state_dicts[i])
@@ -254,7 +288,7 @@ class Optimizer(object):
         learning_rate_decay_fn=None,
         decay_method=None,
         max_grad_norm=None,
-        ascent=False
+        ascent=False,
     ):
         """Initializes the controller.
 
@@ -296,8 +330,8 @@ class Optimizer(object):
             optim_opt.lr,
             learning_rate_decay_fn=make_learning_rate_decay_fn(optim_opt),
             decay_method=opt.decay_method,
-            max_grad_norm = optim_opt.max_grad_norm,
-            ascent=optim_opt.optim == "ascentsgd"
+            max_grad_norm=optim_opt.max_grad_norm,
+            ascent=optim_opt.optim == "ascentsgd",
         )
         if opt.model_dtype == "fp16":
             if opt.optim == "fusedadam":
@@ -316,10 +350,14 @@ class Optimizer(object):
         """Returns the current learning rate."""
         if self._learning_rate_decay_fn is None:
             if no_improvement:
-                self._learning_rate /= 2  #half the learning rate if the loss stops decreasing
-                logger.info(f"Step {self._decay_step}: Halving the learning rate to {self._learning_rate}")
+                self._learning_rate /= (
+                    2  # half the learning rate if the loss stops decreasing
+                )
+                logger.info(
+                    f"Step {self._decay_step}: Halving the learning rate to {self._learning_rate}"
+                )
             if self.ascent:
-                return -self._learning_rate 
+                return -self._learning_rate
             return self._learning_rate
         scale = self._learning_rate_decay_fn(self._decay_step)
         # if (self._decay_step % 100 == 0):
@@ -351,7 +389,7 @@ class Optimizer(object):
         """Wrapper for backward pass. Some optimizer requires ownership of the
         backward pass."""
         if scaler is not None:
-            scaler.scale(loss).backward(retain_graph=retain_graph)    
+            scaler.scale(loss).backward(retain_graph=retain_graph)
         elif self._fp16 == "amp":
             import apex
 
@@ -389,17 +427,19 @@ class Optimizer(object):
                 clip_grad_norm_(group["params"], self._max_grad_norm)
             elif self._fp16 is None and self._max_grad_norm > 0 and not self.ascent:
                 # clip_grad_norm_(group["params"], self._max_grad_norm)
-                for p in group['params']:
+                for p in group["params"]:
                     param_norm = p.grad.data.norm(2, -1).sum(dim=0)
                     # print(p.size())
                     coeff = torch.clamp(self._max_grad_norm / param_norm, max=1.0)
                     # print(coeff)
-                    p.grad.detach().mul_(coeff.to(p.grad.device).unsqueeze(0).unsqueeze(2))
+                    p.grad.detach().mul_(
+                        coeff.to(p.grad.device).unsqueeze(0).unsqueeze(2)
+                    )
                     # print(param_norm)
                     # param_norm = p.grad.data.norm(2, -1).sum(dim=0)
                     # print(param_norm)
                 # input()
-        
+
         # for group in self._optimizer.param_groups:
         #     print(group["lr"])
         if scaler is None:
@@ -629,7 +669,6 @@ class AdaFactor(torch.optim.Optimizer):
 
 
 class FusedAdam(torch.optim.Optimizer):
-
     """Implements Adam algorithm. Currently GPU-only.
        Requires Apex to be installed via
     ``python setup.py install --cuda_ext --cpp_ext``.
@@ -1103,20 +1142,24 @@ class AdamW(torch.optim.Optimizer):
 
         return loss
 
+
 class SGLD(torch.optim.Optimizer):
-    """ Stochastic Gradient Langevin Dynamics Sampler with preconditioning.
-        Optimization variable is viewed as a posterior sample under Stochastic
-        Gradient Langevin Dynamics with noise rescaled in eaach dimension
-        according to RMSProp.
+    """Stochastic Gradient Langevin Dynamics Sampler with preconditioning.
+    Optimization variable is viewed as a posterior sample under Stochastic
+    Gradient Langevin Dynamics with noise rescaled in eaach dimension
+    according to RMSProp.
     """
-    def __init__(self,
-                 params,
-                 lr=1e-2,
-                 precondition_decay_rate=0.99,
-                 num_pseudo_batches=1,
-                 num_burn_in_steps=3000,
-                 diagonal_bias=1e-8) -> None:
-        """ Set up a SGLD Optimizer.
+
+    def __init__(
+        self,
+        params,
+        lr=1e-2,
+        precondition_decay_rate=0.99,
+        num_pseudo_batches=1,
+        num_burn_in_steps=3000,
+        diagonal_bias=1e-8,
+    ) -> None:
+        """Set up a SGLD Optimizer.
 
         Parameters
         ----------
@@ -1156,7 +1199,6 @@ class SGLD(torch.optim.Optimizer):
         )
         super().__init__(params, defaults)
 
-
     def step(self, closure=None):
         loss = None
 
@@ -1183,14 +1225,12 @@ class SGLD(torch.optim.Optimizer):
 
         return loss
 
+
 class ExpGD(torch.optim.Optimizer):
-    """ Exponentiated Gradient Descent
-    """
-    def __init__(self,
-                 params,
-                 lr=1e-2,
-                 mw=1, momentum=0.0) -> None:
-        """ Set up a SGLD Optimizer.
+    """Exponentiated Gradient Descent"""
+
+    def __init__(self, params, lr=1e-2, mw=1, momentum=0.0) -> None:
+        """Set up a SGLD Optimizer.
 
         Parameters
         ----------
@@ -1247,11 +1287,11 @@ class ExpGD(torch.optim.Optimizer):
                 gradient = parameter.grad.data
 
                 mw = group["mw"]
-                momentum = group['momentum']
+                momentum = group["momentum"]
 
                 # print(parameter.size())
                 # print(gradient.size())
-                
+
                 # print(parameter)
                 if mw == 1:
                     unnormalized = parameter.data.mul_(torch.exp(-lr * gradient))
@@ -1262,45 +1302,45 @@ class ExpGD(torch.optim.Optimizer):
                     # print(parameter)
                     # print(parameter.max(-1))
                     # input()
-                elif mw == 3: # variation
+                elif mw == 3:  # variation
                     state = self.state[parameter]
                     if len(state) == 0:
                         state["step"] = 0
                         state["mt"] = torch.zeros_like(gradient)
-                    mt = state['mt']
-                    step = state['step']
+                    mt = state["mt"]
+                    step = state["step"]
                     exponand = -lr * gradient - 4 * lr * lr * (gradient - mt) ** 2
                     unnormalized = parameter.data.mul_(torch.exp(exponand))
                     # print(unnormalized)
                     parameter.data.div_(unnormalized.sum(dim=-1, keepdims=True))
 
-                    mt = mt * step + gradient 
+                    mt = mt * step + gradient
                     mt = mt / (step + 1)
-                    state['step'] += 1
-                    state['mt'] = mt
-                elif mw == 4: #optimistic
+                    state["step"] += 1
+                    state["mt"] = mt
+                elif mw == 4:  # optimistic
                     state = self.state[parameter]
                     if len(state) == 0:
                         state["step"] = 0
                         state["zt"] = torch.zeros_like(gradient)
-                    zt = state['zt']
-                    step = state['step']
+                    zt = state["zt"]
+                    step = state["step"]
 
                     exponand = -lr * gradient - lr * lr * (gradient - zt) ** 2
                     unnormalized = parameter.data.mul_(torch.exp(exponand))
                     # print(unnormalized)
                     parameter.data.div_(unnormalized.sum(dim=-1, keepdims=True))
 
-                    state['step'] += 1
-                    state['zt'] = gradient
-                elif mw == 5: #momentum
+                    state["step"] += 1
+                    state["zt"] = gradient
+                elif mw == 5:  # momentum
                     state = self.state[parameter]
                     if len(state) == 0:
-                        state['step'] = 0
-                        state['lastgrad'] = torch.zeros_like(gradient)
-                    lastgrad = state['lastgrad']
-                    step = state['step']
-                    grad = (momentum * lastgrad + lr * gradient)
+                        state["step"] = 0
+                        state["lastgrad"] = torch.zeros_like(gradient)
+                    lastgrad = state["lastgrad"]
+                    step = state["step"]
+                    grad = momentum * lastgrad + lr * gradient
                     logits = torch.log(parameter.data) - grad
                     # unnormalized = parameter.data.mul_(torch.exp(1-grad))
                     # print(unnormalized)
@@ -1308,29 +1348,28 @@ class ExpGD(torch.optim.Optimizer):
                     # parameter.data.div_(unnormalized.sum(dim=-1, keepdims=True))
                     parameter.data.copy_(F.softmax(logits, dim=-1))
 
-                    state['step'] += 1
-                    state['lastgrad'] = grad
-                
-                elif mw == 6: #momentum with no exponent
+                    state["step"] += 1
+                    state["lastgrad"] = grad
+
+                elif mw == 6:  # momentum with no exponent
                     state = self.state[parameter]
                     if len(state) == 0:
-                        state['step'] = 0
-                        state['lastgrad'] = torch.zeros_like(gradient)
-                    lastgrad = state['lastgrad']
-                    step = state['step']
-                    grad = (momentum * lastgrad + lr * gradient)
-                    unnormalized = parameter.data.mul_(1-gradient)
+                        state["step"] = 0
+                        state["lastgrad"] = torch.zeros_like(gradient)
+                    lastgrad = state["lastgrad"]
+                    step = state["step"]
+                    grad = momentum * lastgrad + lr * gradient
+                    unnormalized = parameter.data.mul_(1 - gradient)
                     # print(unnormalized)
                     parameter.data.div_(unnormalized.sum(dim=-1, keepdims=True))
 
-                    state['step'] += 1
-                    state['lastgrad'] = grad
+                    state["step"] += 1
+                    state["lastgrad"] = grad
 
                 else:
-                    unnormalized = parameter.data.mul_(1-lr * gradient)
+                    unnormalized = parameter.data.mul_(1 - lr * gradient)
                     # print(unnormalized)
                     parameter.data.div_(unnormalized.sum(dim=-1, keepdims=True))
-                
 
                 # print(parameter.size())
                 # print(parameter.data.sum(dim=-1))
@@ -1338,56 +1377,59 @@ class ExpGD(torch.optim.Optimizer):
 
         return loss
 
+
 class GradAscent(torch.optim.Optimizer):
-    
+
     def __init__(self, params, lr=1.0):
         defaults = dict(
             lr=lr,
         )
-        
+
         self.set_mask(torch.ones_like(params[0]))
         super().__init__(params, defaults)
-    
+
     def set_mask(self, mask):
         self.mask = mask
-    
+
     def step(self):
         for group in self.param_groups:
             for parameter in group["params"]:
-                
+
                 if parameter.grad is None:
                     continue
 
                 state = self.state[parameter]
                 gradient = parameter.grad.data
 
-                parameter.data.add_(self.mask * group['lr'] * gradient)
+                parameter.data.add_(self.mask * group["lr"] * gradient)
 
 
 class EmbedGD(torch.optim.Optimizer):
-    """ Embedding Gradient Descent
-    """
-    def __init__(self,
-                 params,
-                 lr=1e-2,
-                 embed_lut=None,
-                 momentum=0.0,
-                 final_bias=None,
-                 lr_pattern="constant",
-                 max_steps=50,
-                 do_sample=False,
-                 noise_variance=0.0,
-                 gumbel_noise_max=0.0,
-                 top_p=1.0,
-                 top_k=0.0,
-                 repetition_penalty=0.0,
-                 begintemp=1.0,
-                 finaltemp=0.01,
-                 temp_reduction_steps=20,
-                 grad_distance="dot",
-                 step_decay_method="constant",
-                 time_decay_method="constant") -> None:
-        """ Set up a  Optimizer.
+    """Embedding Gradient Descent"""
+
+    def __init__(
+        self,
+        params,
+        lr=1e-2,
+        embed_lut=None,
+        momentum=0.0,
+        final_bias=None,
+        lr_pattern="constant",
+        max_steps=50,
+        do_sample=False,
+        noise_variance=0.0,
+        gumbel_noise_max=0.0,
+        top_p=1.0,
+        top_k=0.0,
+        repetition_penalty=0.0,
+        begintemp=1.0,
+        finaltemp=0.01,
+        temp_reduction_steps=20,
+        grad_distance="dot",
+        step_decay_method="constant",
+        time_decay_method="constant",
+    ) -> None:
+        """Set up a  Optimizer.
 
         Parameters
         ----------
@@ -1419,7 +1461,7 @@ class EmbedGD(torch.optim.Optimizer):
         """
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
-        
+
         self.base_lr = lr
         seqlen = params[0].size(1)
         self.lr_pattern = lr_pattern
@@ -1431,14 +1473,16 @@ class EmbedGD(torch.optim.Optimizer):
         self.temp_reduction_steps = temp_reduction_steps
         self.do_sample = do_sample
         self.top_k = top_k
-        self.top_p = top_p #for nucleus sampling (default is 0, just take argmin), this is totally random and has almost 0 chance of working
-        self.noise_variance = noise_variance #add normal noise to param_t centered at 0, with this variance
+        self.top_p = top_p  # for nucleus sampling (default is 0, just take argmin), this is totally random and has almost 0 chance of working
+        self.noise_variance = noise_variance  # add normal noise to param_t centered at 0, with this variance
         self.gumbel_noise_max = gumbel_noise_max
         self.new_predictions = None
 
         self.begintemp = begintemp
         self.finaltemp = finaltemp
-        self.r = pow(self.finaltemp/self.begintemp, 1/(self.temp_reduction_steps-1))
+        self.r = pow(
+            self.finaltemp / self.begintemp, 1 / (self.temp_reduction_steps - 1)
+        )
 
         self.repetition_penalty = repetition_penalty
         self.grad_distance = grad_distance
@@ -1467,17 +1511,17 @@ class EmbedGD(torch.optim.Optimizer):
             final_bias=final_bias,
             freq=freq,
             seqlen=seqlen,
-            momentum=momentum
+            momentum=momentum,
         )
 
         super().__init__(params, defaults)
 
     def __setstate__(self, state):
         super(EmbedGD, self).__setstate__(state)
-    
+
     def get_current_lr(self):
         return self.base_lr
-    
+
     def set_begin_std(self, temp):
         self.begintemp = temp
 
@@ -1492,7 +1536,7 @@ class EmbedGD(torch.optim.Optimizer):
 
         for group in self.param_groups:
             for parameter in group["params"]:
-                
+
                 if parameter.grad is None:
                     continue
 
@@ -1500,21 +1544,32 @@ class EmbedGD(torch.optim.Optimizer):
                 gradient = parameter.grad.data
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['nu'] = 0
-                    state['s'] = 0
+                    state["step"] = 0
+                    state["nu"] = 0
+                    state["s"] = 0
 
                 lr = group["lr"]
                 embed_lut = group["embed_lut"]
                 final_bias = group["final_bias"]
-                momentum = group['momentum']
-                freq = group['freq']
-                seqlen = group['seqlen']
-                timestep = state['step']
-                nu = state['nu']
-                s = state['s']
+                momentum = group["momentum"]
+                freq = group["freq"]
+                seqlen = group["seqlen"]
+                timestep = state["step"]
+                nu = state["nu"]
+                s = state["s"]
 
-                lrs = torch.Tensor(self.lrs[-seqlen-timestep//freq:len(self.lrs)-min(timestep, freq*seqlen-1)//freq]).to(gradient.device).unsqueeze(0).unsqueeze(2)
+                lrs = (
+                    torch.Tensor(
+                        self.lrs[
+                            -seqlen
+                            - timestep // freq : len(self.lrs)
+                            - min(timestep, freq * seqlen - 1) // freq
+                        ]
+                    )
+                    .to(gradient.device)
+                    .unsqueeze(0)
+                    .unsqueeze(2)
+                )
                 # print(lrs[0, :, 0])
                 # input()
                 # lrs = self.get_learning_rates(timestep, seqlen).to(gradient.device).unsqueeze(0).unsqueeze(2)
@@ -1528,15 +1583,20 @@ class EmbedGD(torch.optim.Optimizer):
                 #     self.r = pow(self.finaltemp/self.begintemp, 1/(self.temp_reduction_steps-1))
                 #     scale = max(self.finaltemp, self.begintemp * pow(self.r, timestep))
                 #     lrs = scale * lrs
-                    # d = (self.min_lr - lrs)/(self.max_updates - self.warmup_steps)
-                    # lrs = (lrs + (timestep - self.warmup_steps) * d).clamp(min=0.5)
-                    # # print(lrs)
+                # d = (self.min_lr - lrs)/(self.max_updates - self.warmup_steps)
+                # lrs = (lrs + (timestep - self.warmup_steps) * d).clamp(min=0.5)
+                # # print(lrs)
                 noise = 0.0
                 if self.noise_variance >= 1e-6:
-                    noise = torch.empty_like(gradient).normal_(mean=0,std=1)  #TODO schedule
-                    noise_std = min(self.begintemp, max(self.finaltemp, self.begintemp * pow(self.r, timestep)))
-                    noise = torch.sqrt(2*lrs) * noise * noise_std
-                
+                    noise = torch.empty_like(gradient).normal_(
+                        mean=0, std=1
+                    )  # TODO schedule
+                    noise_std = min(
+                        self.begintemp,
+                        max(self.finaltemp, self.begintemp * pow(self.r, timestep)),
+                    )
+                    noise = torch.sqrt(2 * lrs) * noise * noise_std
+
                 # s = s + torch.square(gradient.detach())
                 # sepsilon = 1e-8
                 # print(s.size(), gradient.size())
@@ -1551,7 +1611,9 @@ class EmbedGD(torch.optim.Optimizer):
                     objective = temp.matmul(embed_lut.t())
                     # print(objective)
                 elif self.grad_distance == "cosine":
-                    dist = 1 - F.normalize(parameter.data, p=2, dim=-1).matmul(embed_lut.t())
+                    dist = 1 - F.normalize(parameter.data, p=2, dim=-1).matmul(
+                        embed_lut.t()
+                    )
                     objective = (nu - noise).matmul(embed_lut.t()) + dist
                 elif self.grad_distance == "l1":
                     # temp = nu - parameter.data - noise
@@ -1562,28 +1624,42 @@ class EmbedGD(torch.optim.Optimizer):
                     # temp = nu - parameter.data - noise
                     # objective_old = temp.matmul(embed_lut.t())
                     dist = torch.cdist(parameter.data, embed_lut.unsqueeze(0))
-                    objective = (nu - noise).matmul(embed_lut.t()) + 0.5 * torch.square(dist)
+                    objective = (nu - noise).matmul(embed_lut.t()) + 0.5 * torch.square(
+                        dist
+                    )
                 # input()
                 # print(objective)
-                    
+
                 if final_bias is not None:
                     objective = objective - final_bias
 
                 gumbelnoise = 0.0
                 if self.gumbel_noise_max >= 1e-6:
-                    gumbelnoise = torch.empty_like(objective).uniform_(0, 1) #TODO schedule
+                    gumbelnoise = torch.empty_like(objective).uniform_(
+                        0, 1
+                    )  # TODO schedule
                     noise_min = 1e-6
-                    noise_cap = max(noise_min, self.gumbel_noise_max - (step-1)*(self.gumbel_noise_max - noise_min)/self.temp_reduction_steps)
-                    gumbelnoise = -torch.sqrt(2*lrs) * torch.log(-torch.log(gumbelnoise)) * noise_cap
+                    noise_cap = max(
+                        noise_min,
+                        self.gumbel_noise_max
+                        - (step - 1)
+                        * (self.gumbel_noise_max - noise_min)
+                        / self.temp_reduction_steps,
+                    )
+                    gumbelnoise = (
+                        -torch.sqrt(2 * lrs)
+                        * torch.log(-torch.log(gumbelnoise))
+                        * noise_cap
+                    )
                     # print(gumbelnoise.size())
                     # print(gumbelnoise)
 
                     logsoftobjective = F.log_softmax(objective, dim=-1)
                     logsoftobjective += gumbelnoise
 
-                    objective =  logsoftobjective
+                    objective = logsoftobjective
 
-                if not self.do_sample: #argmin
+                if not self.do_sample:  # argmin
                     min_value, min_index = objective.min(dim=-1)
                     next_token = min_index
                     # print(next_token)
@@ -1593,31 +1669,46 @@ class EmbedGD(torch.optim.Optimizer):
                     input()
                     # print(objective)
                     # max_value, max_index = (-objective).max(dim=-1, keepdim=True)
-                    # objective = -objective-max_value 
-                    
+                    # objective = -objective-max_value
+
                     # input()
-                    
+
                     # temperature = max(finaltemp, begintemp - (step-1)*(begintemp-finaltemp)/self.temp_reduction_steps)
-                    temperature = max(self.finaltemp, self.begintemp * pow(self.r, step))
-                    temperature_vector = torch.ones((objective.size(-1),)).to(parameter.device)
+                    temperature = max(
+                        self.finaltemp, self.begintemp * pow(self.r, step)
+                    )
+                    temperature_vector = torch.ones((objective.size(-1),)).to(
+                        parameter.device
+                    )
                     # temperatures = []
-                    next_token = torch.empty((objective.size(0), objective.size(1))).long().to(parameter.device)
+                    next_token = (
+                        torch.empty((objective.size(0), objective.size(1)))
+                        .long()
+                        .to(parameter.device)
+                    )
                     for i in range(objective.size(1)):
                         # temperature = max(self.finaltemp, self.begintemp * pow(self.rlist[i], step))
                         # print(self.rlist[i], step, pow(self.rlist[i], step), self.begintemp)
                         # temperatures.append(temperature)
                         # print(temperature_vector)
                         # if self.top_k > 0 or self.top_p < 1.0:
-                        filtered_logits = top_k_top_p_filtering(objective[:, i, :]/(temperature*temperature_vector), self.top_k, self.top_p)
+                        filtered_logits = top_k_top_p_filtering(
+                            objective[:, i, :] / (temperature * temperature_vector),
+                            self.top_k,
+                            self.top_p,
+                        )
                         # else:
                         #     filtered_logits = objective[:, i, :]/(temperature*temperature_vector)
                         #     filtered_logits = filtered_logits-filtered_logits.max(dim=-1)[0]
-                            
-                        
-                        next_token[:, i] = torch.multinomial(F.softmax(filtered_logits, dim=-1), num_samples=1)
-                        temperature_vector[next_token[:, i]] = 1.0 + self.repetition_penalty
+
+                        next_token[:, i] = torch.multinomial(
+                            F.softmax(filtered_logits, dim=-1), num_samples=1
+                        )
+                        temperature_vector[next_token[:, i]] = (
+                            1.0 + self.repetition_penalty
+                        )
                         # input()
-                    
+
                     # print(temperatures)
                     # input()
 
@@ -1625,51 +1716,55 @@ class EmbedGD(torch.optim.Optimizer):
                 new_embeddings = F.embedding(next_token, embed_lut)
                 parameter.data.copy_(new_embeddings)
 
-                state['step'] += 1
-                state['nu'] = nu
-                state['s'] = s
-                    
+                state["step"] += 1
+                state["nu"] = nu
+                state["s"] = s
+
         return loss
-    
+
     def get_learning_rates(self, t, l):
         # step_decay_method is constant and others are not implemented at the moment
         if self.time_decay_method == "constant":
             lr = self.base_lr
         elif self.time_decay_method == "linear":
             if t <= self.warmup_steps:
-                lr = t*self.base_lr/self.warmup_steps
+                lr = t * self.base_lr / self.warmup_steps
             else:
-                lr = self.base_lr - (t-self.warmup_steps)/(self.max_updates-1)
+                lr = self.base_lr - (t - self.warmup_steps) / (self.max_updates - 1)
         elif self.time_decay_method == "rsqrt":
             if t <= self.warmup_steps:
-                lr = t*self.base_lr/self.warmup_steps
-                
+                lr = t * self.base_lr / self.warmup_steps
+
             else:
                 decay_steps = 10
-                lr = self.base_lr / np.sqrt((t - self.warmup_steps + decay_steps) // decay_steps)
+                lr = self.base_lr / np.sqrt(
+                    (t - self.warmup_steps + decay_steps) // decay_steps
+                )
         elif self.time_decay_method == "exp":
             if t <= self.warmup_steps:
-                lr = t*self.base_lr/self.warmup_steps
+                lr = t * self.base_lr / self.warmup_steps
             else:
                 decay_steps = 10
                 lr = self.base_lr * np.exp(-t + self.warmup_steps)
-                self.base_lr / np.exp(max(t - warmup_steps + decay_steps, 0) // decay_steps)
+                self.base_lr / np.exp(
+                    max(t - warmup_steps + decay_steps, 0) // decay_steps
+                )
         return torch.Tensor([lr for _ in range(l)])
-            
 
-def get_pattern(base_lr:float, length:int, pattern:str, final_lr:float=None):
+
+def get_pattern(base_lr: float, length: int, pattern: str, final_lr: float = None):
     if pattern == "constant":
         pyramid = [base_lr for _ in range(length)]
         reverse_pyramid = [base_lr for _ in range(length)]
         reverse_pyramid.reverse()
     elif pattern == "linear":
-        scale = base_lr/length
-        pyramid = [base_lr-scale*i for i in range(length)]
-        reverse_pyramid = [base_lr-scale*i for i in range(length)]
+        scale = base_lr / length
+        pyramid = [base_lr - scale * i for i in range(length)]
+        reverse_pyramid = [base_lr - scale * i for i in range(length)]
         reverse_pyramid.reverse()
     elif pattern == "flat-linear":
-        scale = base_lr/(length-1)
-        reverse_pyramid = [base_lr-scale*i for i in range(length)]
+        scale = base_lr / (length - 1)
+        reverse_pyramid = [base_lr - scale * i for i in range(length)]
         reverse_pyramid.reverse()
         pyramid = [base_lr for i in range(length)]
     elif pattern == "geometric":
@@ -1677,33 +1772,41 @@ def get_pattern(base_lr:float, length:int, pattern:str, final_lr:float=None):
         reverse_pyramid = [base_lr * (2**-i) for i in range(length)]
         reverse_pyramid.reverse()
     elif pattern == "harmonic":
-        pyramid = [base_lr/(i+1) for i in range(length)]
-        reverse_pyramid = [base_lr/(i+1) for i in range(length)]
+        pyramid = [base_lr / (i + 1) for i in range(length)]
+        reverse_pyramid = [base_lr / (i + 1) for i in range(length)]
         reverse_pyramid.reverse()
     elif pattern == "rsqrt":
-        pyramid = [base_lr/np.sqrt(i+1) for i in range(length)]
-        reverse_pyramid = [base_lr/np.sqrt(i+1) for i in range(length)]
+        pyramid = [base_lr / np.sqrt(i + 1) for i in range(length)]
+        reverse_pyramid = [base_lr / np.sqrt(i + 1) for i in range(length)]
         reverse_pyramid.reverse()
     elif pattern == "block":
         final_lr = 0.3
         block_size = 10
-        pyramid = [base_lr for i in range(min(block_size, length))] + [final_lr for i in range(max(0, length-block_size))]
-        reverse_pyramid = [base_lr for i in range(min(block_size, length))] + [final_lr for i in range(max(0, length-block_size))]
+        pyramid = [base_lr for i in range(min(block_size, length))] + [
+            final_lr for i in range(max(0, length - block_size))
+        ]
+        reverse_pyramid = [base_lr for i in range(min(block_size, length))] + [
+            final_lr for i in range(max(0, length - block_size))
+        ]
         reverse_pyramid.reverse()
     return reverse_pyramid[:-1] + pyramid
+
 
 def safe_softmax(logits):
     pass
 
-def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf'), filter_indices=[]):
-    """ Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
-        Args:
-            logits: logits distribution shape (batch size x vocabulary size)
-            top_k > 0: keep only top k tokens with highest probability (top-k filtering).
-            top_p > 0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
-                Nucleus filtering is described in Holtzman et al. (http://arxiv.org/abs/1904.09751)
-            filter_indices: do not predict the given set of indices.
-        From: https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
+
+def top_k_top_p_filtering(
+    logits, top_k=0, top_p=0.0, filter_value=-float("Inf"), filter_indices=[]
+):
+    """Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
+    Args:
+        logits: logits distribution shape (batch size x vocabulary size)
+        top_k > 0: keep only top k tokens with highest probability (top-k filtering).
+        top_p > 0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
+            Nucleus filtering is described in Holtzman et al. (http://arxiv.org/abs/1904.09751)
+        filter_indices: do not predict the given set of indices.
+    From: https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
     """
     top_k = min(top_k, logits.size(-1))  # Safety check
     if top_p > 0.0:
@@ -1715,14 +1818,15 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')
         # Remove tokens with cumulative probability above the threshold
         sorted_indices_to_remove = cumulative_probs > top_p
 
-        
         # Shift the indices to the right to keep also the first token above the threshold
         sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
         sorted_indices_to_remove[..., 0] = 0
-        
+
         # print(sorted_indices_to_remove, sorted_indices)
         # scatter sorted tensors to original indexing
-        indices_to_remove = sorted_indices_to_remove.scatter(dim=1, index=sorted_indices, src=sorted_indices_to_remove)
+        indices_to_remove = sorted_indices_to_remove.scatter(
+            dim=1, index=sorted_indices, src=sorted_indices_to_remove
+        )
         # print(filter_value)
         # print(indices_to_remove)
         # input("topp")
@@ -1732,9 +1836,8 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')
         # Remove all tokens with a probability less than the last token of the top-k
         indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
         logits[indices_to_remove] = filter_value
-    
+
     if len(filter_indices) > 0:
         pass
 
     return logits
-

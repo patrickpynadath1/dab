@@ -31,7 +31,9 @@ if is_torch_available():
     from torch import nn
 
     from transformers import YolosForObjectDetection, YolosModel
-    from transformers.models.yolos.modeling_yolos import YOLOS_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.yolos.modeling_yolos import (
+        YOLOS_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -90,7 +92,9 @@ class YolosModelTester:
         self.expected_seq_len = num_patches + 1 + self.num_detection_tokens
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size[0], self.image_size[1]])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size[0], self.image_size[1]]
+        )
 
         labels = None
         if self.use_labels:
@@ -132,7 +136,8 @@ class YolosModelTester:
         model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.expected_seq_len, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.expected_seq_len, self.hidden_size),
         )
 
     def create_and_check_for_object_detection(self, config, pixel_values, labels):
@@ -143,14 +148,24 @@ class YolosModelTester:
         result = model(pixel_values=pixel_values)
         result = model(pixel_values)
 
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_detection_tokens, self.num_labels + 1))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_detection_tokens, 4))
+        self.parent.assertEqual(
+            result.logits.shape,
+            (self.batch_size, self.num_detection_tokens, self.num_labels + 1),
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_detection_tokens, 4)
+        )
 
         result = model(pixel_values=pixel_values, labels=labels)
 
         self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_detection_tokens, self.num_labels + 1))
-        self.parent.assertEqual(result.pred_boxes.shape, (self.batch_size, self.num_detection_tokens, 4))
+        self.parent.assertEqual(
+            result.logits.shape,
+            (self.batch_size, self.num_detection_tokens, self.num_labels + 1),
+        )
+        self.parent.assertEqual(
+            result.pred_boxes.shape, (self.batch_size, self.num_detection_tokens, 4)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -166,7 +181,9 @@ class YolosModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (YolosModel, YolosForObjectDetection) if is_torch_available() else ()
+    all_model_classes = (
+        (YolosModel, YolosForObjectDetection) if is_torch_available() else ()
+    )
 
     test_pruning = False
     test_resize_embeddings = False
@@ -175,7 +192,9 @@ class YolosModelTest(ModelTesterMixin, unittest.TestCase):
 
     # special case for head model
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels
+        )
 
         if return_labels:
             if model_class.__name__ == "YolosForObjectDetection":
@@ -183,10 +202,15 @@ class YolosModelTest(ModelTesterMixin, unittest.TestCase):
                 for i in range(self.model_tester.batch_size):
                     target = {}
                     target["class_labels"] = torch.ones(
-                        size=(self.model_tester.n_targets,), device=torch_device, dtype=torch.long
+                        size=(self.model_tester.n_targets,),
+                        device=torch_device,
+                        dtype=torch.long,
                     )
                     target["boxes"] = torch.ones(
-                        self.model_tester.n_targets, 4, device=torch_device, dtype=torch.float
+                        self.model_tester.n_targets,
+                        4,
+                        device=torch_device,
+                        dtype=torch.float,
                     )
                     labels.append(target)
                 inputs_dict["labels"] = labels
@@ -195,7 +219,9 @@ class YolosModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = YolosModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=YolosConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=YolosConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -296,7 +322,9 @@ class YolosModelTest(ModelTesterMixin, unittest.TestCase):
             hidden_states = outputs.hidden_states
 
             expected_num_layers = getattr(
-                self.model_tester, "expected_num_hidden_layers", self.model_tester.num_hidden_layers + 1
+                self.model_tester,
+                "expected_num_hidden_layers",
+                self.model_tester.num_hidden_layers + 1,
             )
             self.assertEqual(len(hidden_states), expected_num_layers)
 
@@ -342,11 +370,17 @@ def prepare_img():
 class YolosModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return AutoFeatureExtractor.from_pretrained("hustvl/yolos-small") if is_vision_available() else None
+        return (
+            AutoFeatureExtractor.from_pretrained("hustvl/yolos-small")
+            if is_vision_available()
+            else None
+        )
 
     @slow
     def test_inference_object_detection_head(self):
-        model = YolosForObjectDetection.from_pretrained("hustvl/yolos-small").to(torch_device)
+        model = YolosForObjectDetection.from_pretrained("hustvl/yolos-small").to(
+            torch_device
+        )
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -361,11 +395,26 @@ class YolosModelIntegrationTest(unittest.TestCase):
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice_logits = torch.tensor(
-            [[-24.0248, -10.3024, -14.8290], [-42.0392, -16.8200, -27.4334], [-27.2743, -11.8154, -18.7148]],
+            [
+                [-24.0248, -10.3024, -14.8290],
+                [-42.0392, -16.8200, -27.4334],
+                [-27.2743, -11.8154, -18.7148],
+            ],
             device=torch_device,
         )
         expected_slice_boxes = torch.tensor(
-            [[0.2559, 0.5455, 0.4706], [0.2989, 0.7279, 0.1875], [0.7732, 0.4017, 0.4462]], device=torch_device
+            [
+                [0.2559, 0.5455, 0.4706],
+                [0.2989, 0.7279, 0.1875],
+                [0.7732, 0.4017, 0.4462],
+            ],
+            device=torch_device,
         )
-        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4))
-        self.assertTrue(torch.allclose(outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3, :3], expected_slice_logits, atol=1e-4)
+        )
+        self.assertTrue(
+            torch.allclose(
+                outputs.pred_boxes[0, :3, :3], expected_slice_boxes, atol=1e-4
+            )
+        )

@@ -38,7 +38,9 @@ class TranslationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
         if isinstance(model.config, MBartConfig):
             src_lang, tgt_lang = list(tokenizer.lang_code_to_id.keys())[:2]
-            translator = TranslationPipeline(model=model, tokenizer=tokenizer, src_lang=src_lang, tgt_lang=tgt_lang)
+            translator = TranslationPipeline(
+                model=model, tokenizer=tokenizer, src_lang=src_lang, tgt_lang=tgt_lang
+            )
         else:
             translator = TranslationPipeline(model=model, tokenizer=tokenizer)
         return translator, ["Some string", "Some other text"]
@@ -51,11 +53,17 @@ class TranslationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
         self.assertEqual(outputs, [{"translation_text": ANY(str)}])
 
         outputs = translator(["Some string", "other string"])
-        self.assertEqual(outputs, [{"translation_text": ANY(str)}, {"translation_text": ANY(str)}])
+        self.assertEqual(
+            outputs, [{"translation_text": ANY(str)}, {"translation_text": ANY(str)}]
+        )
 
     @require_torch
     def test_small_model_pt(self):
-        translator = pipeline("translation_en_to_ro", model="patrickvonplaten/t5-tiny-random", framework="pt")
+        translator = pipeline(
+            "translation_en_to_ro",
+            model="patrickvonplaten/t5-tiny-random",
+            framework="pt",
+        )
         outputs = translator("This is a test string", max_length=20)
         self.assertEqual(
             outputs,
@@ -71,7 +79,11 @@ class TranslationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
 
     @require_tf
     def test_small_model_tf(self):
-        translator = pipeline("translation_en_to_ro", model="patrickvonplaten/t5-tiny-random", framework="tf")
+        translator = pipeline(
+            "translation_en_to_ro",
+            model="patrickvonplaten/t5-tiny-random",
+            framework="tf",
+        )
         outputs = translator("This is a test string", max_length=20)
         self.assertEqual(
             outputs,
@@ -87,7 +99,11 @@ class TranslationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
 
     @require_torch
     def test_en_to_de_pt(self):
-        translator = pipeline("translation_en_to_de", model="patrickvonplaten/t5-tiny-random", framework="pt")
+        translator = pipeline(
+            "translation_en_to_de",
+            model="patrickvonplaten/t5-tiny-random",
+            framework="pt",
+        )
         outputs = translator("This is a test string", max_length=20)
         self.assertEqual(
             outputs,
@@ -103,7 +119,11 @@ class TranslationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta
 
     @require_tf
     def test_en_to_de_tf(self):
-        translator = pipeline("translation_en_to_de", model="patrickvonplaten/t5-tiny-random", framework="tf")
+        translator = pipeline(
+            "translation_en_to_de",
+            model="patrickvonplaten/t5-tiny-random",
+            framework="tf",
+        )
         outputs = translator("This is a test string", max_length=20)
         self.assertEqual(
             outputs,
@@ -135,8 +155,12 @@ class TranslationNewFormatPipelineTests(unittest.TestCase):
     @require_torch
     @slow
     def test_multilingual_translation(self):
-        model = MBartForConditionalGeneration.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
-        tokenizer = MBart50TokenizerFast.from_pretrained("facebook/mbart-large-50-many-to-many-mmt")
+        model = MBartForConditionalGeneration.from_pretrained(
+            "facebook/mbart-large-50-many-to-many-mmt"
+        )
+        tokenizer = MBart50TokenizerFast.from_pretrained(
+            "facebook/mbart-large-50-many-to-many-mmt"
+        )
 
         translator = pipeline(task="translation", model=model, tokenizer=tokenizer)
         # Missing src_lang, tgt_lang
@@ -150,7 +174,13 @@ class TranslationNewFormatPipelineTests(unittest.TestCase):
         self.assertEqual(outputs, [{"translation_text": "यह एक परीक्षण है"}])
 
         # src_lang, tgt_lang can be defined at pipeline call time
-        translator = pipeline(task="translation", model=model, tokenizer=tokenizer, src_lang="en_XX", tgt_lang="ar_AR")
+        translator = pipeline(
+            task="translation",
+            model=model,
+            tokenizer=tokenizer,
+            src_lang="en_XX",
+            tgt_lang="ar_AR",
+        )
         outputs = translator("This is a test")
         self.assertEqual(outputs, [{"translation_text": "هذا إختبار"}])
 

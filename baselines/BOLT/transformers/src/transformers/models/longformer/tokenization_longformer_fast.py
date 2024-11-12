@@ -21,7 +21,11 @@ from .tokenization_longformer import LongformerTokenizer
 logger = logging.get_logger(__name__)
 
 
-VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "tokenizer_file": "tokenizer.json"}
+VOCAB_FILES_NAMES = {
+    "vocab_file": "vocab.json",
+    "merges_file": "merges.txt",
+    "tokenizer_file": "tokenizer.json",
+}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
@@ -89,6 +93,7 @@ class LongformerTokenizerFast(RobertaTokenizerFast):
     [`LongformerTokenizerFast`] is identical to [`RobertaTokenizerFast`]. Refer to the superclass for usage examples
     and documentation concerning parameters.
     """
+
     # merges and vocab same as Roberta
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP

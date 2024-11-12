@@ -43,7 +43,11 @@ if is_torch_available():
 
 
 def decode_spans(
-    start: np.ndarray, end: np.ndarray, topk: int, max_answer_len: int, undesired_tokens: np.ndarray
+    start: np.ndarray,
+    end: np.ndarray,
+    topk: int,
+    max_answer_len: int,
+    undesired_tokens: np.ndarray,
 ) -> Tuple:
     """
     Take the output of any `ModelForQuestionAnswering` and will generate probabilities for each span to be the actual
@@ -84,7 +88,9 @@ def decode_spans(
         idx_sort = idx[np.argsort(-scores_flat[idx])]
 
     starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:]
-    desired_spans = np.isin(starts, undesired_tokens.nonzero()) & np.isin(ends, undesired_tokens.nonzero())
+    desired_spans = np.isin(starts, undesired_tokens.nonzero()) & np.isin(
+        ends, undesired_tokens.nonzero()
+    )
     starts = starts[desired_spans]
     ends = ends[desired_spans]
     scores = candidates[0, starts, ends]
@@ -142,7 +148,9 @@ def select_starts_ends(
     # Mask CLS
     start[0, 0] = end[0, 0] = 0.0
 
-    starts, ends, scores = decode_spans(start, end, top_k, max_answer_len, undesired_tokens)
+    starts, ends, scores = decode_spans(
+        start, end, top_k, max_answer_len, undesired_tokens
+    )
     return starts, ends, scores, min_null_score
 
 
@@ -161,7 +169,9 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
         elif isinstance(item, dict):
             for k in ["question", "context"]:
                 if k not in item:
-                    raise KeyError("You need to provide a dictionary with keys {question:..., context:...}")
+                    raise KeyError(
+                        "You need to provide a dictionary with keys {question:..., context:...}"
+                    )
                 elif item[k] is None:
                     raise ValueError(f"`{k}` cannot be None")
                 elif isinstance(item[k], str) and len(item[k]) == 0:
@@ -186,22 +196,42 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
         elif "data" in kwargs:
             inputs = kwargs["data"]
         elif "question" in kwargs and "context" in kwargs:
-            if isinstance(kwargs["question"], list) and isinstance(kwargs["context"], str):
-                inputs = [{"question": Q, "context": kwargs["context"]} for Q in kwargs["question"]]
-            elif isinstance(kwargs["question"], list) and isinstance(kwargs["context"], list):
+            if isinstance(kwargs["question"], list) and isinstance(
+                kwargs["context"], str
+            ):
+                inputs = [
+                    {"question": Q, "context": kwargs["context"]}
+                    for Q in kwargs["question"]
+                ]
+            elif isinstance(kwargs["question"], list) and isinstance(
+                kwargs["context"], list
+            ):
                 if len(kwargs["question"]) != len(kwargs["context"]):
-                    raise ValueError("Questions and contexts don't have the same lengths")
+                    raise ValueError(
+                        "Questions and contexts don't have the same lengths"
+                    )
 
-                inputs = [{"question": Q, "context": C} for Q, C in zip(kwargs["question"], kwargs["context"])]
-            elif isinstance(kwargs["question"], str) and isinstance(kwargs["context"], str):
-                inputs = [{"question": kwargs["question"], "context": kwargs["context"]}]
+                inputs = [
+                    {"question": Q, "context": C}
+                    for Q, C in zip(kwargs["question"], kwargs["context"])
+                ]
+            elif isinstance(kwargs["question"], str) and isinstance(
+                kwargs["context"], str
+            ):
+                inputs = [
+                    {"question": kwargs["question"], "context": kwargs["context"]}
+                ]
             else:
                 raise ValueError("Arguments can't be understood")
         else:
             raise ValueError(f"Unknown arguments {kwargs}")
 
         # When user is sending a generator we need to trust it's a valid example
-        generator_types = (types.GeneratorType, Dataset) if Dataset is not None else (types.GeneratorType,)
+        generator_types = (
+            (types.GeneratorType, Dataset)
+            if Dataset is not None
+            else (types.GeneratorType,)
+        )
         if isinstance(inputs, generator_types):
             return inputs
 
@@ -259,7 +289,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
 
         self._args_parser = QuestionAnsweringArgumentHandler()
         self.check_model_type(
-            TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING if self.framework == "tf" else MODEL_FOR_QUESTION_ANSWERING_MAPPING
+            TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING
+            if self.framework == "tf"
+            else MODEL_FOR_QUESTION_ANSWERING_MAPPING
         )
 
     @staticmethod
@@ -280,7 +312,10 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             One or a list of [`SquadExample`]: The corresponding [`SquadExample`] grouping question and context.
         """
         if isinstance(question, list):
-            return [SquadExample(None, q, c, None, None, None) for q, c in zip(question, context)]
+            return [
+                SquadExample(None, q, c, None, None, None)
+                for q, c in zip(question, context)
+            ]
         else:
             return SquadExample(None, question, context, None, None, None)
 
@@ -295,7 +330,7 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         max_question_len=None,
         handle_impossible_answer=None,
         align_to_words=None,
-        **kwargs
+        **kwargs,
     ):
         # Set defaults values
         preprocess_params = {}
@@ -310,7 +345,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
 
         postprocess_params = {}
         if topk is not None and top_k is None:
-            warnings.warn("topk parameter is deprecated, use top_k instead", UserWarning)
+            warnings.warn(
+                "topk parameter is deprecated, use top_k instead", UserWarning
+            )
             top_k = topk
         if top_k is not None:
             if top_k < 1:
@@ -318,7 +355,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             postprocess_params["top_k"] = top_k
         if max_answer_len is not None:
             if max_answer_len < 1:
-                raise ValueError(f"max_answer_len parameter should be >= 1 (got {max_answer_len}")
+                raise ValueError(
+                    f"max_answer_len parameter should be >= 1 (got {max_answer_len}"
+                )
         if max_answer_len is not None:
             postprocess_params["max_answer_len"] = max_answer_len
         if handle_impossible_answer is not None:
@@ -380,12 +419,21 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             return super().__call__(examples[0], **kwargs)
         return super().__call__(examples, **kwargs)
 
-    def preprocess(self, example, padding="do_not_pad", doc_stride=None, max_question_len=64, max_seq_len=None):
+    def preprocess(
+        self,
+        example,
+        padding="do_not_pad",
+        doc_stride=None,
+        max_question_len=64,
+        max_seq_len=None,
+    ):
         # XXX: This is specal, args_parser will not handle anything generator or dataset like
         # For those we expect user to send a simple valid example either directly as a SquadExample or simple dict.
         # So we still need a little sanitation here.
         if isinstance(example, dict):
-            example = SquadExample(None, example["question"], example["context"], None, None, None)
+            example = SquadExample(
+                None, example["question"], example["context"], None, None, None
+            )
 
         if max_seq_len is None:
             max_seq_len = min(self.tokenizer.model_max_length, 384)
@@ -409,7 +457,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
 
             encoded_inputs = self.tokenizer(
                 text=example.question_text if question_first else example.context_text,
-                text_pair=example.context_text if question_first else example.question_text,
+                text_pair=(
+                    example.context_text if question_first else example.question_text
+                ),
                 padding=padding,
                 truncation="only_second" if question_first else "only_first",
                 max_length=max_seq_len,
@@ -429,7 +479,10 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             # p_mask: mask with 1 for token than cannot be in the answer (0 for token which can be in an answer)
             # We put 0 on the tokens from the context and 1 everywhere else (question and special tokens)
             p_mask = [
-                [tok != 1 if question_first else 0 for tok in encoded_inputs.sequence_ids(span_id)]
+                [
+                    tok != 1 if question_first else 0
+                    for tok in encoded_inputs.sequence_ids(span_id)
+                ]
                 for span_id in range(num_spans)
             ]
 
@@ -437,14 +490,20 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             for span_idx in range(num_spans):
                 input_ids_span_idx = encoded_inputs["input_ids"][span_idx]
                 attention_mask_span_idx = (
-                    encoded_inputs["attention_mask"][span_idx] if "attention_mask" in encoded_inputs else None
+                    encoded_inputs["attention_mask"][span_idx]
+                    if "attention_mask" in encoded_inputs
+                    else None
                 )
                 token_type_ids_span_idx = (
-                    encoded_inputs["token_type_ids"][span_idx] if "token_type_ids" in encoded_inputs else None
+                    encoded_inputs["token_type_ids"][span_idx]
+                    if "token_type_ids" in encoded_inputs
+                    else None
                 )
                 # keep the cls_token unmasked (some models use it to indicate unanswerable questions)
                 if self.tokenizer.cls_token_id is not None:
-                    cls_indices = np.nonzero(np.array(input_ids_span_idx) == self.tokenizer.cls_token_id)[0]
+                    cls_indices = np.nonzero(
+                        np.array(input_ids_span_idx) == self.tokenizer.cls_token_id
+                    )[0]
                     for cls_index in cls_indices:
                         p_mask[span_idx][cls_index] = 0
                 submask = p_mask[span_idx]
@@ -474,7 +533,10 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         for i, feature in enumerate(features):
             fw_args = {}
             others = {}
-            model_input_names = self.tokenizer.model_input_names + ["p_mask", "token_type_ids"]
+            model_input_names = self.tokenizer.model_input_names + [
+                "p_mask",
+                "token_type_ids",
+            ]
 
             for k, v in feature.__dict__.items():
                 if k in model_input_names:
@@ -516,11 +578,20 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             example = output["example"]
             p_mask = output["p_mask"]
             attention_mask = (
-                output["attention_mask"].numpy() if output.get("attention_mask", None) is not None else None
+                output["attention_mask"].numpy()
+                if output.get("attention_mask", None) is not None
+                else None
             )
 
             starts, ends, scores, min_null_score = select_starts_ends(
-                start_, end_, p_mask, attention_mask, min_null_score, top_k, handle_impossible_answer, max_answer_len
+                start_,
+                end_,
+                p_mask,
+                attention_mask,
+                min_null_score,
+                top_k,
+                handle_impossible_answer,
+                max_answer_len,
             )
 
             if not self.tokenizer.is_fast:
@@ -536,9 +607,17 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                     answers.append(
                         {
                             "score": score.item(),
-                            "start": np.where(char_to_word == token_to_orig_map[s])[0][0].item(),
-                            "end": np.where(char_to_word == token_to_orig_map[e])[0][-1].item(),
-                            "answer": " ".join(example.doc_tokens[token_to_orig_map[s] : token_to_orig_map[e] + 1]),
+                            "start": np.where(char_to_word == token_to_orig_map[s])[0][
+                                0
+                            ].item(),
+                            "end": np.where(char_to_word == token_to_orig_map[e])[0][
+                                -1
+                            ].item(),
+                            "answer": " ".join(
+                                example.doc_tokens[
+                                    token_to_orig_map[s] : token_to_orig_map[e] + 1
+                                ]
+                            ),
                         }
                     )
             else:
@@ -555,7 +634,11 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                 # the left hand side, since now we have different offsets
                 # everywhere.
                 if self.tokenizer.padding_side == "left":
-                    offset = (output["input_ids"] == self.tokenizer.pad_token_id).numpy().sum()
+                    offset = (
+                        (output["input_ids"] == self.tokenizer.pad_token_id)
+                        .numpy()
+                        .sum()
+                    )
                 else:
                     offset = 0
 
@@ -567,7 +650,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                     s = s - offset
                     e = e - offset
 
-                    start_index, end_index = self.get_indices(enc, s, e, sequence_index, align_to_words)
+                    start_index, end_index = self.get_indices(
+                        enc, s, e, sequence_index, align_to_words
+                    )
 
                     answers.append(
                         {
@@ -579,21 +664,32 @@ class QuestionAnsweringPipeline(ChunkPipeline):
                     )
 
         if handle_impossible_answer:
-            answers.append({"score": min_null_score, "start": 0, "end": 0, "answer": ""})
+            answers.append(
+                {"score": min_null_score, "start": 0, "end": 0, "answer": ""}
+            )
         answers = sorted(answers, key=lambda x: x["score"], reverse=True)[:top_k]
         if len(answers) == 1:
             return answers[0]
         return answers
 
     def get_indices(
-        self, enc: "tokenizers.Encoding", s: int, e: int, sequence_index: int, align_to_words: bool
+        self,
+        enc: "tokenizers.Encoding",
+        s: int,
+        e: int,
+        sequence_index: int,
+        align_to_words: bool,
     ) -> Tuple[int, int]:
         if align_to_words:
             try:
                 start_word = enc.token_to_word(s)
                 end_word = enc.token_to_word(e)
-                start_index = enc.word_to_chars(start_word, sequence_index=sequence_index)[0]
-                end_index = enc.word_to_chars(end_word, sequence_index=sequence_index)[1]
+                start_index = enc.word_to_chars(
+                    start_word, sequence_index=sequence_index
+                )[0]
+                end_index = enc.word_to_chars(end_word, sequence_index=sequence_index)[
+                    1
+                ]
             except Exception:
                 # Some tokenizers don't really handle words. Keep to offsets then.
                 start_index = enc.offsets[s][0]
@@ -603,7 +699,9 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             end_index = enc.offsets[e][1]
         return start_index, end_index
 
-    def span_to_answer(self, text: str, start: int, end: int) -> Dict[str, Union[str, int]]:
+    def span_to_answer(
+        self, text: str, start: int, end: int
+    ) -> Dict[str, Union[str, int]]:
         """
         When decoding from token probabilities, this method maps token indexes to actual word in the initial context.
 

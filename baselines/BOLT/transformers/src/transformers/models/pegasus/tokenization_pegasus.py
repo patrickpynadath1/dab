@@ -27,7 +27,9 @@ SPIECE_UNDERLINE = "▁"
 VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {"google/pegasus-xsum": "https://huggingface.co/google/pegasus-xsum/resolve/main/spiece.model"}
+    "vocab_file": {
+        "google/pegasus-xsum": "https://huggingface.co/google/pegasus-xsum/resolve/main/spiece.model"
+    }
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
@@ -95,6 +97,7 @@ class PegasusTokenizer(PreTrainedTokenizer):
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
               BPE-dropout.
     """
+
     vocab_files_names = VOCAB_FILES_NAMES
 
     vocab_files_names = VOCAB_FILES_NAMES
@@ -113,7 +116,7 @@ class PegasusTokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         offset=103,  # entries 2 - 104 are only used for pretraining
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.offset = offset
         if additional_special_tokens is not None:
@@ -125,22 +128,28 @@ class PegasusTokenizer(PreTrainedTokenizer):
 
             additional_special_tokens_extended = (
                 ([mask_token_sent] + additional_special_tokens)
-                if mask_token_sent not in additional_special_tokens and mask_token_sent is not None
+                if mask_token_sent not in additional_special_tokens
+                and mask_token_sent is not None
                 else additional_special_tokens
             )
             # fill additional tokens with ..., <unk_token_102> in case not all additional tokens are already taken
             additional_special_tokens_extended += [
-                f"<unk_{i}>" for i in range(len(additional_special_tokens_extended), self.offset - 1)
+                f"<unk_{i}>"
+                for i in range(len(additional_special_tokens_extended), self.offset - 1)
             ]
 
-            if len(set(additional_special_tokens_extended)) != len(additional_special_tokens_extended):
+            if len(set(additional_special_tokens_extended)) != len(
+                additional_special_tokens_extended
+            ):
                 raise ValueError(
                     "Please make sure that the provided additional_special_tokens do not contain an incorrectly"
                     f" shifted list of <unk_x> tokens. Found {additional_special_tokens_extended}."
                 )
             additional_special_tokens = additional_special_tokens_extended
         else:
-            additional_special_tokens = [mask_token_sent] if mask_token_sent is not None else []
+            additional_special_tokens = (
+                [mask_token_sent] if mask_token_sent is not None else []
+            )
             additional_special_tokens += [f"<unk_{i}>" for i in range(2, self.offset)]
 
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
@@ -178,7 +187,9 @@ class PegasusTokenizer(PreTrainedTokenizer):
         if self.offset > 0:
             # entries 2-104 are only used for pretraining and called <mask_1>, <mask_2>, unk_2, ...unk_102
             # mask_token_sent is already added to list -> so start at 1
-            self.encoder.update({i + 3: additional_special_tokens[i] for i in range(1, self.offset - 1)})
+            self.encoder.update(
+                {i + 3: additional_special_tokens[i] for i in range(1, self.offset - 1)}
+            )
 
         self.decoder: Dict[str, int] = {v: k for k, v in self.encoder.items()}
 
@@ -239,13 +250,18 @@ class PegasusTokenizer(PreTrainedTokenizer):
         return 1
 
     def _special_token_mask(self, seq):
-        all_special_ids = set(self.all_special_ids)  # call it once instead of inside list comp
+        all_special_ids = set(
+            self.all_special_ids
+        )  # call it once instead of inside list comp
         all_special_ids.remove(self.unk_token_id)  # <unk> is only sometimes special
 
         return [1 if x in all_special_ids else 0 for x in seq]
 
     def get_special_tokens_mask(
-        self, token_ids_0: List, token_ids_1: Optional[List] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List,
+        token_ids_1: Optional[List] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """Get list where entries are [1] if a token is [eos] or [pad] else 0."""
         if already_has_special_tokens:
@@ -255,7 +271,9 @@ class PegasusTokenizer(PreTrainedTokenizer):
         else:
             return self._special_token_mask(token_ids_0 + token_ids_1) + [1]
 
-    def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None) -> List[int]:
+    def build_inputs_with_special_tokens(
+        self, token_ids_0, token_ids_1=None
+    ) -> List[int]:
         """
         Build model inputs from a sequence or a pair of sequences for sequence classification tasks by concatenating
         and adding special tokens. A PEGASUS sequence has the following format, where `X` represents the sequence:
@@ -280,15 +298,21 @@ class PegasusTokenizer(PreTrainedTokenizer):
         # We don't expect to process pairs, but leave the pair logic for API consistency
         return token_ids_0 + token_ids_1 + [self.eos_token_id]
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
         out_vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["vocab_file"],
         )
 
-        if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file) and os.path.isfile(self.vocab_file):
+        if os.path.abspath(self.vocab_file) != os.path.abspath(
+            out_vocab_file
+        ) and os.path.isfile(self.vocab_file):
             copyfile(self.vocab_file, out_vocab_file)
         elif not os.path.isfile(self.vocab_file):
             with open(out_vocab_file, "wb") as fi:

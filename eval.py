@@ -7,8 +7,9 @@ import pickle
 from evaluation import *
 from models import load_sentiment_discriminator, load_tokenizer
 
+
 def exp_specific_metrics(exp, batch, **kwargs):
-    if exp == "sentiment":
+    if exp == "sentiment" or exp == "selective_biasing":
         return compute_classifier_attribute(batch, **kwargs)
     elif exp == "keywords":
         return []
@@ -22,7 +23,14 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     cur_idx = 0
     # batch_size = total_conf['batch_size']
     batch_size = 300
-    metrics = {"perp": [], "cola": [], "self_bleu": [], total_conf["exp"]: [], 'internal_senti': [], 'sst_senti': []}
+    metrics = {
+        "perp": [],
+        "cola": [],
+        "self_bleu": [],
+        total_conf["exp"]: [],
+        "internal_senti": [],
+        "sst_senti": [],
+    }
     cola_tokenizer, cola_model = load_cola_model()
     ext_senti_tokenizer, ext_senti_clf = load_external_sentiment()
     ext_toxic_tokenizer, ext_toxic_clf = load_internal_toxic()
@@ -49,17 +57,17 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
     #     cur_gens = [gen.replace(prompt, "") for gen in cur_gens]
     #     cur_gens = [gen.replace("\n", "") for gen in cur_gens]
 
-    #     # pass to self bleu 
+    #     # pass to self bleu
     #     metrics["self_bleu"].append(calc_self_bleu(cur_gens))
     while cur_idx < len(generated_sentences):
         print(cur_idx)
         batch = generated_sentences[cur_idx : cur_idx + batch_size]
 
-        metrics['cola'].append(compute_classifier_attribute(
-                                            batch,
-                                            ext_tokenizer=cola_tokenizer,
-                                            ext_clf=cola_model)
-                                )
+        metrics["cola"].append(
+            compute_classifier_attribute(
+                batch, ext_tokenizer=cola_tokenizer, ext_clf=cola_model
+            )
+        )
         if total_conf["exp"] != "detoxify":
             metrics[total_conf["exp"]].append(
                 exp_specific_metrics(
@@ -69,23 +77,23 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
                     ext_clf=ext_senti_clf,
                 )
             )
-            if total_conf["exp"] == "sentiment":
-
-                metrics['internal_senti'].append(
+            if total_conf["exp"] != "keywords":
+                print("calcing senti")
+                metrics["internal_senti"].append(
                     exp_specific_metrics(
-                        total_conf["exp"],
+                        "sentiment",
                         batch,
                         ext_tokenizer=internal_sentiment_tokenizer,
                         ext_clf=internal_sentiment_clf,
-                    )            
+                    )
                 )
-                metrics['sst_senti'].append(
+                metrics["sst_senti"].append(
                     exp_specific_metrics(
-                        total_conf["exp"],
+                        "sentiment",
                         batch,
                         ext_tokenizer=sst_tok,
                         ext_clf=sst_clf,
-                    )            
+                    )
                 )
         else:
             metrics[total_conf["exp"]].append(
@@ -96,8 +104,6 @@ def eval_loop(total_conf, generated_sentences, return_on_end=False, dump_on_end=
                     ext_clf=ext_toxic_clf,
                 )
             )
-            
-        
 
         cur_idx += batch_size
     if dump_on_end:

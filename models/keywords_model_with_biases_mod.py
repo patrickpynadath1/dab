@@ -284,7 +284,7 @@ class GPTPromptTuningWithBiasesModelMixin:
         logits = logits + onehot_generates - onehot_generates.detach()
         keywords_losses = batch_log_bleulosscnn_ae(logits, keywords, 1)
         keywords_loss = torch.mean(keywords_losses)
-        
+
         loss = keywords_loss
         return loss, output_ids, onehot_generates, logits, keywords_losses
 

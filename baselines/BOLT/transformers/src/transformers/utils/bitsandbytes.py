@@ -42,17 +42,27 @@ def set_module_8bit_tensor_to_device(module, tensor_name, device, value=None):
         tensor_name = splits[-1]
 
     if tensor_name not in module._parameters and tensor_name not in module._buffers:
-        raise ValueError(f"{module} does not have a parameter or a buffer named {tensor_name}.")
+        raise ValueError(
+            f"{module} does not have a parameter or a buffer named {tensor_name}."
+        )
     is_buffer = tensor_name in module._buffers
     old_value = getattr(module, tensor_name)
 
-    if old_value.device == torch.device("meta") and device not in ["meta", torch.device("meta")] and value is None:
-        raise ValueError(f"{tensor_name} is on the meta device, we need a `value` to put in on {device}.")
+    if (
+        old_value.device == torch.device("meta")
+        and device not in ["meta", torch.device("meta")]
+        and value is None
+    ):
+        raise ValueError(
+            f"{tensor_name} is on the meta device, we need a `value` to put in on {device}."
+        )
 
     if is_buffer:
         has_fp16_weights = None
     else:
-        has_fp16_weights = getattr(module._parameters[tensor_name], "has_fp16_weights", None)
+        has_fp16_weights = getattr(
+            module._parameters[tensor_name], "has_fp16_weights", None
+        )
 
     if has_fp16_weights is not None:
         param = module._parameters[tensor_name]
@@ -68,7 +78,9 @@ def set_module_8bit_tensor_to_device(module, tensor_name, device, value=None):
                     )
             else:
                 new_value = torch.tensor(value, device="cpu")
-            new_value = bnb.nn.Int8Params(new_value, requires_grad=False, has_fp16_weights=has_fp16_weights).to(device)
+            new_value = bnb.nn.Int8Params(
+                new_value, requires_grad=False, has_fp16_weights=has_fp16_weights
+            ).to(device)
             module._parameters[tensor_name] = new_value
     else:
         if value is None:
@@ -139,7 +151,9 @@ def get_keys_to_not_convert(model):
     """
     # Create a copy of the model and tie the weights, then
     # check if it contains tied weights
-    tied_model = deepcopy(model)  # this has 0 cost since it is done inside `init_empty_weights` context manager`
+    tied_model = deepcopy(
+        model
+    )  # this has 0 cost since it is done inside `init_empty_weights` context manager`
     tied_model.tie_weights()
 
     tied_keys = list(find_tied_parameters(tied_model).values())

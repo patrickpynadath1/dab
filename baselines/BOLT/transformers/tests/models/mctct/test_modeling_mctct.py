@@ -21,10 +21,20 @@ import unittest
 from datasets import load_dataset
 
 from transformers import MCTCTConfig, is_torch_available
-from transformers.testing_utils import require_soundfile, require_torch, slow, torch_device
+from transformers.testing_utils import (
+    require_soundfile,
+    require_torch,
+    slow,
+    torch_device,
+)
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    _config_zero_init,
+    floats_tensor,
+    ids_tensor,
+)
 
 
 if is_torch_available():
@@ -94,19 +104,28 @@ class MCTCTModelTester:
 
         output_seq_length = self.seq_length
         dilation = 1
-        for _, kernel_sz, stride in zip(range(self.num_conv_layers), self.conv_kernel, self.conv_stride):
+        for _, kernel_sz, stride in zip(
+            range(self.num_conv_layers), self.conv_kernel, self.conv_stride
+        ):
             padding = kernel_sz // 2
-            output_seq_length = output_seq_length + 2 * padding - dilation * (kernel_sz - 1) - 1
-            output_seq_length = torch.div(output_seq_length, stride, rounding_mode="trunc") + 1
+            output_seq_length = (
+                output_seq_length + 2 * padding - dilation * (kernel_sz - 1) - 1
+            )
+            output_seq_length = (
+                torch.div(output_seq_length, stride, rounding_mode="trunc") + 1
+            )
 
         self.output_seq_length = int(math.ceil(output_seq_length))
         self.encoder_seq_length = self.output_seq_length
 
     def prepare_config_and_inputs(self):
         input_features = floats_tensor(
-            [self.batch_size, self.seq_length, self.input_feat_per_channel], self.vocab_size
+            [self.batch_size, self.seq_length, self.input_feat_per_channel],
+            self.vocab_size,
         )
-        attention_mask = torch.ones([self.batch_size, self.seq_length], dtype=torch.long, device=torch_device)
+        attention_mask = torch.ones(
+            [self.batch_size, self.seq_length], dtype=torch.long, device=torch_device
+        )
 
         config = self.get_config()
 
@@ -144,7 +163,8 @@ class MCTCTModelTester:
         result = model(input_features, attention_mask=attention_mask)
 
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.output_seq_length, self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.output_seq_length, self.hidden_size),
         )
 
     def create_and_check_model_for_ctc(self, config, input_features, attention_mask):
@@ -155,7 +175,8 @@ class MCTCTModelTester:
         model.eval()
         result = model(input_features, attention_mask=attention_mask)
         self.parent.assertEqual(
-            result.logits.shape, (self.batch_size, self.adapter_output_seq_length, self.vocab_size)
+            result.logits.shape,
+            (self.batch_size, self.adapter_output_seq_length, self.vocab_size),
         )
 
     def create_and_check_batch_inference(self, config, input_features, *args):
@@ -166,7 +187,9 @@ class MCTCTModelTester:
         model.eval()
 
         input_features = input_features[:3]
-        attention_mask = torch.ones(input_features.shape[:-1], device=torch_device, dtype=torch.bool)
+        attention_mask = torch.ones(
+            input_features.shape[:-1], device=torch_device, dtype=torch.bool
+        )
 
         input_lengths = [input_features.shape[-1] // i for i in [2, 2, 1]]
 
@@ -175,7 +198,9 @@ class MCTCTModelTester:
             input_features[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0.0
 
-        batch_outputs = model(input_features, attention_mask=attention_mask).last_hidden_state
+        batch_outputs = model(
+            input_features, attention_mask=attention_mask
+        ).last_hidden_state
 
         for i in range(input_features.shape[0]):
             input_slice = input_features[i : i + 1, : input_lengths[i]]
@@ -194,22 +219,33 @@ class MCTCTModelTester:
         input_features = input_features[:3]
 
         # input_features is a 2D window for each sequence
-        attention_mask = torch.ones(input_features.shape[:-1], device=torch_device, dtype=torch.long)
+        attention_mask = torch.ones(
+            input_features.shape[:-1], device=torch_device, dtype=torch.long
+        )
 
         # -2 since input_features is a 2D window for each sequence in batch
         input_lengths = [input_features.shape[-2] // i for i in [2, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_features.shape[0], min(max_length_labels) - 1), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_features.shape[0], min(max_length_labels) - 1),
+            model.config.vocab_size,
+        )
         # pad input
         for i in range(len(input_lengths)):
             input_features[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0
 
         model.config.ctc_loss_reduction = "sum"
-        sum_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
+        sum_loss = model(
+            input_features, attention_mask=attention_mask, labels=labels
+        ).loss.item()
 
         model.config.ctc_loss_reduction = "mean"
-        mean_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
+        mean_loss = model(
+            input_features, attention_mask=attention_mask, labels=labels
+        ).loss.item()
 
         self.parent.assertTrue(isinstance(sum_loss, float))
         self.parent.assertTrue(isinstance(mean_loss, float))
@@ -223,8 +259,13 @@ class MCTCTModelTester:
         input_features = input_features[:3]
 
         input_lengths = [input_features.shape[-2] // i for i in [2, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_features.shape[0], max(max_length_labels) - 1), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_features.shape[0], max(max_length_labels) - 1),
+            model.config.vocab_size,
+        )
 
         # pad input
         for i in range(len(input_lengths)):
@@ -248,15 +289,23 @@ class MCTCTModelTester:
         input_features = input_features[:3]
 
         input_lengths = [input_features.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(torch.tensor(input_lengths))
-        labels = ids_tensor((input_features.shape[0], max(max_length_labels) - 2), model.config.vocab_size + 100)
+        max_length_labels = model._get_feat_extract_output_lengths(
+            torch.tensor(input_lengths)
+        )
+        labels = ids_tensor(
+            (input_features.shape[0], max(max_length_labels) - 2),
+            model.config.vocab_size + 100,
+        )
 
         with self.parent.assertRaises(ValueError):
             model(input_features, labels=labels)
 
     def prepare_config_and_inputs_for_common(self):
         config, input_features, attention_mask = self.prepare_config_and_inputs()
-        inputs_dict = {"input_features": input_features, "attention_mask": attention_mask}
+        inputs_dict = {
+            "input_features": input_features,
+            "attention_mask": attention_mask,
+        }
         return config, inputs_dict
 
 
@@ -269,7 +318,9 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = MCTCTModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=MCTCTConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=MCTCTConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -312,7 +363,9 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
                 "output_hidden_states",
                 "return_dict",
             ]
-            self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            self.assertListEqual(
+                arg_names[: len(expected_arg_names)], expected_arg_names
+            )
 
     # MCTCT cannot resize token embeddings
     # since it has no tokens embeddings
@@ -337,11 +390,16 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
         input_features = inputs_dict["input_features"]
 
         input_lengths = torch.tensor(
-            [input_features.shape[1] for _ in range(input_features.shape[0])], dtype=torch.long, device=torch_device
+            [input_features.shape[1] for _ in range(input_features.shape[0])],
+            dtype=torch.long,
+            device=torch_device,
         )
         output_lengths = model._get_feat_extract_output_lengths(input_lengths)
 
-        labels = ids_tensor((input_features.shape[0], output_lengths[0] - 2), self.model_tester.vocab_size)
+        labels = ids_tensor(
+            (input_features.shape[0], output_lengths[0] - 2),
+            self.model_tester.vocab_size,
+        )
         inputs_dict["attention_mask"] = torch.ones_like(inputs_dict["attention_mask"])
         inputs_dict["labels"] = labels
 
@@ -384,7 +442,9 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any([x in name for x in uniform_init_parms]):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0
+                            <= ((param.data.mean() * 1e9).round() / 1e9).item()
+                            <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
                     else:
@@ -406,7 +466,10 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
             module.bias.data.fill_(3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
             module.codevectors.data.fill_(3)
-        if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
+        if (
+            hasattr(module, "masked_spec_embed")
+            and module.masked_spec_embed is not None
+        ):
             module.masked_spec_embed.data.fill_(3)
 
     @slow
@@ -424,7 +487,9 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = MCTCTModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=MCTCTConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=MCTCTConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -484,11 +549,16 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
         input_features = inputs_dict["input_features"]
 
         input_lengths = torch.tensor(
-            [input_features.shape[1] for _ in range(input_features.shape[0])], dtype=torch.long, device=torch_device
+            [input_features.shape[1] for _ in range(input_features.shape[0])],
+            dtype=torch.long,
+            device=torch_device,
         )
         output_lengths = model._get_feat_extract_output_lengths(input_lengths)
 
-        labels = ids_tensor((input_features.shape[0], output_lengths[0] - 2), self.model_tester.vocab_size)
+        labels = ids_tensor(
+            (input_features.shape[0], output_lengths[0] - 2),
+            self.model_tester.vocab_size,
+        )
         inputs_dict["attention_mask"] = torch.ones_like(inputs_dict["attention_mask"])
         inputs_dict["labels"] = labels
 
@@ -531,7 +601,9 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any([x in name for x in uniform_init_parms]):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0
+                            <= ((param.data.mean() * 1e9).round() / 1e9).item()
+                            <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
                     else:
@@ -553,7 +625,10 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
             module.bias.data.fill_(3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
             module.codevectors.data.fill_(3)
-        if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
+        if (
+            hasattr(module, "masked_spec_embed")
+            and module.masked_spec_embed is not None
+        ):
             module.masked_spec_embed.data.fill_(3)
 
     @unittest.skip(reason="Feed forward chunking is not implemented")
@@ -571,7 +646,9 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
 @slow
 class MCTCTModelIntegrationTest(unittest.TestCase):
     def _load_datasamples(self, num_samples):
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        ds = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+        )
         # automatic decoding with librispeech
         speech_samples = ds.sort("id").filter(
             lambda x: x["id"] in [f"1272-141231-000{i}" for i in range(num_samples)]
@@ -582,10 +659,14 @@ class MCTCTModelIntegrationTest(unittest.TestCase):
     def test_inference_ctc_normal(self):
         model = MCTCTForCTC.from_pretrained("speechbrain/m-ctc-t-large")
         model.to(torch_device)
-        processor = MCTCTProcessor.from_pretrained("speechbrain/m-ctc-t-large", do_lower_case=True)
+        processor = MCTCTProcessor.from_pretrained(
+            "speechbrain/m-ctc-t-large", do_lower_case=True
+        )
         input_speech = self._load_datasamples(1)
 
-        input_features = processor(input_speech, return_tensors="pt").input_features.to(torch_device)
+        input_features = processor(input_speech, return_tensors="pt").input_features.to(
+            torch_device
+        )
 
         with torch.no_grad():
             logits = model(input_features).logits
@@ -599,7 +680,9 @@ class MCTCTModelIntegrationTest(unittest.TestCase):
     def test_inference_ctc_normal_batched(self):
         model = MCTCTForCTC.from_pretrained("speechbrain/m-ctc-t-large")
         model.to(torch_device)
-        processor = MCTCTProcessor.from_pretrained("speechbrain/m-ctc-t-large", do_lower_case=True)
+        processor = MCTCTProcessor.from_pretrained(
+            "speechbrain/m-ctc-t-large", do_lower_case=True
+        )
 
         input_speech = self._load_datasamples(2)
 
@@ -621,12 +704,18 @@ class MCTCTModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_ctc_robust_batched(self):
-        model = MCTCTForCTC.from_pretrained("speechbrain/m-ctc-t-large").to(torch_device)
-        processor = MCTCTProcessor.from_pretrained("speechbrain/m-ctc-t-large", do_lower_case=True)
+        model = MCTCTForCTC.from_pretrained("speechbrain/m-ctc-t-large").to(
+            torch_device
+        )
+        processor = MCTCTProcessor.from_pretrained(
+            "speechbrain/m-ctc-t-large", do_lower_case=True
+        )
 
         input_speech = self._load_datasamples(4)
 
-        inputs = processor(input_speech, return_tensors="pt", padding=True, return_attention_mask=True)
+        inputs = processor(
+            input_speech, return_tensors="pt", padding=True, return_attention_mask=True
+        )
 
         input_features = inputs.input_features.to(torch_device)
         attention_mask = inputs.attention_mask.to(torch_device)

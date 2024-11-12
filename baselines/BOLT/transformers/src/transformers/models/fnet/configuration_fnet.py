@@ -22,7 +22,7 @@ logger = logging.get_logger(__name__)
 
 FNET_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "google/fnet-base": "https://huggingface.co/google/fnet-base/resolve/main/config.json",
-    "google/fnet-large": "https://huggingface.co/google/fnet-large/resolve/main/config.json"
+    "google/fnet-large": "https://huggingface.co/google/fnet-large/resolve/main/config.json",
     # See all FNet models at https://huggingface.co/models?filter=fnet
 }
 
@@ -84,6 +84,7 @@ class FNetConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "fnet"
 
     def __init__(
@@ -105,7 +106,12 @@ class FNetConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs
     ):
-        super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs
+        )
 
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

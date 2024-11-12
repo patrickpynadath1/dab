@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_pytesseract, require_torch
 from transformers.utils import is_pytesseract_available, is_torch_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -57,14 +60,22 @@ class LayoutLMv2FeatureExtractionTester(unittest.TestCase):
         self.apply_ocr = apply_ocr
 
     def prepare_feat_extract_dict(self):
-        return {"do_resize": self.do_resize, "size": self.size, "apply_ocr": self.apply_ocr}
+        return {
+            "do_resize": self.do_resize,
+            "size": self.size,
+            "apply_ocr": self.apply_ocr,
+        }
 
 
 @require_torch
 @require_pytesseract
-class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestCase):
+class LayoutLMv2FeatureExtractionTest(
+    FeatureExtractionSavingTestMixin, unittest.TestCase
+):
 
-    feature_extraction_class = LayoutLMv2FeatureExtractor if is_pytesseract_available() else None
+    feature_extraction_class = (
+        LayoutLMv2FeatureExtractor if is_pytesseract_available() else None
+    )
 
     def setUp(self):
         self.feature_extract_tester = LayoutLMv2FeatureExtractionTester(self)
@@ -86,7 +97,9 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
@@ -106,7 +119,9 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         self.assertIsInstance(encoding.boxes, list)
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -121,12 +136,16 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random numpy tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, numpify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, numpify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, np.ndarray)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -138,7 +157,9 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -153,12 +174,16 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PyTorch tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
         for image in image_inputs:
             self.assertIsInstance(image, torch.Tensor)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs[0], return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (
@@ -170,7 +195,9 @@ class LayoutLMv2FeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
         self.assertEqual(
             encoded_images.shape,
             (

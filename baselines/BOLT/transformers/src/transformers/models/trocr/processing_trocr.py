@@ -35,6 +35,7 @@ class TrOCRProcessor(ProcessorMixin):
         tokenizer ([`RobertaTokenizer`/`XLMRobertaTokenizer`]):
             An instance of [`RobertaTokenizer`/`XLMRobertaTokenizer`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "AutoFeatureExtractor"
     tokenizer_class = "AutoTokenizer"
 
@@ -61,7 +62,9 @@ class TrOCRProcessor(ProcessorMixin):
             args = args[1:]
 
         if images is None and text is None:
-            raise ValueError("You need to specify either an `images` or `text` input to process.")
+            raise ValueError(
+                "You need to specify either an `images` or `text` input to process."
+            )
 
         if images is not None:
             inputs = self.feature_extractor(images, *args, **kwargs)

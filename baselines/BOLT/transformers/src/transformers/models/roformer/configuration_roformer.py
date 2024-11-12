@@ -104,6 +104,7 @@ class RoFormerConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "roformer"
 
     def __init__(

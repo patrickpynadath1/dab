@@ -22,6 +22,7 @@ class LangevinSampler(nn.Module):
         use_scale_weights=True,
         initialization="random_disc",
         initialization_noise_rate=0.5,
+        bal_val=0.5,
         **kwargs
     ):
         super().__init__()
@@ -43,6 +44,7 @@ class LangevinSampler(nn.Module):
         self.initialization = initialization
         self.initialization_noise_rate = initialization_noise_rate
 
+        self.bal_val = bal_val
         # initializing sampling metrics to track
         self.sampled_tokens = []
         self.max_unnorm = []
@@ -113,7 +115,7 @@ class LangevinSampler(nn.Module):
         self.weights = self.weight_val
         initial_bias = initial_bias.detach()
         initial_bias.requires_grad = True
-    
+
         return inputs, initial_bias
 
     def calc_grad(self, loss, onehot):
@@ -130,7 +132,8 @@ class LangevinSampler(nn.Module):
             torch.arange(token_dist.size(1))[None, :, None],
             cur_token_ids[:, self.prompt_length :].unsqueeze(-1),
         ] = EPS
-        unfiltered_dist = gx * token_dist
+        # unfiltered_dist = gx * token_dist
+        unfiltered_dist = gx
         return -1 * unfiltered_dist
 
     # selects the logits from unfiltered_dist for the tokens in the topk_ids

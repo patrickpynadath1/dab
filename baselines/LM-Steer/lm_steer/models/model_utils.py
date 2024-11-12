@@ -20,35 +20,39 @@ def find_max_subspans(sequence, n_spans, max_length):
     # trace[:, n_spans, max_length, 0] = (n_spans, max_length, 0)
     inner_scores[-1, :, :, 1] = -1e5
     for _i in range(length):
-        for _j in range(n_spans+1):
-            for _k in range(max_length+1):
+        for _j in range(n_spans + 1):
+            for _k in range(max_length + 1):
                 trace[_i, _j, _k, 0] = (_j, max_length, 0)
 
     for _i in range(length):
         for _j in range(n_spans):
-            for _k in range(max_length+1):
+            for _k in range(max_length + 1):
                 inner_scores[_i, _j, _k, 0], trace[_i, _j, _k, 0] = (
-                    inner_scores[_i-1, _j, max_length, 0],
-                    (_j, max_length, 0)
+                    inner_scores[_i - 1, _j, max_length, 0],
+                    (_j, max_length, 0),
                 )
-                max_taken = inner_scores[_i-1, _j, :, 1].max()
+                max_taken = inner_scores[_i - 1, _j, :, 1].max()
                 if max_taken > inner_scores[_i, _j, _k, 0]:
                     inner_scores[_i, _j, _k, 0] = max_taken
                     trace[_i, _j, _k, 0] = (
-                        _j, inner_scores[_i-1, _j, :, 1].argmax(), 1)
+                        _j,
+                        inner_scores[_i - 1, _j, :, 1].argmax(),
+                        1,
+                    )
 
                 if _k < max_length:
                     inner_scores[_i, _j, _k, 1], trace[_i, _j, _k, 1] = (
                         (
-                            inner_scores[_i-1, _j, _k+1, 1] + sequence[_i],
-                            (_j, _k+1, 1)
+                            inner_scores[_i - 1, _j, _k + 1, 1] + sequence[_i],
+                            (_j, _k + 1, 1),
                         )
-                        if (inner_scores[_i-1, _j, _k+1, 1] >
-                            inner_scores[_i-1, _j+1, max_length, 0])
+                        if (
+                            inner_scores[_i - 1, _j, _k + 1, 1]
+                            > inner_scores[_i - 1, _j + 1, max_length, 0]
+                        )
                         else (
-                            inner_scores[_i-1, _j+1, max_length, 0] +
-                            sequence[_i],
-                            (_j+1, max_length, 0)
+                            inner_scores[_i - 1, _j + 1, max_length, 0] + sequence[_i],
+                            (_j + 1, max_length, 0),
                         )
                     )
 

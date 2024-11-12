@@ -98,14 +98,19 @@ class KerasMetricCallback(Callback):
                     "the batch_size argument must be set."
                 )
             # Wrap a tf.data.Dataset around it
-            eval_dataset = tf.data.Dataset.from_tensor_slices(eval_dataset).batch(batch_size, drop_remainder=False)
+            eval_dataset = tf.data.Dataset.from_tensor_slices(eval_dataset).batch(
+                batch_size, drop_remainder=False
+            )
         self.eval_dataset = eval_dataset
         self.predict_with_generate = predict_with_generate
         self.output_cols = output_cols
 
         # This next block attempts to parse out which elements of the dataset should be appended to the labels list
         # that is passed to the metric_fn
-        if isinstance(eval_dataset.element_spec, tuple) and len(eval_dataset.element_spec) == 2:
+        if (
+            isinstance(eval_dataset.element_spec, tuple)
+            and len(eval_dataset.element_spec) == 2
+        ):
             input_spec, label_spec = eval_dataset.element_spec
         else:
             input_spec = eval_dataset.element_spec
@@ -113,7 +118,9 @@ class KerasMetricCallback(Callback):
         if label_cols is not None:
             for label in label_cols:
                 if label not in input_spec:
-                    raise ValueError(f"Label {label} is in label_cols but could not be found in the dataset inputs!")
+                    raise ValueError(
+                        f"Label {label} is in label_cols but could not be found in the dataset inputs!"
+                    )
             self.label_cols = label_cols
             self.use_keras_label = False
         elif label_spec is not None:
@@ -124,7 +131,9 @@ class KerasMetricCallback(Callback):
         elif "labels" in input_spec:
             self.label_cols = ["labels"]
             self.use_keras_label = False
-            logging.warning("No label_cols specified for KerasMetricCallback, assuming you want the 'labels' key.")
+            logging.warning(
+                "No label_cols specified for KerasMetricCallback, assuming you want the 'labels' key."
+            )
         elif "start_positions" in input_spec and "end_positions" in input_spec:
             self.label_cols = ["start_positions", "end_positions"]
             self.use_keras_label = False
@@ -133,9 +142,13 @@ class KerasMetricCallback(Callback):
                 "start_positions and end_positions keys."
             )
         else:
-            raise ValueError("Could not autodetect label_cols for KerasMetricCallback, please specify them!")
+            raise ValueError(
+                "Could not autodetect label_cols for KerasMetricCallback, please specify them!"
+            )
         if parse(tf.__version__) < parse("2.7"):
-            logging.warning("TF versions less than 2.7 may encounter issues with KerasMetricCallback!")
+            logging.warning(
+                "TF versions less than 2.7 may encounter issues with KerasMetricCallback!"
+            )
 
         self.use_xla_generation = use_xla_generation
         self.generate_kwargs = {} if generate_kwargs is None else generate_kwargs
@@ -145,14 +158,18 @@ class KerasMetricCallback(Callback):
     @staticmethod
     def _concatenate_batches(batches, padding_index=-100):
         # If all batches are unidimensional or same length, do a simple concatenation
-        if batches[0].ndim == 1 or all([batch.shape[1] == batches[0].shape[1] for batch in batches]):
+        if batches[0].ndim == 1 or all(
+            [batch.shape[1] == batches[0].shape[1] for batch in batches]
+        ):
             return np.concatenate(batches, axis=0)
 
         # Welp, they're not the same length. Let's do some padding
         max_len = max([batch.shape[1] for batch in batches])
         num_samples = sum([batch.shape[0] for batch in batches])
         output = np.full_like(
-            batches[0], fill_value=padding_index, shape=[num_samples, max_len] + list(batches[0].shape[2:])
+            batches[0],
+            fill_value=padding_index,
+            shape=[num_samples, max_len] + list(batches[0].shape[2:]),
         )
         # i keeps track of which part of the concatenated array we're writing the next batch to
         i = 0
@@ -165,7 +182,9 @@ class KerasMetricCallback(Callback):
         if isinstance(inputs[0], dict):
             outputs = dict()
             for key in inputs[0].keys():
-                outputs[key] = self._concatenate_batches([batch[key] for batch in inputs])
+                outputs[key] = self._concatenate_batches(
+                    [batch[key] for batch in inputs]
+                )
             # If it's a dict with only one key, just return the array
             if len(outputs) == 1:
                 outputs = list(outputs.values())[0]
@@ -174,7 +193,9 @@ class KerasMetricCallback(Callback):
             for input_list in zip(*inputs):
                 outputs.append(self._concatenate_batches(input_list))
             if len(outputs) == 1:
-                outputs = outputs[0]  # If it's a list with only one element, just return the array
+                outputs = outputs[
+                    0
+                ]  # If it's a list with only one element, just return the array
         elif isinstance(inputs[0], np.ndarray):
             outputs = self._concatenate_batches(inputs)
         elif isinstance(inputs[0], tf.Tensor):
@@ -193,7 +214,9 @@ class KerasMetricCallback(Callback):
         if self.predict_with_generate:
             # This dense conditional recognizes the case where we have an encoder-decoder model, but
             # avoids getting tangled up when we just have a model with a layer called 'encoder'
-            if hasattr(self.model, "encoder") and hasattr(self.model.encoder, "main_input_name"):
+            if hasattr(self.model, "encoder") and hasattr(
+                self.model.encoder, "main_input_name"
+            ):
                 if self.model.encoder.main_input_name != self.model.main_input_name:
                     main_input_name = self.model.encoder.main_input_name
             else:
@@ -202,9 +225,13 @@ class KerasMetricCallback(Callback):
             if self.use_xla_generation and self.generation_function is None:
 
                 def generation_function(inputs, attention_mask):
-                    return self.model.generate(inputs, attention_mask=attention_mask, **self.generate_kwargs)
+                    return self.model.generate(
+                        inputs, attention_mask=attention_mask, **self.generate_kwargs
+                    )
 
-                self.generation_function = tf.function(generation_function, jit_compile=True)
+                self.generation_function = tf.function(
+                    generation_function, jit_compile=True
+                )
 
         prediction_list = []
         label_list = []
@@ -223,9 +250,13 @@ class KerasMetricCallback(Callback):
                     generation_inputs = batch
                     attention_mask = None
                 if self.use_xla_generation:
-                    predictions = self.generation_function(generation_inputs, attention_mask=attention_mask)
+                    predictions = self.generation_function(
+                        generation_inputs, attention_mask=attention_mask
+                    )
                 else:
-                    predictions = self.model.generate(generation_inputs, attention_mask=attention_mask)
+                    predictions = self.model.generate(
+                        generation_inputs, attention_mask=attention_mask
+                    )
             else:
                 predictions = self.model.predict_on_batch(batch)
                 if isinstance(predictions, dict):
@@ -235,7 +266,11 @@ class KerasMetricCallback(Callback):
                 if self.output_cols is not None:
                     predictions = {key: predictions[key] for key in self.output_cols}
                 else:
-                    predictions = {key: val for key, val in predictions.items() if key not in ignore_keys + ["loss"]}
+                    predictions = {
+                        key: val
+                        for key, val in predictions.items()
+                        if key not in ignore_keys + ["loss"]
+                    }
             prediction_list.append(predictions)
             if not self.use_keras_label:
                 labels = {key: batch[key].numpy() for key in self.label_cols}
@@ -320,16 +355,22 @@ class PushToHubCallback(Callback):
         hub_model_id: Optional[str] = None,
         hub_token: Optional[str] = None,
         checkpoint: bool = False,
-        **model_card_args
+        **model_card_args,
     ):
         super().__init__()
         if checkpoint and save_strategy != "epoch":
-            raise ValueError("Cannot save checkpoints when save_strategy is not 'epoch'!")
+            raise ValueError(
+                "Cannot save checkpoints when save_strategy is not 'epoch'!"
+            )
         if isinstance(save_strategy, str):
             save_strategy = IntervalStrategy(save_strategy.lower())
         self.save_strategy = save_strategy
-        if self.save_strategy == IntervalStrategy.STEPS and (not isinstance(save_steps, int) or save_steps <= 0):
-            raise ValueError("Please supply a positive integer argument for save_steps when save_strategy == 'steps'!")
+        if self.save_strategy == IntervalStrategy.STEPS and (
+            not isinstance(save_steps, int) or save_steps <= 0
+        ):
+            raise ValueError(
+                "Please supply a positive integer argument for save_steps when save_strategy == 'steps'!"
+            )
         self.save_steps = save_steps
         output_dir = Path(output_dir)
         if hub_model_id is None:
@@ -356,7 +397,10 @@ class PushToHubCallback(Callback):
         self.training_history = []
 
     def on_train_batch_end(self, batch, logs=None):
-        if self.save_strategy == IntervalStrategy.STEPS and (batch + 1) % self.save_steps == 0:
+        if (
+            self.save_strategy == IntervalStrategy.STEPS
+            and (batch + 1) % self.save_steps == 0
+        ):
             if self.last_job is not None and not self.last_job.is_done:
                 return  # The last upload is still running, don't start another
             self.model.save_pretrained(self.output_dir)
@@ -402,7 +446,10 @@ class PushToHubCallback(Callback):
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(self.output_dir)
         train_summary = TrainingSummary.from_keras(
-            model=self.model, model_name=self.hub_model_id, keras_history=self.training_history, **self.model_card_args
+            model=self.model,
+            model_name=self.hub_model_id,
+            keras_history=self.training_history,
+            **self.model_card_args,
         )
         model_card = train_summary.to_model_card()
         with (self.output_dir / "README.md").open("w") as f:

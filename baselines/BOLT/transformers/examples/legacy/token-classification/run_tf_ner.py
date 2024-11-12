@@ -23,7 +23,12 @@ from importlib import import_module
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from seqeval.metrics import classification_report, f1_score, precision_score, recall_score
+from seqeval.metrics import (
+    classification_report,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 
 from transformers import (
     AutoConfig,
@@ -53,23 +58,36 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"
+        }
     )
     config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained config name or path if not the same as model_name"
+        },
     )
     task_type: Optional[str] = field(
-        default="NER", metadata={"help": "Task type to fine tune in training (e.g. NER, POS, etc)"}
+        default="NER",
+        metadata={"help": "Task type to fine tune in training (e.g. NER, POS, etc)"},
     )
     tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+        default=None,
+        metadata={
+            "help": "Pretrained tokenizer name or path if not the same as model_name"
+        },
     )
-    use_fast: bool = field(default=False, metadata={"help": "Set this flag to use fast tokenization."})
+    use_fast: bool = field(
+        default=False, metadata={"help": "Set this flag to use fast tokenization."}
+    )
     # If you want to tweak more attributes on your tokenizer, you should do it in a distinct script,
     # or just modify its tokenizer_config.json.
     cache_dir: Optional[str] = field(
         default=None,
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+        metadata={
+            "help": "Where do you want to store the pretrained models downloaded from huggingface.co"
+        },
     )
 
 
@@ -80,10 +98,14 @@ class DataTrainingArguments:
     """
 
     data_dir: str = field(
-        metadata={"help": "The input data dir. Should contain the .txt files for a CoNLL-2003-formatted task."}
+        metadata={
+            "help": "The input data dir. Should contain the .txt files for a CoNLL-2003-formatted task."
+        }
     )
     labels: Optional[str] = field(
-        metadata={"help": "Path to a file containing all labels. If not specified, CoNLL-2003 labels are used."}
+        metadata={
+            "help": "Path to a file containing all labels. If not specified, CoNLL-2003 labels are used."
+        }
     )
     max_seq_length: int = field(
         default=128,
@@ -95,7 +117,8 @@ class DataTrainingArguments:
         },
     )
     overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
+        default=False,
+        metadata={"help": "Overwrite the cached training and evaluation sets"},
     )
 
 
@@ -103,7 +126,9 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TFTrainingArguments))
+    parser = HfArgumentParser(
+        (ModelArguments, DataTrainingArguments, TFTrainingArguments)
+    )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     if (
@@ -121,7 +146,9 @@ def main():
 
     try:
         token_classification_task_clazz = getattr(module, model_args.task_type)
-        token_classification_task: TokenClassificationTask = token_classification_task_clazz()
+        token_classification_task: TokenClassificationTask = (
+            token_classification_task_clazz()
+        )
     except AttributeError:
         raise ValueError(
             f"Task {model_args.task_type} needs to be defined as a TokenClassificationTask subclass in {module}. "
@@ -154,14 +181,22 @@ def main():
     # download model & vocab.
 
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        (
+            model_args.config_name
+            if model_args.config_name
+            else model_args.model_name_or_path
+        ),
         num_labels=num_labels,
         id2label=label_map,
         label2id={label: i for i, label in enumerate(labels)},
         cache_dir=model_args.cache_dir,
     )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        (
+            model_args.tokenizer_name
+            if model_args.tokenizer_name
+            else model_args.model_name_or_path
+        ),
         cache_dir=model_args.cache_dir,
         use_fast=model_args.use_fast,
     )
@@ -204,7 +239,9 @@ def main():
         else None
     )
 
-    def align_predictions(predictions: np.ndarray, label_ids: np.ndarray) -> Tuple[List[int], List[int]]:
+    def align_predictions(
+        predictions: np.ndarray, label_ids: np.ndarray
+    ) -> Tuple[List[int], List[int]]:
         preds = np.argmax(predictions, axis=2)
         batch_size, seq_len = preds.shape
         out_label_list = [[] for _ in range(batch_size)]
@@ -278,13 +315,17 @@ def main():
 
         logger.info("\n%s", report)
 
-        output_test_results_file = os.path.join(training_args.output_dir, "test_results.txt")
+        output_test_results_file = os.path.join(
+            training_args.output_dir, "test_results.txt"
+        )
 
         with open(output_test_results_file, "w") as writer:
             writer.write("%s\n" % report)
 
         # Save predictions
-        output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
+        output_test_predictions_file = os.path.join(
+            training_args.output_dir, "test_predictions.txt"
+        )
 
         with open(output_test_predictions_file, "w") as writer:
             with open(os.path.join(data_args.data_dir, "test.txt"), "r") as f:
@@ -297,11 +338,16 @@ def main():
                         if not preds_list[example_id]:
                             example_id += 1
                     elif preds_list[example_id]:
-                        output_line = line.split()[0] + " " + preds_list[example_id].pop(0) + "\n"
+                        output_line = (
+                            line.split()[0] + " " + preds_list[example_id].pop(0) + "\n"
+                        )
 
                         writer.write(output_line)
                     else:
-                        logger.warning("Maximum sequence length exceeded: No prediction for '%s'.", line.split()[0])
+                        logger.warning(
+                            "Maximum sequence length exceeded: No prediction for '%s'.",
+                            line.split()[0],
+                        )
 
     return results
 

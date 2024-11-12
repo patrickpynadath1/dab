@@ -27,7 +27,13 @@ from ...utils import (
 )
 
 
-_import_structure = {"configuration_beit": ["BEIT_PRETRAINED_CONFIG_ARCHIVE_MAP", "BeitConfig", "BeitOnnxConfig"]}
+_import_structure = {
+    "configuration_beit": [
+        "BEIT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "BeitConfig",
+        "BeitOnnxConfig",
+    ]
+}
 
 try:
     if not is_vision_available():
@@ -67,7 +73,11 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_beit import BEIT_PRETRAINED_CONFIG_ARCHIVE_MAP, BeitConfig, BeitOnnxConfig
+    from .configuration_beit import (
+        BEIT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        BeitConfig,
+        BeitOnnxConfig,
+    )
 
     try:
         if not is_vision_available():
@@ -109,4 +119,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

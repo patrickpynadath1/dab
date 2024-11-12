@@ -30,7 +30,11 @@ if is_torch_available():
     import torch
     from torch import nn
 
-    from transformers import ViTForImageClassification, ViTForMaskedImageModeling, ViTModel
+    from transformers import (
+        ViTForImageClassification,
+        ViTForMaskedImageModeling,
+        ViTModel,
+    )
     from transformers.models.vit.modeling_vit import VIT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
@@ -86,7 +90,9 @@ class ViTModelTester:
         self.seq_length = num_patches + 1
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
 
         labels = None
         if self.use_labels:
@@ -118,7 +124,10 @@ class ViTModelTester:
         model.to(torch_device)
         model.eval()
         result = model(pixel_values)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_for_masked_image_modeling(self, config, pixel_values, labels):
         model = ViTForMaskedImageModeling(config=config)
@@ -126,7 +135,8 @@ class ViTModelTester:
         model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
-            result.logits.shape, (self.batch_size, self.num_channels, self.image_size, self.image_size)
+            result.logits.shape,
+            (self.batch_size, self.num_channels, self.image_size, self.image_size),
         )
 
         # test greyscale images
@@ -135,9 +145,13 @@ class ViTModelTester:
         model.to(torch_device)
         model.eval()
 
-        pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, 1, self.image_size, self.image_size]
+        )
         result = model(pixel_values)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, 1, self.image_size, self.image_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, 1, self.image_size, self.image_size)
+        )
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
         config.num_labels = self.type_sequence_label_size
@@ -145,7 +159,9 @@ class ViTModelTester:
         model.to(torch_device)
         model.eval()
         result = model(pixel_values, labels=labels)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.type_sequence_label_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.type_sequence_label_size)
+        )
 
         # test greyscale images
         config.num_channels = 1
@@ -153,9 +169,13 @@ class ViTModelTester:
         model.to(torch_device)
         model.eval()
 
-        pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, 1, self.image_size, self.image_size]
+        )
         result = model(pixel_values)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.type_sequence_label_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.type_sequence_label_size)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -192,7 +212,9 @@ class ViTModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = ViTModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=ViTConfig, has_text_modality=False, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=ViTConfig, has_text_modality=False, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -252,11 +274,17 @@ def prepare_img():
 class ViTModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_feature_extractor(self):
-        return ViTFeatureExtractor.from_pretrained("google/vit-base-patch16-224") if is_vision_available() else None
+        return (
+            ViTFeatureExtractor.from_pretrained("google/vit-base-patch16-224")
+            if is_vision_available()
+            else None
+        )
 
     @slow
     def test_inference_image_classification_head(self):
-        model = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224").to(torch_device)
+        model = ViTForImageClassification.from_pretrained(
+            "google/vit-base-patch16-224"
+        ).to(torch_device)
 
         feature_extractor = self.default_feature_extractor
         image = prepare_img()
@@ -272,7 +300,9 @@ class ViTModelIntegrationTest(unittest.TestCase):
 
         expected_slice = torch.tensor([-0.2744, 0.8215, -0.0836]).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4)
+        )
 
     @slow
     def test_inference_interpolate_pos_encoding(self):
@@ -282,7 +312,9 @@ class ViTModelIntegrationTest(unittest.TestCase):
         # to visualize self-attention on higher resolution images.
         model = ViTModel.from_pretrained("facebook/dino-vits8").to(torch_device)
 
-        feature_extractor = ViTFeatureExtractor.from_pretrained("facebook/dino-vits8", size=480)
+        feature_extractor = ViTFeatureExtractor.from_pretrained(
+            "facebook/dino-vits8", size=480
+        )
         image = prepare_img()
         inputs = feature_extractor(images=image, return_tensors="pt")
         pixel_values = inputs.pixel_values.to(torch_device)
@@ -296,7 +328,15 @@ class ViTModelIntegrationTest(unittest.TestCase):
         self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
 
         expected_slice = torch.tensor(
-            [[4.2340, 4.3906, -6.6692], [4.5463, 1.8928, -6.7257], [4.4429, 0.8496, -5.8585]]
+            [
+                [4.2340, 4.3906, -6.6692],
+                [4.5463, 1.8928, -6.7257],
+                [4.4429, 0.8496, -5.8585],
+            ]
         ).to(torch_device)
 
-        self.assertTrue(torch.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))
+        self.assertTrue(
+            torch.allclose(
+                outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4
+            )
+        )

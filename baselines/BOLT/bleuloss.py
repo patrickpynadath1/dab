@@ -4,7 +4,9 @@ from torch import nn
 import torch.nn.functional as F
 
 
-def batch_log_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None):
+def batch_log_bleulosscnn_ae(
+    decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None
+):
     """
     decoder_outputs: [output_len, batch_size, vocab_size]
         - matrix with probabilityes  -- log probs
@@ -26,17 +28,17 @@ def batch_log_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=
     if ngram_list[0] <= 0:
         ngram_list[0] = output_len
     if weight_list is None:
-        weight_list = [1. / len(ngram_list)] * len(ngram_list)
-    decoder_outputs = torch.log_softmax(decoder_outputs,dim=-1)
+        weight_list = [1.0 / len(ngram_list)] * len(ngram_list)
+    decoder_outputs = torch.log_softmax(decoder_outputs, dim=-1)
     decoder_outputs = torch.relu(decoder_outputs + 20) - 20
     index = target_idx.unsqueeze(1).expand(-1, output_len, tgt_len)
     cost_nll = decoder_outputs.gather(dim=2, index=index)
     cost_nll = cost_nll.unsqueeze(1)
     out = cost_nll
-    sum_gram = 0. #FloatTensor([0.])
+    sum_gram = 0.0  # FloatTensor([0.])
     zero = torch.tensor(0.0).cuda()
-    target_expand = target_idx.view(batch_size,1,1,-1).expand(-1,-1,output_len,-1)
-    out = torch.where(target_expand==pad, zero, out)
+    target_expand = target_idx.view(batch_size, 1, 1, -1).expand(-1, -1, output_len, -1)
+    out = torch.where(target_expand == pad, zero, out)
     for cnt, ngram in enumerate(ngram_list):
         if ngram > output_len:
             continue
@@ -62,7 +64,10 @@ def batch_log_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=
     loss = -sum_gram
     return loss
 
-def my_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None):
+
+def my_bleulosscnn_ae(
+    decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None
+):
     """
     decoder_outputs: [output_len, batch_size, vocab_size]
         - matrix with probabilityes  -- log probs
@@ -85,7 +90,7 @@ def my_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=None, p
     if ngram_list[0] <= 0:
         ngram_list[0] = output_len
     if weight_list is None:
-        weight_list = [1. / len(ngram_list)] * len(ngram_list)
+        weight_list = [1.0 / len(ngram_list)] * len(ngram_list)
     decoder_outputs = torch.softmax(decoder_outputs, dim=-1)
     index = target_idx.unsqueeze(1).expand(-1, output_len, tgt_len)
     cost_nll = decoder_outputs.gather(dim=2, index=index)
@@ -94,7 +99,10 @@ def my_bleulosscnn_ae(decoder_outputs, target_idx, ngram_list, trans_len=None, p
     loss = torch.relu(0.9 - cost_nll.sum(-2)).mean()
     return loss
 
-def my_bleuloss_STG(decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None):
+
+def my_bleuloss_STG(
+    decoder_outputs, target_idx, ngram_list, trans_len=None, pad=0, weight_list=None
+):
     """
     decoder_outputs: [output_len, batch_size, vocab_size]
         - matrix with probabilityes  -- log probs
@@ -113,13 +121,19 @@ def my_bleuloss_STG(decoder_outputs, target_idx, ngram_list, trans_len=None, pad
     _, tgt_len = target_idx.size()
     decoder_outputs = torch.softmax(decoder_outputs, dim=-1)
     index = target_idx.unsqueeze(1).expand(-1, output_len, tgt_len)
-    onehot_prediction = F.one_hot(torch.argmax(decoder_outputs, dim=-1), num_classes=vocab_size)
-    soft_onehot_prediction = onehot_prediction + decoder_outputs - decoder_outputs.detach()
+    onehot_prediction = F.one_hot(
+        torch.argmax(decoder_outputs, dim=-1), num_classes=vocab_size
+    )
+    soft_onehot_prediction = (
+        onehot_prediction + decoder_outputs - decoder_outputs.detach()
+    )
 
     targe_onehot = F.one_hot(index, num_classes=vocab_size)
-    soft_onehot_prediction = soft_onehot_prediction.unsqueeze(-2).repeat(1, 1, tgt_len, 1)
+    soft_onehot_prediction = soft_onehot_prediction.unsqueeze(-2).repeat(
+        1, 1, tgt_len, 1
+    )
 
     diff = 2 - (targe_onehot - soft_onehot_prediction).abs().sum(-1)
-    loss = (diff.sum(1)-2).abs().mean()
+    loss = (diff.sum(1) - 2).abs().mean()
 
     return loss

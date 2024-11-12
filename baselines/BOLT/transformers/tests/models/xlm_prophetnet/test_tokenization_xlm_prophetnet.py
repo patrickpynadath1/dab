@@ -15,7 +15,10 @@
 
 import unittest
 
-from transformers.models.xlm_prophetnet.tokenization_xlm_prophetnet import SPIECE_UNDERLINE, XLMProphetNetTokenizer
+from transformers.models.xlm_prophetnet.tokenization_xlm_prophetnet import (
+    SPIECE_UNDERLINE,
+    XLMProphetNetTokenizer,
+)
 from transformers.testing_utils import get_tests_dir, require_sentencepiece, slow
 from transformers.utils import cached_property
 
@@ -101,7 +104,29 @@ class XLMProphetNetTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
             ids,
             [
                 value + tokenizer.fairseq_offset
-                for value in [8, 21, 84, 55, 24, 19, 7, -9, 602, 347, 347, 347, 3, 12, 66, 46, 72, 80, 6, -9, 4]
+                for value in [
+                    8,
+                    21,
+                    84,
+                    55,
+                    24,
+                    19,
+                    7,
+                    -9,
+                    602,
+                    347,
+                    347,
+                    347,
+                    3,
+                    12,
+                    66,
+                    46,
+                    72,
+                    80,
+                    6,
+                    -9,
+                    4,
+                ]
             ],
         )
 
@@ -135,13 +160,17 @@ class XLMProphetNetTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     @cached_property
     def big_tokenizer(self):
-        return XLMProphetNetTokenizer.from_pretrained("microsoft/xprophetnet-large-wiki100-cased")
+        return XLMProphetNetTokenizer.from_pretrained(
+            "microsoft/xprophetnet-large-wiki100-cased"
+        )
 
     @slow
     def test_tokenization_base_easy_symbols(self):
         symbols = "Hello World!"
         original_tokenizer_encodings = [35389, 6672, 49, 2]
-        self.assertListEqual(original_tokenizer_encodings, self.big_tokenizer.encode(symbols))
+        self.assertListEqual(
+            original_tokenizer_encodings, self.big_tokenizer.encode(symbols)
+        )
 
     @slow
     def test_tokenizer_integration(self):

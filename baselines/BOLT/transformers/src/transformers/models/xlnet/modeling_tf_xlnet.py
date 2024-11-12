@@ -82,37 +82,66 @@ class TFXLNetRelativeAttention(tf.keras.layers.Layer):
         self.initializer_range = config.initializer_range
         self.output_attentions = config.output_attentions
 
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.dropout = tf.keras.layers.Dropout(config.dropout)
 
     def build(self, input_shape):
         initializer = get_initializer(self.initializer_range)
         self.q = self.add_weight(
-            shape=(self.d_model, self.n_head, self.d_head), initializer=initializer, trainable=True, name="q"
+            shape=(self.d_model, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="q",
         )
         self.k = self.add_weight(
-            shape=(self.d_model, self.n_head, self.d_head), initializer=initializer, trainable=True, name="k"
+            shape=(self.d_model, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="k",
         )
         self.v = self.add_weight(
-            shape=(self.d_model, self.n_head, self.d_head), initializer=initializer, trainable=True, name="v"
+            shape=(self.d_model, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="v",
         )
         self.o = self.add_weight(
-            shape=(self.d_model, self.n_head, self.d_head), initializer=initializer, trainable=True, name="o"
+            shape=(self.d_model, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="o",
         )
         self.r = self.add_weight(
-            shape=(self.d_model, self.n_head, self.d_head), initializer=initializer, trainable=True, name="r"
+            shape=(self.d_model, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="r",
         )
         self.r_r_bias = self.add_weight(
-            shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_r_bias"
+            shape=(self.n_head, self.d_head),
+            initializer="zeros",
+            trainable=True,
+            name="r_r_bias",
         )
         self.r_s_bias = self.add_weight(
-            shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_s_bias"
+            shape=(self.n_head, self.d_head),
+            initializer="zeros",
+            trainable=True,
+            name="r_s_bias",
         )
         self.r_w_bias = self.add_weight(
-            shape=(self.n_head, self.d_head), initializer="zeros", trainable=True, name="r_w_bias"
+            shape=(self.n_head, self.d_head),
+            initializer="zeros",
+            trainable=True,
+            name="r_w_bias",
         )
         self.seg_embed = self.add_weight(
-            shape=(2, self.n_head, self.d_head), initializer=initializer, trainable=True, name="seg_embed"
+            shape=(2, self.n_head, self.d_head),
+            initializer=initializer,
+            trainable=True,
+            name="seg_embed",
         )
         super().build(input_shape)
 
@@ -132,7 +161,16 @@ class TFXLNetRelativeAttention(tf.keras.layers.Layer):
         return x
 
     def rel_attn_core(
-        self, q_head, k_head_h, v_head_h, k_head_r, seg_mat, attn_mask, head_mask, output_attentions, training=False
+        self,
+        q_head,
+        k_head_h,
+        v_head_h,
+        k_head_r,
+        seg_mat,
+        attn_mask,
+        head_mask,
+        output_attentions,
+        training=False,
     ):
         """Core relative positional attention operations."""
         # content based attention score
@@ -331,12 +369,18 @@ class TFXLNetRelativeAttention(tf.keras.layers.Layer):
 class TFXLNetFeedForward(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="layer_norm"
+        )
         self.layer_1 = tf.keras.layers.Dense(
-            config.d_inner, kernel_initializer=get_initializer(config.initializer_range), name="layer_1"
+            config.d_inner,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="layer_1",
         )
         self.layer_2 = tf.keras.layers.Dense(
-            config.d_model, kernel_initializer=get_initializer(config.initializer_range), name="layer_2"
+            config.d_model,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="layer_2",
         )
         self.dropout = tf.keras.layers.Dropout(config.dropout)
         if isinstance(config.ff_activation, str):
@@ -395,7 +439,9 @@ class TFXLNetLayer(tf.keras.layers.Layer):
             output_g = self.ff(output_g, training=training)
         output_h = self.ff(output_h, training=training)
 
-        outputs = (output_h, output_g) + outputs[2:]  # Add again attentions if there are there
+        outputs = (output_h, output_g) + outputs[
+            2:
+        ]  # Add again attentions if there are there
         return outputs
 
 
@@ -408,7 +454,9 @@ class TFXLNetLMHead(tf.keras.layers.Layer):
         self.input_embeddings = input_embeddings
 
     def build(self, input_shape):
-        self.bias = self.add_weight(shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias")
+        self.bias = self.add_weight(
+            shape=(self.vocab_size,), initializer="zeros", trainable=True, name="bias"
+        )
         super().build(input_shape)
 
     def get_output_embeddings(self):
@@ -455,9 +503,14 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
         self.initializer_range = config.initializer_range
 
         self.word_embedding = TFSharedEmbeddings(
-            config.vocab_size, config.d_model, initializer_range=config.initializer_range, name="word_embedding"
+            config.vocab_size,
+            config.d_model,
+            initializer_range=config.initializer_range,
+            name="word_embedding",
         )
-        self.layer = [TFXLNetLayer(config, name=f"layer_._{i}") for i in range(config.n_layer)]
+        self.layer = [
+            TFXLNetLayer(config, name=f"layer_._{i}") for i in range(config.n_layer)
+        ]
         self.dropout = tf.keras.layers.Dropout(config.dropout)
 
         self.use_mems_eval = config.use_mems_eval
@@ -473,7 +526,10 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
     def build(self, input_shape):
         initializer = get_initializer(self.initializer_range)
         self.mask_emb = self.add_weight(
-            shape=(1, 1, self.d_model), initializer=initializer, trainable=True, name="mask_emb"
+            shape=(1, 1, self.d_model),
+            initializer=initializer,
+            trainable=True,
+            name="mask_emb",
         )
 
     def _prune_heads(self, heads_to_prune):
@@ -559,12 +615,18 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
             bwd_pos_seq = tf.range(-beg, -end, 1.0)
 
             if self.clamp_len > 0:
-                fwd_pos_seq = tf.clip_by_value(fwd_pos_seq, -self.clamp_len, self.clamp_len)
-                bwd_pos_seq = tf.clip_by_value(bwd_pos_seq, -self.clamp_len, self.clamp_len)
+                fwd_pos_seq = tf.clip_by_value(
+                    fwd_pos_seq, -self.clamp_len, self.clamp_len
+                )
+                bwd_pos_seq = tf.clip_by_value(
+                    bwd_pos_seq, -self.clamp_len, self.clamp_len
+                )
 
             if bsz is not None:
                 if bsz % 2 != 0:
-                    raise ValueError(f"With bi_data, the batch size {bsz} should be divisible by 2")
+                    raise ValueError(
+                        f"With bi_data, the batch size {bsz} should be divisible by 2"
+                    )
                 fwd_pos_emb = self.positional_embedding(fwd_pos_seq, inv_freq, bsz // 2)
                 bwd_pos_emb = self.positional_embedding(bwd_pos_seq, inv_freq, bsz // 2)
             else:
@@ -575,7 +637,9 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
         else:
             fwd_pos_seq = tf.range(beg, end, -1.0)
             if self.clamp_len > 0:
-                fwd_pos_seq = tf.clip_by_value(fwd_pos_seq, -self.clamp_len, self.clamp_len)
+                fwd_pos_seq = tf.clip_by_value(
+                    fwd_pos_seq, -self.clamp_len, self.clamp_len
+                )
             pos_emb = self.positional_embedding(fwd_pos_seq, inv_freq, bsz)
 
         return pos_emb
@@ -609,7 +673,9 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
         # so we move here the first dimension (batch) to the end
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_ids = tf.transpose(input_ids, perm=(1, 0))
             qlen, bsz = shape_list(input_ids)[:2]
@@ -619,11 +685,27 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        token_type_ids = tf.transpose(token_type_ids, perm=(1, 0)) if token_type_ids is not None else None
-        input_mask = tf.transpose(input_mask, perm=(1, 0)) if input_mask is not None else None
-        attention_mask = tf.transpose(attention_mask, perm=(1, 0)) if attention_mask is not None else None
-        perm_mask = tf.transpose(perm_mask, perm=(1, 2, 0)) if perm_mask is not None else None
-        target_mapping = tf.transpose(target_mapping, perm=(1, 2, 0)) if target_mapping is not None else None
+        token_type_ids = (
+            tf.transpose(token_type_ids, perm=(1, 0))
+            if token_type_ids is not None
+            else None
+        )
+        input_mask = (
+            tf.transpose(input_mask, perm=(1, 0)) if input_mask is not None else None
+        )
+        attention_mask = (
+            tf.transpose(attention_mask, perm=(1, 0))
+            if attention_mask is not None
+            else None
+        )
+        perm_mask = (
+            tf.transpose(perm_mask, perm=(1, 2, 0)) if perm_mask is not None else None
+        )
+        target_mapping = (
+            tf.transpose(target_mapping, perm=(1, 2, 0))
+            if target_mapping is not None
+            else None
+        )
 
         mlen = shape_list(mems[0])[0] if mems is not None and mems[0] is not None else 0
         klen = mlen + qlen
@@ -671,8 +753,13 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
         if attn_mask is not None:
             non_tgt_mask = -tf.eye(qlen)
             if mlen > 0:
-                non_tgt_mask = tf.concat([tf.zeros([qlen, mlen]), non_tgt_mask], axis=-1)
-            non_tgt_mask = tf.cast((attn_mask + non_tgt_mask[:, :, None, None]) > 0, dtype=non_tgt_mask.dtype)
+                non_tgt_mask = tf.concat(
+                    [tf.zeros([qlen, mlen]), non_tgt_mask], axis=-1
+                )
+            non_tgt_mask = tf.cast(
+                (attn_mask + non_tgt_mask[:, :, None, None]) > 0,
+                dtype=non_tgt_mask.dtype,
+            )
         else:
             non_tgt_mask = None
 
@@ -744,7 +831,9 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
             if use_mems:
                 new_mems = new_mems + (self.cache_mem(output_h, mems[i]),)
             if output_hidden_states:
-                hidden_states.append((output_h, output_g) if output_g is not None else output_h)
+                hidden_states.append(
+                    (output_h, output_g) if output_g is not None else output_h
+                )
 
             outputs = layer_module(
                 output_h,
@@ -765,9 +854,13 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
 
         # Add last hidden state
         if output_hidden_states:
-            hidden_states.append((output_h, output_g) if output_g is not None else output_h)
+            hidden_states.append(
+                (output_h, output_g) if output_g is not None else output_h
+            )
 
-        output = self.dropout(output_g if output_g is not None else output_h, training=training)
+        output = self.dropout(
+            output_g if output_g is not None else output_h, training=training
+        )
 
         # Prepare outputs, we transpose back here to shape [bsz, len, hidden_dim] (cf. beginning of forward() method)
         output = tf.transpose(output, perm=(1, 0, 2))
@@ -776,23 +869,40 @@ class TFXLNetMainLayer(tf.keras.layers.Layer):
             new_mems = None
         if output_hidden_states:
             if output_g is not None:
-                hidden_states = tuple(tf.transpose(h, perm=(1, 0, 2)) for hs in hidden_states for h in hs)
+                hidden_states = tuple(
+                    tf.transpose(h, perm=(1, 0, 2)) for hs in hidden_states for h in hs
+                )
             else:
-                hidden_states = tuple(tf.transpose(hs, perm=(1, 0, 2)) for hs in hidden_states)
+                hidden_states = tuple(
+                    tf.transpose(hs, perm=(1, 0, 2)) for hs in hidden_states
+                )
         if output_attentions:
             if target_mapping is not None:
                 # when target_mapping is provided, there are 2-tuple of attentions
                 attentions = tuple(
-                    tuple(tf.transpose(attn_stream, perm=(2, 3, 0, 1)) for attn_stream in t) for t in attentions
+                    tuple(
+                        tf.transpose(attn_stream, perm=(2, 3, 0, 1))
+                        for attn_stream in t
+                    )
+                    for t in attentions
                 )
             else:
-                attentions = tuple(tf.transpose(t, perm=(2, 3, 0, 1)) for t in attentions)
+                attentions = tuple(
+                    tf.transpose(t, perm=(2, 3, 0, 1)) for t in attentions
+                )
 
         if not return_dict:
-            return tuple(v for v in [output, new_mems, hidden_states, attentions] if v is not None)
+            return tuple(
+                v
+                for v in [output, new_mems, hidden_states, attentions]
+                if v is not None
+            )
 
         return TFXLNetModelOutput(
-            last_hidden_state=output, mems=new_mems, hidden_states=hidden_states, attentions=attentions
+            last_hidden_state=output,
+            mems=new_mems,
+            hidden_states=hidden_states,
+            attentions=attentions,
         )
 
 
@@ -1143,7 +1253,9 @@ class TFXLNetModel(TFXLNetPreTrainedModel):
         self.transformer = TFXLNetMainLayer(config, name="transformer")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -1187,12 +1299,23 @@ class TFXLNetModel(TFXLNetPreTrainedModel):
         return outputs
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
         return TFXLNetModelOutput(
-            last_hidden_state=output.last_hidden_state, mems=mems, hidden_states=hs, attentions=attns
+            last_hidden_state=output.last_hidden_state,
+            mems=mems,
+            hidden_states=hs,
+            attentions=attns,
         )
 
 
@@ -1206,7 +1329,9 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
         self.transformer = TFXLNetMainLayer(config, name="transformer")
-        self.lm_loss = TFXLNetLMHead(config, self.transformer.word_embedding, name="lm_loss")
+        self.lm_loss = TFXLNetLMHead(
+            config, self.transformer.word_embedding, name="lm_loss"
+        )
         # generate fails to convert to a graph with XLNet
         self.supports_xla_generation = False
 
@@ -1214,7 +1339,10 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
         return self.lm_loss
 
     def get_prefix_bias_name(self):
-        warnings.warn("The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.", FutureWarning)
+        warnings.warn(
+            "The method get_prefix_bias_name is deprecated. Please use `get_bias` instead.",
+            FutureWarning,
+        )
         return self.name + "/" + self.lm_loss.name
 
     def prepare_inputs_for_generation(self, inputs, past=None, use_mems=None, **kwargs):
@@ -1234,7 +1362,9 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
 
         # Build permutation mask so that previous tokens don't see last token
         sequence_length = input_ids.shape[1]
-        perm_mask = tf.zeros((effective_batch_size, sequence_length, sequence_length - 1))
+        perm_mask = tf.zeros(
+            (effective_batch_size, sequence_length, sequence_length - 1)
+        )
         perm_mask_seq_end = tf.ones((effective_batch_size, sequence_length, 1))
         perm_mask = tf.concat([perm_mask, perm_mask_seq_end], axis=-1)
 
@@ -1257,8 +1387,12 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
         return inputs
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFXLNetLMHeadModelOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFXLNetLMHeadModelOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids: Optional[TFModelInputType] = None,
@@ -1355,11 +1489,21 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
         )
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
-        return TFXLNetLMHeadModelOutput(logits=output.logits, mems=mems, hidden_states=hs, attentions=attns)
+        return TFXLNetLMHeadModelOutput(
+            logits=output.logits, mems=mems, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1369,7 +1513,9 @@ class TFXLNetLMHeadModel(TFXLNetPreTrainedModel, TFCausalLanguageModelingLoss):
     """,
     XLNET_START_DOCSTRING,
 )
-class TFXLNetForSequenceClassification(TFXLNetPreTrainedModel, TFSequenceClassificationLoss):
+class TFXLNetForSequenceClassification(
+    TFXLNetPreTrainedModel, TFSequenceClassificationLoss
+):
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
         self.num_labels = config.num_labels
@@ -1379,11 +1525,15 @@ class TFXLNetForSequenceClassification(TFXLNetPreTrainedModel, TFSequenceClassif
             config, initializer_range=config.initializer_range, name="sequence_summary"
         )
         self.logits_proj = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="logits_proj"
+            config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="logits_proj",
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -1450,8 +1600,16 @@ class TFXLNetForSequenceClassification(TFXLNetPreTrainedModel, TFSequenceClassif
         )
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
         return TFXLNetForSequenceClassificationOutput(
@@ -1475,7 +1633,9 @@ class TFXLNetForMultipleChoice(TFXLNetPreTrainedModel, TFMultipleChoiceLoss):
             config, initializer_range=config.initializer_range, name="sequence_summary"
         )
         self.logits_proj = tf.keras.layers.Dense(
-            1, kernel_initializer=get_initializer(config.initializer_range), name="logits_proj"
+            1,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="logits_proj",
         )
 
     @property
@@ -1489,7 +1649,9 @@ class TFXLNetForMultipleChoice(TFXLNetPreTrainedModel, TFMultipleChoiceLoss):
         return {"input_ids": tf.constant(MULTIPLE_CHOICE_DUMMY_INPUTS)}
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -1527,10 +1689,22 @@ class TFXLNetForMultipleChoice(TFXLNetPreTrainedModel, TFMultipleChoiceLoss):
             num_choices = shape_list(inputs_embeds)[1]
             seq_length = shape_list(inputs_embeds)[2]
 
-        flat_input_ids = tf.reshape(input_ids, (-1, seq_length)) if input_ids is not None else None
-        flat_attention_mask = tf.reshape(attention_mask, (-1, seq_length)) if attention_mask is not None else None
-        flat_token_type_ids = tf.reshape(token_type_ids, (-1, seq_length)) if token_type_ids is not None else None
-        flat_input_mask = tf.reshape(input_mask, (-1, seq_length)) if input_mask is not None else None
+        flat_input_ids = (
+            tf.reshape(input_ids, (-1, seq_length)) if input_ids is not None else None
+        )
+        flat_attention_mask = (
+            tf.reshape(attention_mask, (-1, seq_length))
+            if attention_mask is not None
+            else None
+        )
+        flat_token_type_ids = (
+            tf.reshape(token_type_ids, (-1, seq_length))
+            if token_type_ids is not None
+            else None
+        )
+        flat_input_mask = (
+            tf.reshape(input_mask, (-1, seq_length)) if input_mask is not None else None
+        )
         flat_inputs_embeds = (
             tf.reshape(inputs_embeds, (-1, seq_length, shape_list(inputs_embeds)[3]))
             if inputs_embeds is not None
@@ -1573,9 +1747,15 @@ class TFXLNetForMultipleChoice(TFXLNetPreTrainedModel, TFMultipleChoiceLoss):
     @tf.function(
         input_signature=[
             {
-                "input_ids": tf.TensorSpec((None, None, None), tf.int64, name="input_ids"),
-                "attention_mask": tf.TensorSpec((None, None, None), tf.int64, name="attention_mask"),
-                "token_type_ids": tf.TensorSpec((None, None, None), tf.int64, name="token_type_ids"),
+                "input_ids": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="input_ids"
+                ),
+                "attention_mask": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="attention_mask"
+                ),
+                "token_type_ids": tf.TensorSpec(
+                    (None, None, None), tf.int64, name="token_type_ids"
+                ),
             }
         ]
     )
@@ -1585,11 +1765,21 @@ class TFXLNetForMultipleChoice(TFXLNetPreTrainedModel, TFMultipleChoiceLoss):
         return self.serving_output(output)
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
-        return TFXLNetForMultipleChoiceOutput(logits=output.logits, mems=mems, hidden_states=hs, attentions=attns)
+        return TFXLNetForMultipleChoiceOutput(
+            logits=output.logits, mems=mems, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1606,11 +1796,15 @@ class TFXLNetForTokenClassification(TFXLNetPreTrainedModel, TFTokenClassificatio
 
         self.transformer = TFXLNetMainLayer(config, name="transformer")
         self.classifier = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="classifier"
+            config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="classifier",
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -1673,11 +1867,21 @@ class TFXLNetForTokenClassification(TFXLNetPreTrainedModel, TFTokenClassificatio
         )
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
-        return TFXLNetForTokenClassificationOutput(logits=output.logits, mems=mems, hidden_states=hs, attentions=attns)
+        return TFXLNetForTokenClassificationOutput(
+            logits=output.logits, mems=mems, hidden_states=hs, attentions=attns
+        )
 
 
 @add_start_docstrings(
@@ -1687,16 +1891,22 @@ class TFXLNetForTokenClassification(TFXLNetPreTrainedModel, TFTokenClassificatio
     """,
     XLNET_START_DOCSTRING,
 )
-class TFXLNetForQuestionAnsweringSimple(TFXLNetPreTrainedModel, TFQuestionAnsweringLoss):
+class TFXLNetForQuestionAnsweringSimple(
+    TFXLNetPreTrainedModel, TFQuestionAnsweringLoss
+):
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
         self.transformer = TFXLNetMainLayer(config, name="transformer")
         self.qa_outputs = tf.keras.layers.Dense(
-            config.num_labels, kernel_initializer=get_initializer(config.initializer_range), name="qa_outputs"
+            config.num_labels,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="qa_outputs",
         )
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        XLNET_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_TOKENIZER_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -1775,8 +1985,16 @@ class TFXLNetForQuestionAnsweringSimple(TFXLNetPreTrainedModel, TFQuestionAnswer
         )
 
     def serving_output(self, output):
-        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+        hs = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attns = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
         mems = tf.convert_to_tensor(output.mems) if output.mems is not None else None
 
         return TFXLNetForQuestionAnsweringSimpleOutput(

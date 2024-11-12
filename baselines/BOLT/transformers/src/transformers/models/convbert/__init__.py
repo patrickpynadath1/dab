@@ -27,7 +27,11 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_convbert": ["CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "ConvBertConfig", "ConvBertOnnxConfig"],
+    "configuration_convbert": [
+        "CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "ConvBertConfig",
+        "ConvBertOnnxConfig",
+    ],
     "tokenization_convbert": ["ConvBertTokenizer"],
 }
 
@@ -79,7 +83,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_convbert import CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, ConvBertConfig, ConvBertOnnxConfig
+    from .configuration_convbert import (
+        CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        ConvBertConfig,
+        ConvBertOnnxConfig,
+    )
     from .tokenization_convbert import ConvBertTokenizer
 
     try:
@@ -131,4 +139,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

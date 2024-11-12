@@ -4,6 +4,7 @@ from nltk.translate.bleu_score import corpus_bleu, sentence_bleu
 from nltk import word_tokenize
 from typing import List
 
+
 def initialize_metric_storing(total_conf, save_dir):
     # check if the directory exists
     counter = 1
@@ -32,11 +33,10 @@ def check_existing_setup(old_conf, new_conf):
                 return False
     return True
 
+
 def calc_bleu_for_inclusion(sentence_batch: List[str], sent) -> List[float]:
     scores = []
-    candidate = word_tokenize(
-        sent.replace("<s> ", "").replace("</s>", "")
-    )
+    candidate = word_tokenize(sent.replace("<s> ", "").replace("</s>", ""))
     reference = [
         word_tokenize(sentence_batch[k].replace("<s> ", "").replace("</s>", ""))
         for k in range(len(sentence_batch))
@@ -55,25 +55,19 @@ def initialize_best_loss(batch_size, use_senti=True):
 
 
 def updating_best_loss(
-    batch_size, 
-    loss, 
-    sentences, 
-    min_loss_list, 
+    batch_size,
+    loss,
+    sentences,
+    min_loss_list,
     stored_sentence_list,
     iter,
-    bleu_threshold=0
-): 
-    if iter != 0: 
-        for i in range(batch_size):
-            bleu_score = calc_bleu_for_inclusion(stored_sentence_list, sentences[i])
-            if loss[i] < min_loss_list[i]:
-                min_loss_list[i] = loss[i]
-                stored_sentence_list[i] = sentences[i]
-    else: 
-        for i in range(batch_size):
-            if loss[i] < min_loss_list[i]:
-                min_loss_list[i] = loss[i]
-                stored_sentence_list[i] = sentences[i] 
+    bleu_threshold=0,
+):
+
+    for i in range(batch_size):
+        if loss[i] < min_loss_list[i]:
+            min_loss_list[i] = loss[i]
+            stored_sentence_list[i] = sentences[i]
     return
 
 

@@ -145,7 +145,9 @@ def flax_shard_checkpoint(params, max_shard_size="10GB"):
     weight_map = {}
     shards = {}
     for idx, shard in enumerate(sharded_state_dicts):
-        shard_file = FLAX_WEIGHTS_NAME.replace(".msgpack", f"-{idx+1:05d}-of-{len(sharded_state_dicts):05d}.msgpack")
+        shard_file = FLAX_WEIGHTS_NAME.replace(
+            ".msgpack", f"-{idx+1:05d}-of-{len(sharded_state_dicts):05d}.msgpack"
+        )
         shards[shard_file] = shard
         for weight_name in shard.keys():
             weight_map[weight_name] = shard_file
@@ -172,6 +174,7 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         - **main_input_name** (`str`) -- The name of the principal input to the model (often `input_ids` for NLP
           models, `pixel_values` for vision models and `input_values` for speech models).
     """
+
     config_class = None
     base_model_prefix = ""
     main_input_name = "input_ids"
@@ -228,11 +231,15 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         if _do_init:
             self.params = random_params
 
-    def init_weights(self, rng: jax.random.PRNGKey, input_shape: Tuple, params: FrozenDict = None) -> Dict:
+    def init_weights(
+        self, rng: jax.random.PRNGKey, input_shape: Tuple, params: FrozenDict = None
+    ) -> Dict:
         raise NotImplementedError(f"init method has to be implemented for {self}")
 
     def enable_gradient_checkpointing(self):
-        raise NotImplementedError(f"gradient checkpointing method has to be implemented for {self}")
+        raise NotImplementedError(
+            f"gradient checkpointing method has to be implemented for {self}"
+        )
 
     @classmethod
     def _from_config(cls, config, **kwargs):
@@ -293,14 +300,18 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
             )
         self._params = params
 
-    def _cast_floating_to(self, params: Union[Dict, FrozenDict], dtype: jnp.dtype, mask: Any = None) -> Any:
+    def _cast_floating_to(
+        self, params: Union[Dict, FrozenDict], dtype: jnp.dtype, mask: Any = None
+    ) -> Any:
         """
         Helper method to cast floating-point values of given parameter `PyTree` to given `dtype`.
         """
 
         # taken from https://github.com/deepmind/jmp/blob/3a8318abc3292be38582794dbf7b094e6583b192/jmp/_src/policy.py#L27
         def conditional_cast(param):
-            if isinstance(param, jnp.ndarray) and jnp.issubdtype(param.dtype, jnp.floating):
+            if isinstance(param, jnp.ndarray) and jnp.issubdtype(
+                param.dtype, jnp.floating
+            ):
                 param = param.astype(dtype)
             return param
 
@@ -459,7 +470,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                     else:
                         raise ValueError from e
             except (UnicodeDecodeError, ValueError):
-                raise EnvironmentError(f"Unable to convert {shard_file} to Flax deserializable object. ")
+                raise EnvironmentError(
+                    f"Unable to convert {shard_file} to Flax deserializable object. "
+                )
 
             state = flatten_dict(state, sep="/")
             state_sharded_dict.update(state)
@@ -475,9 +488,8 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         pretrained_model_name_or_path: Union[str, os.PathLike],
         dtype: jnp.dtype = jnp.float32,
         *model_args,
-        **kwargs
+        **kwargs,
     ):
-
         r"""
         Instantiate a pretrained flax model from a pre-trained model configuration.
 
@@ -606,7 +618,11 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                 " ignored."
             )
 
-        user_agent = {"file_type": "model", "framework": "flax", "from_auto_class": from_auto_class}
+        user_agent = {
+            "file_type": "model",
+            "framework": "flax",
+            "from_auto_class": from_auto_class,
+        }
         if from_pipeline is not None:
             user_agent["using_pipeline"] = from_pipeline
 
@@ -616,7 +632,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
 
         # Load config if we don't provide a configuration
         if not isinstance(config, PretrainedConfig):
-            config_path = config if config is not None else pretrained_model_name_or_path
+            config_path = (
+                config if config is not None else pretrained_model_name_or_path
+            )
             config, model_kwargs = cls.config_class.from_pretrained(
                 config_path,
                 cache_dir=cache_dir,
@@ -650,22 +668,40 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
             pretrained_model_name_or_path = str(pretrained_model_name_or_path)
             is_local = os.path.isdir(pretrained_model_name_or_path)
             if os.path.isdir(pretrained_model_name_or_path):
-                if from_pt and os.path.isfile(os.path.join(pretrained_model_name_or_path, WEIGHTS_NAME)):
+                if from_pt and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, WEIGHTS_NAME)
+                ):
                     # Load from a PyTorch checkpoint
-                    archive_file = os.path.join(pretrained_model_name_or_path, WEIGHTS_NAME)
-                elif from_pt and os.path.isfile(os.path.join(pretrained_model_name_or_path, WEIGHTS_INDEX_NAME)):
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, WEIGHTS_NAME
+                    )
+                elif from_pt and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, WEIGHTS_INDEX_NAME)
+                ):
                     # Load from a sharded pytorch checkpoint
-                    archive_file = os.path.join(pretrained_model_name_or_path, WEIGHTS_INDEX_NAME)
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, WEIGHTS_INDEX_NAME
+                    )
                     is_sharded = True
-                elif os.path.isfile(os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)):
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)
+                ):
                     # Load from a Flax checkpoint
-                    archive_file = os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)
-                elif os.path.isfile(os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_INDEX_NAME)):
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, FLAX_WEIGHTS_NAME
+                    )
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_INDEX_NAME)
+                ):
                     # Load from a sharded Flax checkpoint
-                    archive_file = os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_INDEX_NAME)
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, FLAX_WEIGHTS_INDEX_NAME
+                    )
                     is_sharded = True
                 # At this stage we don't have a weight file so we will raise an error.
-                elif os.path.isfile(os.path.join(pretrained_model_name_or_path, WEIGHTS_NAME)):
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, WEIGHTS_NAME)
+                ):
                     raise EnvironmentError(
                         f"Error no file named {FLAX_WEIGHTS_NAME} found in directory {pretrained_model_name_or_path} "
                         "but there is a file for PyTorch weights. Use `from_pt=True` to load this model from those "
@@ -699,21 +735,27 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                         _raise_exceptions_for_missing_entries=False,
                         _commit_hash=commit_hash,
                     )
-                    resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+                    resolved_archive_file = cached_file(
+                        pretrained_model_name_or_path, filename, **cached_file_kwargs
+                    )
 
                     # Since we set _raise_exceptions_for_missing_entries=False, we don't get an expection but a None
                     # result when internet is up, the repo and revision exist, but the file does not.
                     if resolved_archive_file is None and filename == FLAX_WEIGHTS_NAME:
                         # Maybe the checkpoint is sharded, we try to grab the index name in this case.
                         resolved_archive_file = cached_file(
-                            pretrained_model_name_or_path, FLAX_WEIGHTS_INDEX_NAME, **cached_file_kwargs
+                            pretrained_model_name_or_path,
+                            FLAX_WEIGHTS_INDEX_NAME,
+                            **cached_file_kwargs,
                         )
                         if resolved_archive_file is not None:
                             is_sharded = True
                     # Maybe the checkpoint is pytorch sharded, we try to grab the pytorch index name in this case.
                     elif resolved_archive_file is None and from_pt:
                         resolved_archive_file = cached_file(
-                            pretrained_model_name_or_path, WEIGHTS_INDEX_NAME, **cached_file_kwargs
+                            pretrained_model_name_or_path,
+                            WEIGHTS_INDEX_NAME,
+                            **cached_file_kwargs,
                         )
                         if resolved_archive_file is not None:
                             is_sharded = True
@@ -725,13 +767,21 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                             "proxies": proxies,
                             "use_auth_token": use_auth_token,
                         }
-                        if has_file(pretrained_model_name_or_path, WEIGHTS_NAME, **has_file_kwargs):
+                        if has_file(
+                            pretrained_model_name_or_path,
+                            WEIGHTS_NAME,
+                            **has_file_kwargs,
+                        ):
                             raise EnvironmentError(
                                 f"{pretrained_model_name_or_path} does not appear to have a file named"
                                 f" {FLAX_WEIGHTS_NAME} but there is a file for PyTorch weights. Use `from_pt=True` to"
                                 " load this model from those weights."
                             )
-                        elif has_file(pretrained_model_name_or_path, WEIGHTS_INDEX_NAME, **has_file_kwargs):
+                        elif has_file(
+                            pretrained_model_name_or_path,
+                            WEIGHTS_INDEX_NAME,
+                            **has_file_kwargs,
+                        ):
                             raise EnvironmentError(
                                 f"{pretrained_model_name_or_path} does not appear to have a file named"
                                 f" {FLAX_WEIGHTS_INDEX_NAME} but there is a sharded file for PyTorch weights. Use"
@@ -759,7 +809,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                 logger.info(f"loading weights file {archive_file}")
                 resolved_archive_file = archive_file
             else:
-                logger.info(f"loading weights file {filename} from cache at {resolved_archive_file}")
+                logger.info(
+                    f"loading weights file {filename} from cache at {resolved_archive_file}"
+                )
         else:
             resolved_archive_file = None
 
@@ -784,7 +836,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         model = cls(config, *model_args, _do_init=_do_init, **model_kwargs)
 
         if from_pt:
-            state = load_pytorch_checkpoint_in_flax_state_dict(model, resolved_archive_file, is_sharded)
+            state = load_pytorch_checkpoint_in_flax_state_dict(
+                model, resolved_archive_file, is_sharded
+            )
         else:
 
             if is_sharded:
@@ -805,7 +859,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                             else:
                                 raise ValueError from e
                     except (UnicodeDecodeError, ValueError):
-                        raise EnvironmentError(f"Unable to convert {archive_file} to Flax deserializable object. ")
+                        raise EnvironmentError(
+                            f"Unable to convert {archive_file} to Flax deserializable object. "
+                        )
             # make sure all arrays are stored as jnp.arrays
             # NOTE: This is to prevent a bug this will be fixed in Flax >= v0.3.4:
             # https://github.com/google/flax/issues/1261
@@ -813,21 +869,31 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                 state = jax.tree_util.tree_map(jnp.array, state)
             else:
                 # keep the params on CPU if we don't want to initialize
-                state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), state)
+                state = jax.tree_util.tree_map(
+                    lambda x: jax.device_put(x, jax.devices("cpu")[0]), state
+                )
 
         # if model is base model only use model_prefix key
-        if cls.base_model_prefix not in dict(model.params_shape_tree) and cls.base_model_prefix in state:
+        if (
+            cls.base_model_prefix not in dict(model.params_shape_tree)
+            and cls.base_model_prefix in state
+        ):
             state = state[cls.base_model_prefix]
 
         # if model is head model and we are loading weights from base model
         # we initialize new params dict with base_model_prefix
-        if cls.base_model_prefix in dict(model.params_shape_tree) and cls.base_model_prefix not in state:
+        if (
+            cls.base_model_prefix in dict(model.params_shape_tree)
+            and cls.base_model_prefix not in state
+        ):
             state = {cls.base_model_prefix: state}
 
         # flatten dicts
         state = flatten_dict(state)
 
-        random_state = flatten_dict(unfreeze(model.params if _do_init else model.params_shape_tree))
+        random_state = flatten_dict(
+            unfreeze(model.params if _do_init else model.params_shape_tree)
+        )
 
         missing_keys = model.required_params - set(state.keys())
         unexpected_keys = set(state.keys()) - model.required_params
@@ -845,7 +911,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         for key in state.keys():
             if key in random_state and state[key].shape != random_state[key].shape:
                 if ignore_mismatched_sizes:
-                    mismatched_keys.append((key, state[key].shape, random_state[key].shape))
+                    mismatched_keys.append(
+                        (key, state[key].shape, random_state[key].shape)
+                    )
                     state[key] = random_state[key]
                 else:
                     raise ValueError(
@@ -875,7 +943,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                 " (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
             )
         else:
-            logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+            logger.info(
+                f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n"
+            )
 
         if len(missing_keys) > 0:
             logger.warning(
@@ -935,7 +1005,12 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
             return model, unflatten_dict(state)
 
     def save_pretrained(
-        self, save_directory: Union[str, os.PathLike], params=None, push_to_hub=False, max_shard_size="10GB", **kwargs
+        self,
+        save_directory: Union[str, os.PathLike],
+        params=None,
+        push_to_hub=False,
+        max_shard_size="10GB",
+        **kwargs,
     ):
         """
         Save a model and its configuration file to a directory, so that it can be re-loaded using the
@@ -963,7 +1038,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
         if os.path.isfile(save_directory):
-            logger.error(f"Provided path ({save_directory}) should be a directory, not a file")
+            logger.error(
+                f"Provided path ({save_directory}) should be a directory, not a file"
+            )
             return
 
         os.makedirs(save_directory, exist_ok=True)
@@ -989,7 +1066,9 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
         # save model
         output_model_file = os.path.join(save_directory, FLAX_WEIGHTS_NAME)
 
-        shards, index = flax_shard_checkpoint(params if params is not None else self.params, max_shard_size)
+        shards, index = flax_shard_checkpoint(
+            params if params is not None else self.params, max_shard_size
+        )
         # Clean the folder from a previous save
         for filename in os.listdir(save_directory):
             full_filename = os.path.join(save_directory, filename)
@@ -1028,7 +1107,11 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
 
         if push_to_hub:
             self._upload_modified_files(
-                save_directory, repo_id, files_timestamps, commit_message=commit_message, token=token
+                save_directory,
+                repo_id,
+                files_timestamps,
+                commit_message=commit_message,
+                token=token,
             )
 
     @classmethod
@@ -1060,8 +1143,10 @@ class FlaxPreTrainedModel(PushToHubMixin, FlaxGenerationMixin):
 
 # To update the docstring, we need to copy the method, otherwise we change the original docstring.
 FlaxPreTrainedModel.push_to_hub = copy_func(FlaxPreTrainedModel.push_to_hub)
-FlaxPreTrainedModel.push_to_hub.__doc__ = FlaxPreTrainedModel.push_to_hub.__doc__.format(
-    object="model", object_class="FlaxAutoModel", object_files="model checkpoint"
+FlaxPreTrainedModel.push_to_hub.__doc__ = (
+    FlaxPreTrainedModel.push_to_hub.__doc__.format(
+        object="model", object_class="FlaxAutoModel", object_files="model checkpoint"
+    )
 )
 
 
@@ -1071,10 +1156,14 @@ def overwrite_call_docstring(model_class, docstring):
     # delete existing docstring
     model_class.__call__.__doc__ = None
     # set correct docstring
-    model_class.__call__ = add_start_docstrings_to_model_forward(docstring)(model_class.__call__)
+    model_class.__call__ = add_start_docstrings_to_model_forward(docstring)(
+        model_class.__call__
+    )
 
 
-def append_call_sample_docstring(model_class, tokenizer_class, checkpoint, output_type, config_class, mask=None):
+def append_call_sample_docstring(
+    model_class, tokenizer_class, checkpoint, output_type, config_class, mask=None
+):
     model_class.__call__ = copy_func(model_class.__call__)
     model_class.__call__ = add_code_sample_docstrings(
         processor_class=tokenizer_class,

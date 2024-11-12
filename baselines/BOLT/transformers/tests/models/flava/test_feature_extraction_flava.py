@@ -21,7 +21,10 @@ import numpy as np
 from transformers.testing_utils import require_torch, require_vision
 from transformers.utils import is_torch_available, is_vision_available
 
-from ...test_feature_extraction_common import FeatureExtractionSavingTestMixin, prepare_image_inputs
+from ...test_feature_extraction_common import (
+    FeatureExtractionSavingTestMixin,
+    prepare_image_inputs,
+)
 
 
 if is_torch_available():
@@ -96,7 +99,9 @@ class FlavaFeatureExtractionTester(unittest.TestCase):
 
         self.codebook_do_resize = codebook_do_resize
         self.codebook_size = codebook_size
-        self.codebook_resample = codebook_resample if codebook_resample is not None else Image.LANCZOS
+        self.codebook_resample = (
+            codebook_resample if codebook_resample is not None else Image.LANCZOS
+        )
         self.codebook_do_center_crop = codebook_do_center_crop
         self.codebook_crop_size = codebook_crop_size
         self.codebook_do_map_pixels = codebook_do_map_pixels
@@ -189,7 +194,9 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
@@ -199,16 +206,25 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Test no bool masked pos
         self.assertFalse("bool_masked_pos" in encoded_images)
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
 
         self.assertEqual(
             encoded_images.pixel_values.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
         encoded_images = feature_extractor(image_inputs, return_tensors="pt")
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
 
         # Test no bool masked pos
         self.assertFalse("bool_masked_pos" in encoded_images)
@@ -227,22 +243,35 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random tensors
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, **prepare_kwargs)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, **prepare_kwargs
+        )
         for image in image_inputs:
             self.assertIsInstance(image, instance_class)
 
         # Test not batched input
         encoded_images = feature_extractor(image_inputs[0], return_tensors="pt")
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
         self.assertEqual(
             encoded_images.pixel_values.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
-        encoded_images = feature_extractor(image_inputs, return_image_mask=True, return_tensors="pt")
+        encoded_images = feature_extractor(
+            image_inputs, return_image_mask=True, return_tensors="pt"
+        )
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
         self.assertEqual(
             encoded_images.pixel_values.shape,
             (
@@ -253,7 +282,9 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
             ),
         )
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_mask_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_mask_size()
+        )
         self.assertEqual(
             encoded_images.bool_masked_pos.shape,
             (
@@ -264,9 +295,13 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_tensors="pt").pixel_values
+        encoded_images = feature_extractor(
+            image_inputs, return_tensors="pt"
+        ).pixel_values
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
         self.assertEqual(
             encoded_images.shape,
             (
@@ -278,9 +313,13 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         )
 
         # Test masking
-        encoded_images = feature_extractor(image_inputs, return_image_mask=True, return_tensors="pt")
+        encoded_images = feature_extractor(
+            image_inputs, return_image_mask=True, return_tensors="pt"
+        )
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_image_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_image_size()
+        )
         self.assertEqual(
             encoded_images.pixel_values.shape,
             (
@@ -291,7 +330,9 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
             ),
         )
 
-        expected_height, expected_width = self.feature_extract_tester.get_expected_mask_size()
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_mask_size()
+        )
         self.assertEqual(
             encoded_images.bool_masked_pos.shape,
             (
@@ -311,31 +352,50 @@ class FlavaFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.Test
         # Initialize feature_extractor
         random.seed(1234)
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False, torchify=True)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False, torchify=True
+        )
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_image_mask=True, return_tensors="pt")
+        encoded_images = feature_extractor(
+            image_inputs[0], return_image_mask=True, return_tensors="pt"
+        )
         self.assertEqual(encoded_images.bool_masked_pos.sum().item(), 75)
 
     def test_codebook_pixels(self):
         # Initialize feature_extractor
         feature_extractor = self.feature_extraction_class(**self.feat_extract_dict)
         # create random PIL images
-        image_inputs = prepare_image_inputs(self.feature_extract_tester, equal_resolution=False)
+        image_inputs = prepare_image_inputs(
+            self.feature_extract_tester, equal_resolution=False
+        )
         for image in image_inputs:
             self.assertIsInstance(image, Image.Image)
 
         # Test not batched input
-        encoded_images = feature_extractor(image_inputs[0], return_codebook_pixels=True, return_tensors="pt")
-        expected_height, expected_width = self.feature_extract_tester.get_expected_codebook_image_size()
+        encoded_images = feature_extractor(
+            image_inputs[0], return_codebook_pixels=True, return_tensors="pt"
+        )
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_codebook_image_size()
+        )
         self.assertEqual(
             encoded_images.codebook_pixel_values.shape,
-            (1, self.feature_extract_tester.num_channels, expected_height, expected_width),
+            (
+                1,
+                self.feature_extract_tester.num_channels,
+                expected_height,
+                expected_width,
+            ),
         )
 
         # Test batched
-        encoded_images = feature_extractor(image_inputs, return_codebook_pixels=True, return_tensors="pt")
-        expected_height, expected_width = self.feature_extract_tester.get_expected_codebook_image_size()
+        encoded_images = feature_extractor(
+            image_inputs, return_codebook_pixels=True, return_tensors="pt"
+        )
+        expected_height, expected_width = (
+            self.feature_extract_tester.get_expected_codebook_image_size()
+        )
         self.assertEqual(
             encoded_images.codebook_pixel_values.shape,
             (

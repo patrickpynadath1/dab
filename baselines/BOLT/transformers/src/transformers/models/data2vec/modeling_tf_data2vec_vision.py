@@ -130,7 +130,9 @@ class TFData2VecVisionEmbeddings(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.config = config
 
-        self.patch_embeddings = TFData2VecVisionPatchEmbeddings(config, name="patch_embeddings")
+        self.patch_embeddings = TFData2VecVisionPatchEmbeddings(
+            config, name="patch_embeddings"
+        )
         self.num_patches = self.patch_embeddings.num_patches
         self.config = config
 
@@ -139,14 +141,18 @@ class TFData2VecVisionEmbeddings(tf.keras.layers.Layer):
     def build(self, input_shape: tf.TensorShape):
         self.cls_token = self.add_weight(
             shape=(1, 1, self.config.hidden_size),
-            initializer=tf.random_normal_initializer(stddev=self.config.initializer_range),
+            initializer=tf.random_normal_initializer(
+                stddev=self.config.initializer_range
+            ),
             trainable=True,
             name="cls_token",
         )
         if self.config.use_mask_token:
             self.mask_token = self.add_weight(
                 shape=(1, 1, self.config.hidden_size),
-                initializer=tf.random_normal_initializer(stddev=self.config.initializer_range),
+                initializer=tf.random_normal_initializer(
+                    stddev=self.config.initializer_range
+                ),
                 trainable=True,
                 name="mask_token",
             )
@@ -156,7 +162,9 @@ class TFData2VecVisionEmbeddings(tf.keras.layers.Layer):
         if self.config.use_absolute_position_embeddings:
             self.position_embeddings = self.add_weight(
                 shape=(1, self.num_patches + 1, self.config.hidden_size),
-                initializer=tf.random_normal_initializer(stddev=self.config.initializer_range),
+                initializer=tf.random_normal_initializer(
+                    stddev=self.config.initializer_range
+                ),
                 trainable=True,
                 name="position_embeddings",
             )
@@ -165,7 +173,9 @@ class TFData2VecVisionEmbeddings(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
-    def call(self, pixel_values: tf.Tensor, bool_masked_pos: Optional[tf.Tensor] = None) -> tf.Tensor:
+    def call(
+        self, pixel_values: tf.Tensor, bool_masked_pos: Optional[tf.Tensor] = None
+    ) -> tf.Tensor:
 
         embeddings = self.patch_embeddings(pixel_values)
         batch_size, seq_len, projection_dim = shape_list(embeddings)
@@ -173,7 +183,9 @@ class TFData2VecVisionEmbeddings(tf.keras.layers.Layer):
         cls_tokens = tf.tile(self.cls_token, (batch_size, 1, 1))
 
         if bool_masked_pos is not None:
-            mask_tokens = tf.broadcast_to(self.mask_token, (batch_size, seq_len, projection_dim))
+            mask_tokens = tf.broadcast_to(
+                self.mask_token, (batch_size, seq_len, projection_dim)
+            )
             # replace the masked visual tokens by mask_tokens
             w = bool_masked_pos[..., None]
             w = tf.cast(w, mask_tokens.dtype)
@@ -200,9 +212,19 @@ class TFData2VecVisionPatchEmbeddings(tf.keras.layers.Layer):
         image_size, patch_size = config.image_size, config.patch_size
         num_channels, hidden_size = config.num_channels, config.hidden_size
 
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         patch_shape = (image_size[0] // patch_size[0], image_size[1] // patch_size[1])
         self.image_size = image_size
         self.patch_size = patch_size
@@ -250,7 +272,12 @@ class TFData2VecVisionPatchEmbeddings(tf.keras.layers.Layer):
 
 
 class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None, **kwargs):
+    def __init__(
+        self,
+        config: Data2VecVisionConfig,
+        window_size: Optional[tuple] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         if config.hidden_size % config.num_attention_heads != 0:
@@ -265,7 +292,9 @@ class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
         self.sqrt_att_head_size = math.sqrt(self.attention_head_size)
 
         self.query = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="query",
         )
         self.key = tf.keras.layers.Dense(
             units=self.all_head_size,
@@ -274,7 +303,9 @@ class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
             use_bias=False,
         )
         self.value = tf.keras.layers.Dense(
-            units=self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="value"
+            units=self.all_head_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="value",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.attention_probs_dropout_prob)
 
@@ -287,7 +318,10 @@ class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
 
     def transpose_for_scores(self, tensor: tf.Tensor, batch_size: int) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size] to [batch_size, seq_length, num_attention_heads, attention_head_size]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size] to [batch_size, num_attention_heads, seq_length, attention_head_size]
         return tf.transpose(tensor, perm=[0, 2, 1, 3])
@@ -318,7 +352,9 @@ class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
             # Passing `0.0` to the `relative_position_bias()` layer because otherwise Keras
             # might complain about `Layer.call()` not being invoked properly. In this case this input
             # i.e., 0.0 is not going to be used in any calculations so we're safe.
-            attention_scores = attention_scores + self.relative_position_bias(0.0)[None, ...]
+            attention_scores = (
+                attention_scores + self.relative_position_bias(0.0)[None, ...]
+            )
 
         # Add shared relative position bias if provided.
         if relative_position_bias is not None:
@@ -339,8 +375,14 @@ class TFData2VecVisionSelfAttention(tf.keras.layers.Layer):
         attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
 
         # (batch_size, seq_len_q, all_head_size)
-        attention_output = tf.reshape(tensor=attention_output, shape=(batch_size, -1, self.all_head_size))
-        outputs = (attention_output, attention_probs) if output_attentions else (attention_output,)
+        attention_output = tf.reshape(
+            tensor=attention_output, shape=(batch_size, -1, self.all_head_size)
+        )
+        outputs = (
+            (attention_output, attention_probs)
+            if output_attentions
+            else (attention_output,)
+        )
 
         return outputs
 
@@ -355,11 +397,19 @@ class TFData2VecVisionSelfOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, input_tensor: tf.Tensor, gamma=None, training: bool = False) -> tf.Tensor:
+    def call(
+        self,
+        hidden_states: tf.Tensor,
+        input_tensor: tf.Tensor,
+        gamma=None,
+        training: bool = False,
+    ) -> tf.Tensor:
         hidden_states = self.dense(inputs=hidden_states)
         hidden_states = self.dropout(inputs=hidden_states, training=training)
 
@@ -367,10 +417,17 @@ class TFData2VecVisionSelfOutput(tf.keras.layers.Layer):
 
 
 class TFData2VecVisionAttention(tf.keras.layers.Layer):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None, **kwargs):
+    def __init__(
+        self,
+        config: Data2VecVisionConfig,
+        window_size: Optional[tuple] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
-        self.attention = TFData2VecVisionSelfAttention(config, window_size=window_size, name="attention")
+        self.attention = TFData2VecVisionSelfAttention(
+            config, window_size=window_size, name="attention"
+        )
         self.dense_output = TFData2VecVisionSelfOutput(config, name="output")
 
     def prune_heads(self, heads):
@@ -394,7 +451,9 @@ class TFData2VecVisionAttention(tf.keras.layers.Layer):
         attention_output = self.dense_output(
             hidden_states=self_outputs[0], input_tensor=input_tensor, training=training
         )
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
 
         return outputs
 
@@ -405,7 +464,9 @@ class TFData2VecVisionIntermediate(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.intermediate_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
 
         if isinstance(config.hidden_act, str):
@@ -425,7 +486,9 @@ class TFData2VecVisionOutput(tf.keras.layers.Layer):
         super().__init__(**kwargs)
 
         self.dense = tf.keras.layers.Dense(
-            units=config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+            units=config.hidden_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            name="dense",
         )
         self.dropout = tf.keras.layers.Dropout(rate=config.hidden_dropout_prob)
 
@@ -440,12 +503,18 @@ class TFData2VecVisionLayer(tf.keras.layers.Layer):
     """This corresponds to the Block class in the timm implementation."""
 
     def __init__(
-        self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None, drop_path_rate: float = 0.0, **kwargs
+        self,
+        config: Data2VecVisionConfig,
+        window_size: Optional[tuple] = None,
+        drop_path_rate: float = 0.0,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.config = config
 
-        self.attention = TFData2VecVisionAttention(config, window_size=window_size, name="attention")
+        self.attention = TFData2VecVisionAttention(
+            config, window_size=window_size, name="attention"
+        )
         self.intermediate = TFData2VecVisionIntermediate(config, name="intermediate")
         self.data2vec_output = TFData2VecVisionOutput(config, name="output")
 
@@ -502,7 +571,9 @@ class TFData2VecVisionLayer(tf.keras.layers.Layer):
             training=training,
         )
         attention_output = self_attention_outputs[0]
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         # apply lambda_1 if present
         if self.lambda_1 is not None:
@@ -531,14 +602,18 @@ class TFData2VecVisionLayer(tf.keras.layers.Layer):
 # Taken and modified from here:
 # https://github.com/leondgarse/keras_cv_attention_models/blob/main/keras_cv_attention_models/beit/beit.py#L28
 class TFData2VecVisionRelativePositionBias(tf.keras.layers.Layer):
-    def __init__(self, config: Data2VecVisionConfig, window_size: tuple, **kwargs) -> None:
+    def __init__(
+        self, config: Data2VecVisionConfig, window_size: tuple, **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         self.config = config
 
         self.window_size = window_size
         # +3 for cls_token_pos_len
         # window_size can be something like (14, 14)
-        self.num_relative_distance = (2 * window_size[0] - 1) * (2 * window_size[1] - 1) + 3
+        self.num_relative_distance = (2 * window_size[0] - 1) * (
+            2 * window_size[1] - 1
+        ) + 3
 
         self.relative_position_index = self.get_position_index()
 
@@ -559,35 +634,54 @@ class TFData2VecVisionRelativePositionBias(tf.keras.layers.Layer):
         coords = tf.stack([yy, xx], axis=0)  # [2, Wh, Ww]
         coords_flatten = tf.reshape(coords, [2, -1])  # [2, Wh*Ww]
 
-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # [2, Wh*Ww, Wh*Ww]
-        relative_coords = tf.transpose(relative_coords, perm=[1, 2, 0])  # [Wh*Ww, Wh*Ww, 2]
+        relative_coords = (
+            coords_flatten[:, :, None] - coords_flatten[:, None, :]
+        )  # [2, Wh*Ww, Wh*Ww]
+        relative_coords = tf.transpose(
+            relative_coords, perm=[1, 2, 0]
+        )  # [Wh*Ww, Wh*Ww, 2]
 
-        xx = (relative_coords[:, :, 0] + self.window_size[0] - 1) * (2 * self.window_size[1] - 1)
+        xx = (relative_coords[:, :, 0] + self.window_size[0] - 1) * (
+            2 * self.window_size[1] - 1
+        )
         yy = relative_coords[:, :, 1] + self.window_size[1] - 1
         relative_coords = tf.stack([xx, yy], axis=-1)
 
-        relative_position_index = tf.reduce_sum(relative_coords, axis=-1)  # [Wh*Ww, Wh*Ww]
+        relative_position_index = tf.reduce_sum(
+            relative_coords, axis=-1
+        )  # [Wh*Ww, Wh*Ww]
 
-        top = tf.ones((1, relative_position_index.shape[1]), dtype=relative_position_index.dtype) * (
-            self.num_relative_distance - 3
+        top = tf.ones(
+            (1, relative_position_index.shape[1]), dtype=relative_position_index.dtype
+        ) * (self.num_relative_distance - 3)
+        left = tf.ones(
+            (relative_position_index.shape[0], 1), dtype=relative_position_index.dtype
+        ) * (self.num_relative_distance - 2)
+        corner = tf.ones((1, 1), dtype=relative_position_index.dtype) * (
+            self.num_relative_distance - 1
         )
-        left = tf.ones((relative_position_index.shape[0], 1), dtype=relative_position_index.dtype) * (
-            self.num_relative_distance - 2
-        )
-        corner = tf.ones((1, 1), dtype=relative_position_index.dtype) * (self.num_relative_distance - 1)
 
         left_corner = tf.concat([corner, left], axis=0)
         relative_position_index = tf.concat([top, relative_position_index], axis=0)
-        relative_position_index = tf.concat([left_corner, relative_position_index], axis=1)  # [Wh*Ww + 1, Wh*Ww + 1]
+        relative_position_index = tf.concat(
+            [left_corner, relative_position_index], axis=1
+        )  # [Wh*Ww + 1, Wh*Ww + 1]
         return relative_position_index
 
     def call(self, inputs=None) -> tf.Tensor:
-        relative_position_bias = tf.gather(self.relative_position_bias_table, self.relative_position_index, axis=0)
+        relative_position_bias = tf.gather(
+            self.relative_position_bias_table, self.relative_position_index, axis=0
+        )
         return tf.transpose(relative_position_bias, [2, 0, 1])
 
 
 class TFData2VecVisionEncoder(tf.keras.layers.Layer):
-    def __init__(self, config: Data2VecVisionConfig, window_size: Optional[tuple] = None, **kwargs):
+    def __init__(
+        self,
+        config: Data2VecVisionConfig,
+        window_size: Optional[tuple] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.config = config
         if config.use_shared_relative_position_bias:
@@ -598,7 +692,9 @@ class TFData2VecVisionEncoder(tf.keras.layers.Layer):
             self.relative_position_bias = None
 
         # stochastic depth decay rule
-        dpr = [x for x in tf.linspace(0.0, config.drop_path_rate, config.num_hidden_layers)]
+        dpr = [
+            x for x in tf.linspace(0.0, config.drop_path_rate, config.num_hidden_layers)
+        ]
         self.layer = [
             TFData2VecVisionLayer(
                 config,
@@ -629,9 +725,16 @@ class TFData2VecVisionEncoder(tf.keras.layers.Layer):
             # might complain about `Layer.call()` not being invoked properly. In this case this input
             # i.e., 0.0 is not going to be used in any calculations so we're safe.
             relative_position_bias = (
-                self.relative_position_bias(0.0) if self.relative_position_bias is not None else None
+                self.relative_position_bias(0.0)
+                if self.relative_position_bias is not None
+                else None
             )
-            layer_outputs = layer_module(hidden_states, layer_head_mask, output_attentions, relative_position_bias)
+            layer_outputs = layer_module(
+                hidden_states,
+                layer_head_mask,
+                output_attentions,
+                relative_position_bias,
+            )
 
             hidden_states = layer_outputs[0]
 
@@ -642,7 +745,11 @@ class TFData2VecVisionEncoder(tf.keras.layers.Layer):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
 
         return TFBaseModelOutput(
             last_hidden_state=hidden_states,
@@ -655,7 +762,9 @@ class TFData2VecVisionEncoder(tf.keras.layers.Layer):
 class TFData2VecVisionMainLayer(tf.keras.layers.Layer):
     config_class = Data2VecVisionConfig
 
-    def __init__(self, config: Data2VecVisionConfig, add_pooling_layer: bool = True, **kwargs):
+    def __init__(
+        self, config: Data2VecVisionConfig, add_pooling_layer: bool = True, **kwargs
+    ):
         super().__init__(**kwargs)
 
         self.config = config
@@ -663,17 +772,23 @@ class TFData2VecVisionMainLayer(tf.keras.layers.Layer):
 
         self.embeddings = TFData2VecVisionEmbeddings(config, name="embeddings")
         self.encoder = TFData2VecVisionEncoder(
-            config, window_size=self.embeddings.patch_embeddings.patch_shape, name="encoder"
+            config,
+            window_size=self.embeddings.patch_embeddings.patch_shape,
+            name="encoder",
         )
         self.layernorm = (
             tf.identity
             if config.use_mean_pooling
-            else tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layernorm")
+            else tf.keras.layers.LayerNormalization(
+                epsilon=config.layer_norm_eps, name="layernorm"
+            )
         )
 
         # We are setting the `data_format` like so because from here on we will revert to the
         # NCHW output format
-        self.pooler = TFData2VecVisionPooler(config, name="pooler") if add_pooling_layer else None
+        self.pooler = (
+            TFData2VecVisionPooler(config, name="pooler") if add_pooling_layer else None
+        )
 
     def get_input_embeddings(self) -> tf.keras.layers.Layer:
         return self.embeddings.patch_embeddings
@@ -696,11 +811,19 @@ class TFData2VecVisionMainLayer(tf.keras.layers.Layer):
         return_dict: Optional[bool] = None,
         training: bool = False,
     ) -> Union[tuple, TFData2VecVisionModelOutputWithPooling]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -715,7 +838,9 @@ class TFData2VecVisionMainLayer(tf.keras.layers.Layer):
         else:
             head_mask = [None] * self.config.num_hidden_layers
 
-        embedding_output = self.embeddings(pixel_values, bool_masked_pos, training=training)
+        embedding_output = self.embeddings(
+            pixel_values, bool_masked_pos, training=training
+        )
 
         encoder_outputs = self.encoder(
             embedding_output,
@@ -728,10 +853,16 @@ class TFData2VecVisionMainLayer(tf.keras.layers.Layer):
 
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(sequence_output) if self.pooler is not None else None
+        )
 
         if not return_dict:
-            head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
+            head_outputs = (
+                (sequence_output, pooled_output)
+                if pooled_output is not None
+                else (sequence_output,)
+            )
             return head_outputs + encoder_outputs[1:]
 
         return TFData2VecVisionModelOutputWithPooling(
@@ -746,7 +877,9 @@ class TFData2VecVisionPooler(tf.keras.layers.Layer):
     def __init__(self, config: Data2VecVisionConfig, **kwargs):
         super().__init__(**kwargs)
         self.layernorm = (
-            tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="layernorm")
+            tf.keras.layers.LayerNormalization(
+                epsilon=config.layer_norm_eps, name="layernorm"
+            )
             if config.use_mean_pooling
             else None
         )
@@ -781,7 +914,12 @@ class TFData2VecVisionPreTrainedModel(TFPreTrainedModel):
             `Dict[str, tf.Tensor]`: The dummy inputs.
         """
         VISION_DUMMY_INPUTS = tf.random.uniform(
-            shape=(3, self.config.num_channels, self.config.image_size, self.config.image_size),
+            shape=(
+                3,
+                self.config.num_channels,
+                self.config.image_size,
+                self.config.image_size,
+            ),
             dtype=tf.float32,
         )
         return {"pixel_values": tf.constant(VISION_DUMMY_INPUTS)}
@@ -789,7 +927,9 @@ class TFData2VecVisionPreTrainedModel(TFPreTrainedModel):
     @tf.function(
         input_signature=[
             {
-                "pixel_values": tf.TensorSpec((None, None, None, None), tf.float32, name="pixel_values"),
+                "pixel_values": tf.TensorSpec(
+                    (None, None, None, None), tf.float32, name="pixel_values"
+                ),
             }
         ]
     )
@@ -880,7 +1020,13 @@ DATA2VEC_VISION_INPUTS_DOCSTRING = r"""
     DATA2VEC_VISION_START_DOCSTRING,
 )
 class TFData2VecVisionModel(TFData2VecVisionPreTrainedModel):
-    def __init__(self, config: Data2VecVisionConfig, add_pooling_layer: bool = False, *inputs, **kwargs):
+    def __init__(
+        self,
+        config: Data2VecVisionConfig,
+        add_pooling_layer: bool = False,
+        *inputs,
+        **kwargs,
+    ):
         super().__init__(config, *inputs, **kwargs)
         self.config = config
 
@@ -924,9 +1070,19 @@ class TFData2VecVisionModel(TFData2VecVisionPreTrainedModel):
 
         return outputs
 
-    def serving_output(self, output: TFData2VecVisionModelOutputWithPooling) -> TFData2VecVisionModelOutputWithPooling:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFData2VecVisionModelOutputWithPooling
+    ) -> TFData2VecVisionModelOutputWithPooling:
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
         return TFData2VecVisionModelOutputWithPooling(
             last_hidden_state=output.last_hidden_state,
@@ -943,12 +1099,16 @@ class TFData2VecVisionModel(TFData2VecVisionPreTrainedModel):
     """,
     DATA2VEC_VISION_START_DOCSTRING,
 )
-class TFData2VecVisionForImageClassification(TFData2VecVisionPreTrainedModel, TFSequenceClassificationLoss):
+class TFData2VecVisionForImageClassification(
+    TFData2VecVisionPreTrainedModel, TFSequenceClassificationLoss
+):
     def __init__(self, config: Data2VecVisionConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
         self.num_labels = config.num_labels
-        self.data2vec_vision = TFData2VecVisionMainLayer(config, add_pooling_layer=True, name="data2vec_vision")
+        self.data2vec_vision = TFData2VecVisionMainLayer(
+            config, add_pooling_layer=True, name="data2vec_vision"
+        )
 
         # Classifier head
         self.classifier = tf.keras.layers.Dense(
@@ -982,7 +1142,9 @@ class TFData2VecVisionForImageClassification(TFData2VecVisionPreTrainedModel, TF
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.data2vec_vision(
             pixel_values=pixel_values,
@@ -995,7 +1157,11 @@ class TFData2VecVisionForImageClassification(TFData2VecVisionPreTrainedModel, TF
 
         pooled_output = outputs.pooler_output if return_dict else outputs[1]
         logits = self.classifier(pooled_output)
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1008,11 +1174,23 @@ class TFData2VecVisionForImageClassification(TFData2VecVisionPreTrainedModel, TF
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFSequenceClassifierOutput
+    ) -> TFSequenceClassifierOutput:
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=hidden_states, attentions=attentions)
+        return TFSequenceClassifierOutput(
+            logits=output.logits, hidden_states=hidden_states, attentions=attentions
+        )
 
 
 class TFData2VecVisionConvModule(tf.keras.layers.Layer):
@@ -1030,7 +1208,7 @@ class TFData2VecVisionConvModule(tf.keras.layers.Layer):
         padding: str = "valid",
         bias: bool = False,
         dilation: Union[int, Tuple[int, int]] = 1,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.conv = tf.keras.layers.Conv2D(
@@ -1067,7 +1245,8 @@ class TFAdaptiveAvgPool1D(tf.keras.layers.Layer):
 
         def get_kernels(ind, outd) -> List:
             """Returns a List [(kernel_offset_start,kernel_length)] defining all the pooling kernels for a 1-D adaptive
-            pooling layer that takes an input of dimension `ind` and yields an output of dimension `outd`"""
+            pooling layer that takes an input of dimension `ind` and yields an output of dimension `outd`
+            """
 
             def start_index(a, b, c):
                 return math.floor((float(a) * float(c)) / b)
@@ -1153,11 +1332,17 @@ class TFData2VecVisionPyramidPoolingModule(tf.keras.layers.Layer):
 
         self.layer_list = []
         for idx, pool_scale in enumerate(pool_scales):
-            pool_scale = pool_scale if isinstance(pool_scale, collections.abc.Iterable) else (pool_scale, pool_scale)
+            pool_scale = (
+                pool_scale
+                if isinstance(pool_scale, collections.abc.Iterable)
+                else (pool_scale, pool_scale)
+            )
             self.layer_list.append(
                 [
                     TFAdaptiveAvgPool2D(output_shape=pool_scale),
-                    TFData2VecVisionConvModule(out_channels=self.channels, kernel_size=1, name=f"{idx}.1"),
+                    TFData2VecVisionConvModule(
+                        out_channels=self.channels, kernel_size=1, name=f"{idx}.1"
+                    ),
                 ]
             )
 
@@ -1170,7 +1355,9 @@ class TFData2VecVisionPyramidPoolingModule(tf.keras.layers.Layer):
                 ppm_out = layer_module(x)
                 x = ppm_out
 
-            upsampled_ppm_out = tf.image.resize(ppm_out, size=shape_list(inputs)[1:-1], method="bilinear")
+            upsampled_ppm_out = tf.image.resize(
+                ppm_out, size=shape_list(inputs)[1:-1], method="bilinear"
+            )
             ppm_outs.append(upsampled_ppm_out)
         return ppm_outs
 
@@ -1189,24 +1376,38 @@ class TFData2VecVisionUperHead(tf.keras.layers.Layer):
         self.pool_scales = config.pool_scales  # e.g. (1, 2, 3, 6)
         self.in_channels = [config.hidden_size] * 4  # e.g. [768, 768, 768, 768]
         self.channels = config.hidden_size
-        self.classifier = tf.keras.layers.Conv2D(config.num_labels, kernel_size=1, name="classifier")
+        self.classifier = tf.keras.layers.Conv2D(
+            config.num_labels, kernel_size=1, name="classifier"
+        )
 
         # PSP Module
-        self.psp_modules = TFData2VecVisionPyramidPoolingModule(self.pool_scales, self.channels, name="psp_modules")
-        self.bottleneck = TFData2VecVisionConvModule(self.channels, kernel_size=3, padding="same", name="bottleneck")
+        self.psp_modules = TFData2VecVisionPyramidPoolingModule(
+            self.pool_scales, self.channels, name="psp_modules"
+        )
+        self.bottleneck = TFData2VecVisionConvModule(
+            self.channels, kernel_size=3, padding="same", name="bottleneck"
+        )
         # FPN Module
         self.lateral_convs = []
         self.fpn_convs = []
         for idx, _ in enumerate(self.in_channels[:-1]):  # skip the top layer
-            l_conv = TFData2VecVisionConvModule(out_channels=self.channels, kernel_size=1, name=f"lateral_convs.{idx}")
+            l_conv = TFData2VecVisionConvModule(
+                out_channels=self.channels, kernel_size=1, name=f"lateral_convs.{idx}"
+            )
             fpn_conv = TFData2VecVisionConvModule(
-                out_channels=self.channels, kernel_size=3, padding="same", name=f"fpn_convs.{idx}"
+                out_channels=self.channels,
+                kernel_size=3,
+                padding="same",
+                name=f"fpn_convs.{idx}",
             )
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
 
         self.fpn_bottleneck = TFData2VecVisionConvModule(
-            out_channels=self.channels, kernel_size=3, padding="same", name="fpn_bottleneck"
+            out_channels=self.channels,
+            kernel_size=3,
+            padding="same",
+            name="fpn_bottleneck",
         )
 
     def psp_forward(self, inputs):
@@ -1220,7 +1421,10 @@ class TFData2VecVisionUperHead(tf.keras.layers.Layer):
 
     def call(self, encoder_hidden_states: tf.Tensor) -> tf.Tensor:
         # build laterals
-        laterals = [lateral_conv(encoder_hidden_states[i]) for i, lateral_conv in enumerate(self.lateral_convs)]
+        laterals = [
+            lateral_conv(encoder_hidden_states[i])
+            for i, lateral_conv in enumerate(self.lateral_convs)
+        ]
 
         laterals.append(self.psp_forward(encoder_hidden_states))
 
@@ -1228,15 +1432,21 @@ class TFData2VecVisionUperHead(tf.keras.layers.Layer):
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = shape_list(laterals[i - 1])[1:-1]
-            laterals[i - 1] = laterals[i - 1] + tf.image.resize(laterals[i], size=prev_shape, method="bilinear")
+            laterals[i - 1] = laterals[i - 1] + tf.image.resize(
+                laterals[i], size=prev_shape, method="bilinear"
+            )
 
         # build outputs
-        fpn_outs = [self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels - 1)]
+        fpn_outs = [
+            self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels - 1)
+        ]
         # append psp feature
         fpn_outs.append(laterals[-1])
 
         for i in range(used_backbone_levels - 1, 0, -1):
-            fpn_outs[i] = tf.image.resize(fpn_outs[i], size=shape_list(fpn_outs[0])[1:-1], method="bilinear")
+            fpn_outs[i] = tf.image.resize(
+                fpn_outs[i], size=shape_list(fpn_outs[0])[1:-1], method="bilinear"
+            )
         fpn_outs = tf.concat(fpn_outs, axis=-1)
         output = self.fpn_bottleneck(fpn_outs)
         output = self.classifier(output)
@@ -1264,7 +1474,7 @@ class TFData2VecVisionFCNHead(tf.keras.layers.Layer):
         in_index: int = 2,
         kernel_size: int = 3,
         dilation: Union[int, Tuple[int, int]] = 1,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.in_channels = config.hidden_size
@@ -1299,10 +1509,15 @@ class TFData2VecVisionFCNHead(tf.keras.layers.Layer):
             self.convs = convs
         if self.concat_input:
             self.conv_cat = TFData2VecVisionConvModule(
-                out_channels=self.channels, kernel_size=kernel_size, padding="same", name="conv_cat"
+                out_channels=self.channels,
+                kernel_size=kernel_size,
+                padding="same",
+                name="conv_cat",
             )
 
-        self.classifier = tf.keras.layers.Conv2D(config.num_labels, kernel_size=1, name="classifier")
+        self.classifier = tf.keras.layers.Conv2D(
+            config.num_labels, kernel_size=1, name="classifier"
+        )
 
     def call(self, encoder_hidden_states: tf.Tensor) -> tf.Tensor:
         # just take the relevant feature maps
@@ -1326,16 +1541,26 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
     def __init__(self, config: Data2VecVisionConfig, *inputs, **kwargs) -> None:
         super().__init__(config, *inputs, **kwargs)
         self.num_labels = config.num_labels
-        self.data2vec_vision = TFData2VecVisionMainLayer(config, add_pooling_layer=False, name="data2vec_vision")
+        self.data2vec_vision = TFData2VecVisionMainLayer(
+            config, add_pooling_layer=False, name="data2vec_vision"
+        )
 
         # FPNs
         self.fpn1 = [
-            tf.keras.layers.Conv2DTranspose(config.hidden_size, kernel_size=2, strides=2, name="fpn1.0"),
+            tf.keras.layers.Conv2DTranspose(
+                config.hidden_size, kernel_size=2, strides=2, name="fpn1.0"
+            ),
             tf.keras.layers.BatchNormalization(name="fpn1.1"),
             tf.keras.layers.Activation("gelu"),
-            tf.keras.layers.Conv2DTranspose(config.hidden_size, kernel_size=2, strides=2, name="fpn1.3"),
+            tf.keras.layers.Conv2DTranspose(
+                config.hidden_size, kernel_size=2, strides=2, name="fpn1.3"
+            ),
         ]
-        self.fpn2 = [tf.keras.layers.Conv2DTranspose(config.hidden_size, kernel_size=2, strides=2, name="fpn2.0")]
+        self.fpn2 = [
+            tf.keras.layers.Conv2DTranspose(
+                config.hidden_size, kernel_size=2, strides=2, name="fpn2.0"
+            )
+        ]
 
         self.fpn3 = tf.identity
         self.fpn4 = tf.keras.layers.MaxPool2D(pool_size=2, strides=2)
@@ -1343,7 +1568,9 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
         # Semantic segmentation head(s)
         self.decode_head = TFData2VecVisionUperHead(config, name="decode_head")
         self.auxiliary_head = (
-            TFData2VecVisionFCNHead(config, name="auxiliary_head") if config.use_auxiliary_head else None
+            TFData2VecVisionFCNHead(config, name="auxiliary_head")
+            if config.use_auxiliary_head
+            else None
         )
 
     def compute_loss(self, logits, auxiliary_logits, labels):
@@ -1353,16 +1580,24 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
         else:
             label_interp_shape = shape_list(labels)[-2:]
 
-        upsampled_logits = tf.image.resize(logits, size=label_interp_shape, method="bilinear")
+        upsampled_logits = tf.image.resize(
+            logits, size=label_interp_shape, method="bilinear"
+        )
         if auxiliary_logits is not None:
-            upsampled_auxiliary_logits = tf.image.resize(auxiliary_logits, size=label_interp_shape, method="bilinear")
+            upsampled_auxiliary_logits = tf.image.resize(
+                auxiliary_logits, size=label_interp_shape, method="bilinear"
+            )
         # compute weighted loss
-        loss_fct = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction="none")
+        loss_fct = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True, reduction="none"
+        )
 
         # Copied from https://www.tensorflow.org/text/tutorials/transformer#loss_and_metrics.
         # Utility to mask the index to ignore during computing the loss.
         def masked_loss(real, pred):
-            mask = tf.math.logical_not(tf.math.equal(real, self.config.semantic_loss_ignore_index))
+            mask = tf.math.logical_not(
+                tf.math.equal(real, self.config.semantic_loss_ignore_index)
+            )
             loss_ = loss_fct(real, pred)
             mask = tf.cast(mask, dtype=loss_.dtype)
             loss_ *= mask
@@ -1377,7 +1612,9 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(DATA2VEC_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFSemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFSemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         pixel_values: Optional[tf.Tensor] = None,
@@ -1412,9 +1649,13 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
         >>> # logits are of shape (batch_size, num_labels, height, width)
         >>> logits = outputs.logits
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
 
         outputs = self.data2vec_vision(
@@ -1428,7 +1669,11 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
 
         # only keep certain features, and reshape
         # note that we do +1 as the encoder_hidden_states also includes the initial embeddings
-        features = [feature for idx, feature in enumerate(encoder_hidden_states) if idx + 1 in self.config.out_indices]
+        features = [
+            feature
+            for idx, feature in enumerate(encoder_hidden_states)
+            if idx + 1 in self.config.out_indices
+        ]
         batch_size = shape_list(pixel_values)[0]
         patch_resolution = self.config.image_size // self.config.patch_size
 
@@ -1475,8 +1720,20 @@ class TFData2VecVisionForSemanticSegmentation(TFData2VecVisionPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSemanticSegmenterOutput) -> TFSemanticSegmenterOutput:
-        hidden_states = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
-        attentions = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+    def serving_output(
+        self, output: TFSemanticSegmenterOutput
+    ) -> TFSemanticSegmenterOutput:
+        hidden_states = (
+            tf.convert_to_tensor(output.hidden_states)
+            if self.config.output_hidden_states
+            else None
+        )
+        attentions = (
+            tf.convert_to_tensor(output.attentions)
+            if self.config.output_attentions
+            else None
+        )
 
-        return TFSemanticSegmenterOutput(logits=output.logits, hidden_states=hidden_states, attentions=attentions)
+        return TFSemanticSegmenterOutput(
+            logits=output.logits, hidden_states=hidden_states, attentions=attentions
+        )

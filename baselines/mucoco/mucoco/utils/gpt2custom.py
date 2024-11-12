@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"h\.\d+\.attn\.masked_bias", r"lm_head\.weight"]
 
@@ -18,10 +19,13 @@ class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
         self.transformer = GPT2Model(config)
 
         embeds = self.transformer.get_input_embeddings()
-        old_dim = getattr(config,'n_embd', embeds.embedding_dim)
-        new_dim = getattr(config,'new_n_embd', None)
+        old_dim = getattr(config, "n_embd", embeds.embedding_dim)
+        new_dim = getattr(config, "new_n_embd", None)
         if new_dim is not None:
-            new_embeds = nn.Sequential(nn.Embedding(embeds.num_embeddings, new_dim), nn.Linear(new_dim, old_dim, bias=False))
+            new_embeds = nn.Sequential(
+                nn.Embedding(embeds.num_embeddings, new_dim),
+                nn.Linear(new_dim, old_dim, bias=False),
+            )
             self.transformer.set_input_embeddings(new_embeds)
 
         self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
@@ -52,7 +56,9 @@ class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
             config.num_labels - 1]`. If :obj:`config.num_labels == 1` a regression loss is computed (Mean-Square loss),
             If :obj:`config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -82,7 +88,9 @@ class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+                sequence_lengths = (
+                    torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+                )
             else:
                 sequence_lengths = -1
                 logger.warning(
@@ -97,7 +105,9 @@ class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (
+                    labels.dtype == torch.long or labels.dtype == torch.int
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -110,7 +120,9 @@ class GPT2CustomForSequenceClassification(GPT2PreTrainedModel):
                     loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(
+                    pooled_logits.view(-1, self.num_labels), labels.view(-1)
+                )
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)

@@ -84,10 +84,14 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         self.size_divisor = size_divisor
         self.resample = resample
         self.do_normalize = do_normalize
-        self.image_mean = image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        self.image_mean = (
+            image_mean if image_mean is not None else IMAGENET_STANDARD_MEAN
+        )
         self.image_std = image_std if image_std is not None else IMAGENET_STANDARD_STD
 
-    def _resize(self, image, shorter=800, longer=1333, size_divisor=32, resample=Image.BICUBIC):
+    def _resize(
+        self, image, shorter=800, longer=1333, size_divisor=32, resample=Image.BICUBIC
+    ):
         """
         Resizes the shorter edge of `image` to `shorter` and limits the longer edge to under `longer`, while preserving
         the aspect ratio. Also makes sure that both the height and width can be divided by `size_divisor`.
@@ -125,7 +129,10 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
             neww = neww * scale
 
         newh, neww = int(newh + 0.5), int(neww + 0.5)
-        newh, neww = newh // size_divisor * size_divisor, neww // size_divisor * size_divisor
+        newh, neww = (
+            newh // size_divisor * size_divisor,
+            neww // size_divisor * size_divisor,
+        )
 
         return self.resize(image, size=(neww, newh), resample=resample)
 
@@ -138,7 +145,9 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         return maxes
 
     def pad_and_create_pixel_mask(
-        self, pixel_values_list: List["torch.Tensor"], return_tensors: Optional[Union[str, TensorType]] = None
+        self,
+        pixel_values_list: List["torch.Tensor"],
+        return_tensors: Optional[Union[str, TensorType]] = None,
     ):
         """
         Pad images up to the largest image in a batch and create a corresponding `pixel_mask`.
@@ -165,7 +174,9 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         for image in pixel_values_list:
             # create padded image
             padded_image = np.zeros((c, h, w), dtype=np.float32)
-            padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = np.copy(image)
+            padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = (
+                np.copy(image)
+            )
             padded_images.append(padded_image)
             # create pixel mask
             mask = np.zeros((h, w), dtype=np.int64)
@@ -232,7 +243,11 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -243,7 +258,10 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -263,7 +281,10 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
                 for image in images
             ]
         if self.do_normalize:
-            images = [self.normalize(image=image, mean=self.image_mean, std=self.image_std) for image in images]
+            images = [
+                self.normalize(image=image, mean=self.image_mean, std=self.image_std)
+                for image in images
+            ]
 
         if pad_and_return_pixel_mask:
             # pad images up to largest image in batch and create pixel_mask
@@ -274,7 +295,9 @@ class ViltFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
             for image in images:
                 # create padded image
                 padded_image = np.zeros((c, h, w), dtype=np.float32)
-                padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = np.copy(image)
+                padded_image[: image.shape[0], : image.shape[1], : image.shape[2]] = (
+                    np.copy(image)
+                )
                 padded_images.append(padded_image)
                 # create pixel mask
                 mask = np.zeros((h, w), dtype=np.int64)

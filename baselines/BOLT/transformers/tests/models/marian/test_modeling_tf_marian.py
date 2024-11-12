@@ -18,8 +18,20 @@ import tempfile
 import unittest
 import warnings
 
-from transformers import AutoTokenizer, MarianConfig, MarianTokenizer, TranslationPipeline, is_tf_available
-from transformers.testing_utils import require_sentencepiece, require_tf, require_tokenizers, slow, tooslow
+from transformers import (
+    AutoTokenizer,
+    MarianConfig,
+    MarianTokenizer,
+    TranslationPipeline,
+    is_tf_available,
+)
+from transformers.testing_utils import (
+    require_sentencepiece,
+    require_tf,
+    require_tokenizers,
+    slow,
+    tooslow,
+)
 from transformers.utils import cached_property
 
 from ...test_configuration_common import ConfigTester
@@ -77,10 +89,14 @@ class TFMarianModelTester:
 
     def prepare_config_and_inputs_for_common(self):
         input_ids = ids_tensor([self.batch_size, self.seq_length - 1], self.vocab_size)
-        eos_tensor = tf.expand_dims(tf.constant([self.eos_token_id] * self.batch_size), 1)
+        eos_tensor = tf.expand_dims(
+            tf.constant([self.eos_token_id] * self.batch_size), 1
+        )
         input_ids = tf.concat([input_ids, eos_tensor], axis=1)
 
-        decoder_input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        decoder_input_ids = ids_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size
+        )
 
         config = self.config_cls(
             vocab_size=self.vocab_size,
@@ -113,7 +129,12 @@ class TFMarianModelTester:
         self.batch_size = 1
 
         # first forward pass
-        outputs = model(input_ids, attention_mask=attention_mask, head_mask=head_mask, use_cache=True)
+        outputs = model(
+            input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            use_cache=True,
+        )
 
         output, past_key_values = outputs.to_tuple()
 
@@ -125,8 +146,14 @@ class TFMarianModelTester:
         next_input_ids = tf.concat([input_ids, next_tokens], axis=-1)
         next_attention_mask = tf.concat([attention_mask, next_attn_mask], axis=-1)
 
-        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)[0]
-        output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[0]
+        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)[
+            0
+        ]
+        output_from_past = model(
+            next_tokens,
+            attention_mask=next_attention_mask,
+            past_key_values=past_key_values,
+        )[0]
 
         self.parent.assertEqual(next_tokens.shape[1], output_from_past.shape[1])
 
@@ -136,7 +163,9 @@ class TFMarianModelTester:
         output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         # test that outputs are equal for slice
-        tf.debugging.assert_near(output_from_past_slice, output_from_no_past_slice, rtol=1e-3)
+        tf.debugging.assert_near(
+            output_from_past_slice, output_from_no_past_slice, rtol=1e-3
+        )
 
 
 def prepare_marian_inputs_dict(
@@ -150,21 +179,30 @@ def prepare_marian_inputs_dict(
     cross_attn_head_mask=None,
 ):
     if attention_mask is None:
-        attention_mask = tf.cast(tf.math.not_equal(input_ids, config.pad_token_id), tf.int8)
+        attention_mask = tf.cast(
+            tf.math.not_equal(input_ids, config.pad_token_id), tf.int8
+        )
     if decoder_attention_mask is None:
         decoder_attention_mask = tf.concat(
             [
                 tf.ones(decoder_input_ids[:, :1].shape, dtype=tf.int8),
-                tf.cast(tf.math.not_equal(decoder_input_ids[:, 1:], config.pad_token_id), tf.int8),
+                tf.cast(
+                    tf.math.not_equal(decoder_input_ids[:, 1:], config.pad_token_id),
+                    tf.int8,
+                ),
             ],
             axis=-1,
         )
     if head_mask is None:
         head_mask = tf.ones((config.encoder_layers, config.encoder_attention_heads))
     if decoder_head_mask is None:
-        decoder_head_mask = tf.ones((config.decoder_layers, config.decoder_attention_heads))
+        decoder_head_mask = tf.ones(
+            (config.decoder_layers, config.decoder_attention_heads)
+        )
     if cross_attn_head_mask is None:
-        cross_attn_head_mask = tf.ones((config.decoder_layers, config.decoder_attention_heads))
+        cross_attn_head_mask = tf.ones(
+            (config.decoder_layers, config.decoder_attention_heads)
+        )
     return {
         "input_ids": input_ids,
         "decoder_input_ids": decoder_input_ids,
@@ -198,19 +236,27 @@ class TFMarianModelTest(TFModelTesterMixin, unittest.TestCase):
     def test_compile_tf_model(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate=3e-5, epsilon=1e-08, clipnorm=1.0)
+        optimizer = tf.keras.optimizers.Adam(
+            learning_rate=3e-5, epsilon=1e-08, clipnorm=1.0
+        )
         loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         metric = tf.keras.metrics.SparseCategoricalAccuracy("accuracy")
 
         model_class = self.all_generative_model_classes[0]
         input_ids = {
-            "decoder_input_ids": tf.keras.Input(batch_shape=(2, 2000), name="decoder_input_ids", dtype="int32"),
-            "input_ids": tf.keras.Input(batch_shape=(2, 2000), name="input_ids", dtype="int32"),
+            "decoder_input_ids": tf.keras.Input(
+                batch_shape=(2, 2000), name="decoder_input_ids", dtype="int32"
+            ),
+            "input_ids": tf.keras.Input(
+                batch_shape=(2, 2000), name="input_ids", dtype="int32"
+            ),
         }
 
         # Prepare our model
         model = model_class(config)
-        model(self._prepare_for_class(inputs_dict, model_class))  # Model must be called before saving.
+        model(
+            self._prepare_for_class(inputs_dict, model_class)
+        )  # Model must be called before saving.
         # Let's load it from the disk to be sure we can use pre-trained weights
         with tempfile.TemporaryDirectory() as tmpdirname:
             model.save_pretrained(tmpdirname)
@@ -220,7 +266,9 @@ class TFMarianModelTest(TFModelTesterMixin, unittest.TestCase):
         hidden_states = outputs_dict[0]
 
         # Add a dense layer on top to test integration with other keras modules
-        outputs = tf.keras.layers.Dense(2, activation="softmax", name="outputs")(hidden_states)
+        outputs = tf.keras.layers.Dense(2, activation="softmax", name="outputs")(
+            hidden_states
+        )
 
         # Compile extended model
         extended_model = tf.keras.Model(inputs=[input_ids], outputs=[outputs])
@@ -269,14 +317,22 @@ class TFMarianModelTest(TFModelTesterMixin, unittest.TestCase):
             for size in [config.vocab_size - 10, config.vocab_size + 10, None]:
                 # build the embeddings
                 model = model_class(config=config)
-                old_input_embeddings = _get_word_embedding_weight(model, model.get_input_embeddings())
-                old_output_embeddings = _get_word_embedding_weight(model, model.get_output_embeddings())
+                old_input_embeddings = _get_word_embedding_weight(
+                    model, model.get_input_embeddings()
+                )
+                old_output_embeddings = _get_word_embedding_weight(
+                    model, model.get_output_embeddings()
+                )
                 old_final_logits_bias = model.get_bias()
 
                 # reshape the embeddings
                 model.resize_token_embeddings(size)
-                new_input_embeddings = _get_word_embedding_weight(model, model.get_input_embeddings())
-                new_output_embeddings = _get_word_embedding_weight(model, model.get_output_embeddings())
+                new_input_embeddings = _get_word_embedding_weight(
+                    model, model.get_input_embeddings()
+                )
+                new_output_embeddings = _get_word_embedding_weight(
+                    model, model.get_output_embeddings()
+                )
                 new_final_logits_bias = model.get_bias()
 
                 # check that the resized embeddings size matches the desired size.
@@ -286,28 +342,40 @@ class TFMarianModelTest(TFModelTesterMixin, unittest.TestCase):
 
                 # check that weights remain the same after resizing
                 models_equal = True
-                for p1, p2 in zip(old_input_embeddings.value(), new_input_embeddings.value()):
+                for p1, p2 in zip(
+                    old_input_embeddings.value(), new_input_embeddings.value()
+                ):
                     if tf.math.reduce_sum(tf.math.abs(p1 - p2)) > 0:
                         models_equal = False
                 self.assertTrue(models_equal)
 
-                if old_output_embeddings is not None and new_output_embeddings is not None:
+                if (
+                    old_output_embeddings is not None
+                    and new_output_embeddings is not None
+                ):
                     self.assertEqual(new_output_embeddings.shape[0], assert_size)
 
                     models_equal = True
-                    for p1, p2 in zip(old_output_embeddings.value(), new_output_embeddings.value()):
+                    for p1, p2 in zip(
+                        old_output_embeddings.value(), new_output_embeddings.value()
+                    ):
                         if tf.math.reduce_sum(tf.math.abs(p1 - p2)) > 0:
                             models_equal = False
                     self.assertTrue(models_equal)
 
-                if old_final_logits_bias is not None and new_final_logits_bias is not None:
+                if (
+                    old_final_logits_bias is not None
+                    and new_final_logits_bias is not None
+                ):
                     old_final_logits_bias = old_final_logits_bias["final_logits_bias"]
                     new_final_logits_bias = new_final_logits_bias["final_logits_bias"]
                     self.assertEqual(new_final_logits_bias.shape[0], 1)
                     self.assertEqual(new_final_logits_bias.shape[1], assert_size)
 
                     models_equal = True
-                    for old, new in zip(old_final_logits_bias.value(), new_final_logits_bias.value()):
+                    for old, new in zip(
+                        old_final_logits_bias.value(), new_final_logits_bias.value()
+                    ):
                         for p1, p2 in zip(old, new):
                             if tf.math.reduce_sum(tf.math.abs(p1 - p2)) > 0:
                                 models_equal = False
@@ -352,7 +420,9 @@ class AbstractMarianIntegrationTest(unittest.TestCase):
     @cached_property
     def model(self):
         warnings.simplefilter("error")
-        model: TFMarianMTModel = TFAutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        model: TFMarianMTModel = TFAutoModelForSeq2SeqLM.from_pretrained(
+            self.model_name
+        )
         assert isinstance(model, TFMarianMTModel)
         c = model.config
         self.assertListEqual(c.bad_words_ids, [[c.pad_token_id]])
@@ -365,11 +435,18 @@ class AbstractMarianIntegrationTest(unittest.TestCase):
         self.assertListEqual(self.expected_text, generated_words)
 
     def translate_src_text(self, **tokenizer_kwargs):
-        model_inputs = self.tokenizer(self.src_text, **tokenizer_kwargs, padding=True, return_tensors="tf")
-        generated_ids = self.model.generate(
-            model_inputs.input_ids, attention_mask=model_inputs.attention_mask, num_beams=2, max_length=128
+        model_inputs = self.tokenizer(
+            self.src_text, **tokenizer_kwargs, padding=True, return_tensors="tf"
         )
-        generated_words = self.tokenizer.batch_decode(generated_ids.numpy(), skip_special_tokens=True)
+        generated_ids = self.model.generate(
+            model_inputs.input_ids,
+            attention_mask=model_inputs.attention_mask,
+            num_beams=2,
+            max_length=128,
+        )
+        generated_words = self.tokenizer.batch_decode(
+            generated_ids.numpy(), skip_special_tokens=True
+        )
         return generated_words
 
 
@@ -381,8 +458,12 @@ class TestMarian_MT_EN(AbstractMarianIntegrationTest):
 
     src = "mt"
     tgt = "en"
-    src_text = ["Billi messu b'mod ġentili, Ġesù fejjaq raġel li kien milqut bil - marda kerha tal - ġdiem."]
-    expected_text = ["Touching gently, Jesus healed a man who was affected by the sad disease of leprosy."]
+    src_text = [
+        "Billi messu b'mod ġentili, Ġesù fejjaq raġel li kien milqut bil - marda kerha tal - ġdiem."
+    ]
+    expected_text = [
+        "Touching gently, Jesus healed a man who was affected by the sad disease of leprosy."
+    ]
 
     @unittest.skip("Skipping until #12647 is resolved.")
     @slow

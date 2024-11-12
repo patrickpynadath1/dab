@@ -37,7 +37,9 @@ if is_vision_available():
 if is_torch_available():
     import torch
 
-    from ..models.auto.modeling_auto import MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING
+    from ..models.auto.modeling_auto import (
+        MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING,
+    )
 
 TESSERACT_LOADED = False
 if is_pytesseract_available():
@@ -59,11 +61,21 @@ def normalize_box(box, width, height):
     ]
 
 
-def apply_tesseract(image: "Image.Image", lang: Optional[str], tesseract_config: Optional[str]):
+def apply_tesseract(
+    image: "Image.Image", lang: Optional[str], tesseract_config: Optional[str]
+):
     """Applies Tesseract OCR on a document image, and returns recognized words + normalized bounding boxes."""
     # apply OCR
-    data = pytesseract.image_to_data(image, lang=lang, output_type="dict", config=tesseract_config)
-    words, left, top, width, height = data["text"], data["left"], data["top"], data["width"], data["height"]
+    data = pytesseract.image_to_data(
+        image, lang=lang, output_type="dict", config=tesseract_config
+    )
+    words, left, top, width, height = (
+        data["text"],
+        data["left"],
+        data["top"],
+        data["width"],
+        data["height"],
+    )
 
     # filter empty words and corresponding coordinates
     irrelevant_indices = [idx for idx, word in enumerate(words) if not word.strip()]
@@ -71,7 +83,9 @@ def apply_tesseract(image: "Image.Image", lang: Optional[str], tesseract_config:
     left = [coord for idx, coord in enumerate(left) if idx not in irrelevant_indices]
     top = [coord for idx, coord in enumerate(top) if idx not in irrelevant_indices]
     width = [coord for idx, coord in enumerate(width) if idx not in irrelevant_indices]
-    height = [coord for idx, coord in enumerate(height) if idx not in irrelevant_indices]
+    height = [
+        coord for idx, coord in enumerate(height) if idx not in irrelevant_indices
+    ]
 
     # turn coordinates into (left, top, left+width, top+height) format
     actual_boxes = []
@@ -121,7 +135,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
         if self.model.config.__class__.__name__ == "VisionEncoderDecoderConfig":
             self.model_type = ModelType.VisionEncoderDecoder
             if self.model.config.encoder.model_type != "donut-swin":
-                raise ValueError("Currently, the only supported VisionEncoderDecoder model is Donut")
+                raise ValueError(
+                    "Currently, the only supported VisionEncoderDecoder model is Donut"
+                )
         elif self.model.config.__class__.__name__ == "LayoutLMConfig":
             self.model_type = ModelType.LayoutLM
         else:
@@ -160,7 +176,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
             postprocess_params["top_k"] = top_k
         if max_answer_len is not None:
             if max_answer_len < 1:
-                raise ValueError(f"max_answer_len parameter should be >= 1 (got {max_answer_len}")
+                raise ValueError(
+                    f"max_answer_len parameter should be >= 1 (got {max_answer_len}"
+                )
             postprocess_params["max_answer_len"] = max_answer_len
         if handle_impossible_answer is not None:
             postprocess_params["handle_impossible_answer"] = handle_impossible_answer
@@ -248,9 +266,13 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
         if input.get("image", None) is not None:
             image = load_image(input["image"])
             if self.feature_extractor is not None:
-                image_features.update(self.feature_extractor(images=image, return_tensors=self.framework))
+                image_features.update(
+                    self.feature_extractor(images=image, return_tensors=self.framework)
+                )
             elif self.model_type == ModelType.VisionEncoderDecoder:
-                raise ValueError("If you are using a VisionEncoderDecoderModel, you must provide a feature extractor")
+                raise ValueError(
+                    "If you are using a VisionEncoderDecoderModel, you must provide a feature extractor"
+                )
 
         words, boxes = None, None
         if not self.model_type == ModelType.VisionEncoderDecoder:
@@ -267,7 +289,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
                         " but pytesseract is not available"
                     )
                 if TESSERACT_LOADED:
-                    words, boxes = apply_tesseract(image, lang=lang, tesseract_config=tesseract_config)
+                    words, boxes = apply_tesseract(
+                        image, lang=lang, tesseract_config=tesseract_config
+                    )
             else:
                 raise ValueError(
                     "You must provide an image or word_boxes. If you provide an image, the pipeline will automatically"
@@ -281,7 +305,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
             )
 
         if self.model_type == ModelType.VisionEncoderDecoder:
-            task_prompt = f'<s_docvqa><s_question>{input["question"]}</s_question><s_answer>'
+            task_prompt = (
+                f'<s_docvqa><s_question>{input["question"]}</s_question><s_answer>'
+            )
             # Adapted from https://huggingface.co/spaces/nielsr/donut-docvqa/blob/main/app.py
             encoding = {
                 "inputs": image_features["pixel_values"],
@@ -325,12 +351,17 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
             # p_mask: mask with 1 for token than cannot be in the answer (0 for token which can be in an answer)
             # We put 0 on the tokens from the context and 1 everywhere else (question and special tokens)
             # This logic mirrors the logic in the question_answering pipeline
-            p_mask = [[tok != 1 for tok in encoding.sequence_ids(span_id)] for span_id in range(num_spans)]
+            p_mask = [
+                [tok != 1 for tok in encoding.sequence_ids(span_id)]
+                for span_id in range(num_spans)
+            ]
             for span_idx in range(num_spans):
                 input_ids_span_idx = encoding["input_ids"][span_idx]
                 # keep the cls_token unmasked (some models use it to indicate unanswerable questions)
                 if self.tokenizer.cls_token_id is not None:
-                    cls_indices = np.nonzero(np.array(input_ids_span_idx) == self.tokenizer.cls_token_id)[0]
+                    cls_indices = np.nonzero(
+                        np.array(input_ids_span_idx) == self.tokenizer.cls_token_id
+                    )[0]
                     for cls_index in cls_indices:
                         p_mask[span_idx][cls_index] = 0
 
@@ -352,7 +383,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
                             bbox.append([0] * 4)
 
                 if self.framework == "tf":
-                    raise ValueError("Unsupported: Tensorflow preprocessing for DocumentQuestionAnsweringPipeline")
+                    raise ValueError(
+                        "Unsupported: Tensorflow preprocessing for DocumentQuestionAnsweringPipeline"
+                    )
                 elif self.framework == "pt":
                     encoding["bbox"] = torch.tensor([bbox])
 
@@ -380,7 +413,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
         if self.model_type == ModelType.VisionEncoderDecoder:
             answers = self.postprocess_donut(model_outputs)
         else:
-            answers = self.postprocess_extractive_qa(model_outputs, top_k=top_k, **kwargs)
+            answers = self.postprocess_extractive_qa(
+                model_outputs, top_k=top_k, **kwargs
+            )
 
         answers = sorted(answers, key=lambda x: x.get("score", 0), reverse=True)[:top_k]
         return answers
@@ -390,8 +425,12 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
 
         # TODO: A lot of this logic is specific to Donut and should probably be handled in the tokenizer
         # (see https://github.com/huggingface/transformers/pull/18414/files#r961747408 for more context).
-        sequence = sequence.replace(self.tokenizer.eos_token, "").replace(self.tokenizer.pad_token, "")
-        sequence = re.sub(r"<.*?>", "", sequence, count=1).strip()  # remove first task start token
+        sequence = sequence.replace(self.tokenizer.eos_token, "").replace(
+            self.tokenizer.pad_token, ""
+        )
+        sequence = re.sub(
+            r"<.*?>", "", sequence, count=1
+        ).strip()  # remove first task start token
         ret = {
             "answer": None,
         }
@@ -402,7 +441,12 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
         return [ret]
 
     def postprocess_extractive_qa(
-        self, model_outputs, top_k=1, handle_impossible_answer=False, max_answer_len=15, **kwargs
+        self,
+        model_outputs,
+        top_k=1,
+        handle_impossible_answer=False,
+        max_answer_len=15,
+        **kwargs,
     ):
         min_null_score = 1000000  # large and positive
         answers = []
@@ -415,7 +459,11 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
             model_outputs["start_logits"],
             model_outputs["end_logits"],
             model_outputs["p_mask"],
-            model_outputs["attention_mask"].numpy() if model_outputs.get("attention_mask", None) is not None else None,
+            (
+                model_outputs["attention_mask"].numpy()
+                if model_outputs.get("attention_mask", None) is not None
+                else None
+            ),
             min_null_score,
             top_k,
             handle_impossible_answer,
@@ -428,7 +476,9 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
             if word_start is not None and word_end is not None:
                 answers.append(
                     {
-                        "score": float(score),  # XXX Write a test that verifies the result is JSON-serializable
+                        "score": float(
+                            score
+                        ),  # XXX Write a test that verifies the result is JSON-serializable
                         "answer": " ".join(words[word_start : word_end + 1]),
                         "start": word_start,
                         "end": word_end,
@@ -436,6 +486,8 @@ class DocumentQuestionAnsweringPipeline(Pipeline):
                 )
 
         if handle_impossible_answer:
-            answers.append({"score": min_null_score, "answer": "", "start": 0, "end": 0})
+            answers.append(
+                {"score": min_null_score, "answer": "", "start": 0, "end": 0}
+            )
 
         return answers

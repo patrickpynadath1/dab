@@ -141,7 +141,7 @@ class TransfoXLConfig(PretrainedConfig):
         init_std=0.02,
         layer_norm_epsilon=1e-5,
         eos_token_id=0,
-        **kwargs
+        **kwargs,
     ):
         self.vocab_size = vocab_size
         self.cutoffs = []
@@ -177,7 +177,9 @@ class TransfoXLConfig(PretrainedConfig):
     @property
     def max_position_embeddings(self):
         # Message copied from Transformer-XL documentation
-        logger.info(f"The model {self.model_type} is one of the few models that has no sequence length limit.")
+        logger.info(
+            f"The model {self.model_type} is one of the few models that has no sequence length limit."
+        )
         return -1
 
     @max_position_embeddings.setter

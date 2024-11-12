@@ -22,8 +22,18 @@ import numpy as np
 import tensorflow as tf
 
 from ...configuration_utils import PretrainedConfig
-from ...modeling_tf_utils import TFCausalLanguageModelingLoss, TFPreTrainedModel, shape_list, unpack_inputs
-from ...utils import ModelOutput, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
+from ...modeling_tf_utils import (
+    TFCausalLanguageModelingLoss,
+    TFPreTrainedModel,
+    shape_list,
+    unpack_inputs,
+)
+from ...utils import (
+    ModelOutput,
+    add_start_docstrings_to_model_forward,
+    logging,
+    replace_return_docstrings,
+)
 from .configuration_rag import RagConfig
 from .retrieval_rag import RagRetriever
 
@@ -213,6 +223,7 @@ class TFRagPreTrainedModel(TFPreTrainedModel):
     generator, the encoder and generator are trainable while the retriever is just an indexed dataset.
 
     """
+
     config_class = RagConfig
     base_model_prefix = "rag"
     _keys_to_ignore_on_load_missing = [r"position_ids"]
@@ -224,7 +235,7 @@ class TFRagPreTrainedModel(TFPreTrainedModel):
         generator_pretrained_model_name_or_path: str = None,
         retriever: RagRetriever = None,
         *model_args,
-        **kwargs
+        **kwargs,
     ) -> TFPreTrainedModel:
         r"""
         Instantiates an question encoder and a generator from one or two base classes of the library from pretrained
@@ -331,7 +342,9 @@ class TFRagPreTrainedModel(TFPreTrainedModel):
             if "config" not in kwargs_question_encoder:
                 from ..auto.configuration_auto import AutoConfig
 
-                question_encoder_config = AutoConfig.from_pretrained(question_encoder_pretrained_model_name_or_path)
+                question_encoder_config = AutoConfig.from_pretrained(
+                    question_encoder_pretrained_model_name_or_path
+                )
                 kwargs_question_encoder["config"] = question_encoder_config
 
             question_encoder = TFAutoModel.from_pretrained(
@@ -354,7 +367,9 @@ class TFRagPreTrainedModel(TFPreTrainedModel):
             if "config" not in kwargs_generator:
                 from ..auto.configuration_auto import AutoConfig
 
-                generator_config = AutoConfig.from_pretrained(generator_pretrained_model_name_or_path)
+                generator_config = AutoConfig.from_pretrained(
+                    generator_pretrained_model_name_or_path
+                )
                 kwargs_generator["config"] = generator_config
 
             generator = TFAutoModelForSeq2SeqLM.from_pretrained(
@@ -371,7 +386,12 @@ class TFRagPreTrainedModel(TFPreTrainedModel):
                 question_encoder.config, generator.config, **kwargs
             )
 
-        return cls(question_encoder=question_encoder, generator=generator, config=config, retriever=retriever)
+        return cls(
+            question_encoder=question_encoder,
+            generator=generator,
+            config=config,
+            retriever=retriever,
+        )
 
 
 RAG_START_DOCSTRING = r"""
@@ -504,20 +524,30 @@ class TFRagModel(TFRagPreTrainedModel):
                 question_encoder.config, generator.config, **kwargs
             )
         else:
-            assert isinstance(config, self.config_class), f"config: {config} has to be of type {self.config_class}"
+            assert isinstance(
+                config, self.config_class
+            ), f"config: {config} has to be of type {self.config_class}"
         super().__init__(config, **kwargs)
 
         if question_encoder is None:
             from ..auto.modeling_tf_auto import TFAutoModel
 
-            question_encoder = TFAutoModel.from_config(config.question_encoder, name="question_encoder")
+            question_encoder = TFAutoModel.from_config(
+                config.question_encoder, name="question_encoder"
+            )
 
         if generator is None:
             from ..auto.modeling_tf_auto import TFAutoModelForSeq2SeqLM
 
-            load_weight_prefix = load_weight_prefix if load_weight_prefix is not None else self.load_weight_prefix
+            load_weight_prefix = (
+                load_weight_prefix
+                if load_weight_prefix is not None
+                else self.load_weight_prefix
+            )
             generator = TFAutoModelForSeq2SeqLM.from_config(
-                config.generator, name="generator", load_weight_prefix=load_weight_prefix + "/generator"
+                config.generator,
+                name="generator",
+                load_weight_prefix=load_weight_prefix + "/generator",
             )
 
         self.retriever = retriever
@@ -535,7 +565,9 @@ class TFRagModel(TFRagPreTrainedModel):
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(RAG_FORWARD_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFRetrievAugLMOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFRetrievAugLMOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids=None,
@@ -554,7 +586,7 @@ class TFRagModel(TFRagPreTrainedModel):
         n_docs=None,
         return_dict=None,
         training=False,
-        **kwargs
+        **kwargs,
     ):
         r"""
         Returns:
@@ -588,7 +620,11 @@ class TFRagModel(TFRagPreTrainedModel):
         # whether retriever has to be used
         has_to_retrieve = (
             self.retriever is not None
-            and (context_input_ids is None or context_attention_mask is None or doc_scores is None)
+            and (
+                context_input_ids is None
+                or context_attention_mask is None
+                or doc_scores is None
+            )
             and encoder_outputs is None
         )
 
@@ -597,7 +633,10 @@ class TFRagModel(TFRagPreTrainedModel):
 
             if has_to_retrieve:
                 question_enc_outputs = self.question_encoder(
-                    input_ids, attention_mask=attention_mask, return_dict=True, training=training
+                    input_ids,
+                    attention_mask=attention_mask,
+                    return_dict=True,
+                    training=training,
                 )
                 # see https://github.com/huggingface/transformers/blob/main/src/transformers/models/dpr/modeling_tf_dpr.py#L91
                 question_encoder_last_hidden_state = question_enc_outputs[
@@ -611,7 +650,12 @@ class TFRagModel(TFRagPreTrainedModel):
                     n_docs=n_docs,
                     return_tensors="tf",
                 )
-                context_input_ids, context_attention_mask, retrieved_doc_embeds, retrieved_doc_ids = (
+                (
+                    context_input_ids,
+                    context_attention_mask,
+                    retrieved_doc_embeds,
+                    retrieved_doc_ids,
+                ) = (
                     retriever_outputs["context_input_ids"],
                     retriever_outputs["context_attention_mask"],
                     retriever_outputs["retrieved_doc_embeds"],
@@ -763,7 +807,7 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         encoder_outputs=None,
         doc_scores=None,
         n_docs=None,
-        **kwargs
+        **kwargs,
     ):
         if past is not None:
             # if past is defined use only last decoder_input_ids
@@ -799,7 +843,9 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
         def _reorder_stacked(hidden_states, new_order):
             n_docs = hidden_states.shape[0] // new_order.shape[0]
-            hidden_states = tf.reshape(hidden_states, (-1, n_docs, *hidden_states.shape[1:]))
+            hidden_states = tf.reshape(
+                hidden_states, (-1, n_docs, *hidden_states.shape[1:])
+            )
             hidden_states = tf.gather(hidden_states, new_order, axis=0)
             result = tf.reshape(hidden_states, (-1, *hidden_states.shape[2:]))
             return result
@@ -807,7 +853,11 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         reordered_past = ()
         for layer_past in past:
             # get the correct batch idx from decoder layer's batch dim for cross and self-attn
-            reordered_past += (tuple(_reorder_stacked(past_state, beam_idx) for past_state in layer_past),)
+            reordered_past += (
+                tuple(
+                    _reorder_stacked(past_state, beam_idx) for past_state in layer_past
+                ),
+            )
 
         return reordered_past
 
@@ -816,7 +866,10 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
         # RAG-token marginalization
         seq_logprobs = tf.nn.log_softmax(seq_logits, axis=-1)
-        seq_logprobs = tf.reshape(seq_logprobs, [seq_logits.shape[0] // n_docs, n_docs, -1, seq_logits.shape[-1]])
+        seq_logprobs = tf.reshape(
+            seq_logprobs,
+            [seq_logits.shape[0] // n_docs, n_docs, -1, seq_logits.shape[-1]],
+        )
         doc_logprobs = tf.nn.log_softmax(doc_scores, axis=1)
         doc_logprobs = tf.expand_dims(doc_logprobs, axis=-1)
         doc_logprobs = tf.expand_dims(doc_logprobs, axis=-1)  # twice
@@ -825,7 +878,9 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(RAG_FORWARD_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFRetrievAugLMMarginOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFRetrievAugLMMarginOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids=None,
@@ -847,7 +902,7 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         reduce_loss=None,
         return_dict=None,
         training=False,
-        **kwargs  # needs kwargs for generation
+        **kwargs,  # needs kwargs for generation
     ):
         r"""
         do_marginalize (`bool`, *optional*):
@@ -917,7 +972,9 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
             "decoder_cached_states" not in kwargs
         ), "Please use past_key_values to cache intermediate outputs"  # from modeling_tf_bart.py
 
-        do_marginalize = do_marginalize if do_marginalize else self.config.do_marginalize
+        do_marginalize = (
+            do_marginalize if do_marginalize else self.config.do_marginalize
+        )
         reduce_loss = reduce_loss if reduce_loss else self.config.reduce_loss
 
         if labels is not None:
@@ -1003,7 +1060,7 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         output_attentions=None,
         output_hidden_states=None,
         return_dict_in_generate=None,
-        **model_kwargs
+        **model_kwargs,
     ):
         """
         Implements TFRAG token decoding.
@@ -1094,19 +1151,41 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         n_docs = n_docs if n_docs is not None else self.config.n_docs
         max_length = max_length if max_length is not None else self.config.max_length
         min_length = min_length if min_length is not None else self.config.min_length
-        early_stopping = early_stopping if early_stopping is not None else self.config.early_stopping
+        early_stopping = (
+            early_stopping if early_stopping is not None else self.config.early_stopping
+        )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         num_beams = num_beams if num_beams is not None else self.config.num_beams
-        bos_token_id = bos_token_id if bos_token_id is not None else self.config.generator.bos_token_id
-        pad_token_id = pad_token_id if pad_token_id is not None else self.config.generator.pad_token_id
-        eos_token_id = eos_token_id if eos_token_id is not None else self.config.generator.eos_token_id
-        length_penalty = length_penalty if length_penalty is not None else self.config.length_penalty
-        no_repeat_ngram_size = (
-            no_repeat_ngram_size if no_repeat_ngram_size is not None else self.config.no_repeat_ngram_size
+        bos_token_id = (
+            bos_token_id
+            if bos_token_id is not None
+            else self.config.generator.bos_token_id
         )
-        bad_words_ids = bad_words_ids if bad_words_ids is not None else self.config.bad_words_ids
+        pad_token_id = (
+            pad_token_id
+            if pad_token_id is not None
+            else self.config.generator.pad_token_id
+        )
+        eos_token_id = (
+            eos_token_id
+            if eos_token_id is not None
+            else self.config.generator.eos_token_id
+        )
+        length_penalty = (
+            length_penalty if length_penalty is not None else self.config.length_penalty
+        )
+        no_repeat_ngram_size = (
+            no_repeat_ngram_size
+            if no_repeat_ngram_size is not None
+            else self.config.no_repeat_ngram_size
+        )
+        bad_words_ids = (
+            bad_words_ids if bad_words_ids is not None else self.config.bad_words_ids
+        )
         num_return_sequences = (
-            num_return_sequences if num_return_sequences is not None else self.config.num_return_sequences
+            num_return_sequences
+            if num_return_sequences is not None
+            else self.config.num_return_sequences
         )
         decoder_start_token_id = (
             decoder_start_token_id
@@ -1114,13 +1193,23 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
             else self.config.generator.decoder_start_token_id
         )
 
-        output_scores = output_scores if output_scores is not None else self.config.output_scores
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_scores = (
+            output_scores if output_scores is not None else self.config.output_scores
+        )
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
         return_dict_in_generate = (
-            return_dict_in_generate if return_dict_in_generate is not None else self.config.return_dict_in_generate
+            return_dict_in_generate
+            if return_dict_in_generate is not None
+            else self.config.return_dict_in_generate
         )
 
         model_kwargs["output_scores"] = output_scores
@@ -1131,7 +1220,9 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
         # retrieve docs
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
+            question_hidden_states = self.question_encoder(
+                input_ids, attention_mask=attention_mask
+            )[0]
             out = self.retriever(
                 input_ids,
                 question_hidden_states.numpy().astype(np.float32),
@@ -1151,7 +1242,9 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
             # compute doc_scores
             doc_scores = tf.matmul(
-                tf.expand_dims(question_hidden_states, axis=1), retrieved_doc_embeds, transpose_b=True
+                tf.expand_dims(question_hidden_states, axis=1),
+                retrieved_doc_embeds,
+                transpose_b=True,
             )
             doc_scores = tf.squeeze(doc_scores, axis=1)
 
@@ -1199,8 +1292,12 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
             return tf.reshape(tensor, new_shape)
 
         # correctly extend last_hidden_state and attention mask
-        context_attention_mask = extend_enc_output(context_attention_mask, num_beams=num_beams)
-        encoder_outputs["last_hidden_state"] = extend_enc_output(last_hidden_state, num_beams=num_beams)
+        context_attention_mask = extend_enc_output(
+            context_attention_mask, num_beams=num_beams
+        )
+        encoder_outputs["last_hidden_state"] = extend_enc_output(
+            last_hidden_state, num_beams=num_beams
+        )
 
         doc_scores = tf.repeat(doc_scores, num_beams, axis=0)
 
@@ -1299,20 +1396,28 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
             )
 
         pad_token_id = self.generator.config.pad_token_id
-        assert pad_token_id is not None, "self.model.config.pad_token_id has to be defined."
+        assert (
+            pad_token_id is not None
+        ), "self.model.config.pad_token_id has to be defined."
 
-        start_tokens = tf.fill((shape_list(input_ids)[0], 1), tf.cast(start_token_id, input_ids.dtype))
+        start_tokens = tf.fill(
+            (shape_list(input_ids)[0], 1), tf.cast(start_token_id, input_ids.dtype)
+        )
         shifted_input_ids = tf.concat([start_tokens, input_ids[:, :-1]], -1)
 
         # replace possible -100 values in labels by `pad_token_id`
         shifted_input_ids = tf.where(
             shifted_input_ids == -100,
-            tf.fill(shape_list(shifted_input_ids), tf.cast(pad_token_id, input_ids.dtype)),
+            tf.fill(
+                shape_list(shifted_input_ids), tf.cast(pad_token_id, input_ids.dtype)
+            ),
             shifted_input_ids,
         )
 
         # "Verify that `labels` has only positive values and -100"
-        assert_gte0 = tf.debugging.assert_greater_equal(shifted_input_ids, tf.cast(0, shifted_input_ids.dtype))
+        assert_gte0 = tf.debugging.assert_greater_equal(
+            shifted_input_ids, tf.cast(0, shifted_input_ids.dtype)
+        )
 
         # Make sure the assertion op is called by wrapping the result in an identity no-op
         with tf.control_dependencies([assert_gte0]):
@@ -1321,21 +1426,39 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
         return shifted_input_ids
 
     # nll stands for 'negative log likelihood'
-    def get_nll(self, seq_logits, doc_scores, target, reduce_loss=False, epsilon=0.0, n_docs=None):
+    def get_nll(
+        self,
+        seq_logits,
+        doc_scores,
+        target,
+        reduce_loss=False,
+        epsilon=0.0,
+        n_docs=None,
+    ):
         n_docs = n_docs if n_docs is not None else self.config.n_docs
         # shift tokens left (from original Pytorch's version)
 
         target = tf.concat(
-            [target[:, 1:], tf.fill([target.shape[0], 1], tf.cast(self.config.generator.pad_token_id, target.dtype))],
+            [
+                target[:, 1:],
+                tf.fill(
+                    [target.shape[0], 1],
+                    tf.cast(self.config.generator.pad_token_id, target.dtype),
+                ),
+            ],
             axis=1,
         )
         rag_logprobs = self.marginalize(seq_logits, doc_scores, n_docs)
-        loss = self.hf_compute_loss(target, rag_logprobs, from_logits=True, reduce_loss=reduce_loss)
+        loss = self.hf_compute_loss(
+            target, rag_logprobs, from_logits=True, reduce_loss=reduce_loss
+        )
 
         return loss
 
     # Adopted modeling_tf_bart + add smooth_loss to match with pytorch version
-    def hf_compute_loss(self, labels, y_pred, smooth_epsilon=0.0, from_logits=True, reduce_loss=False):
+    def hf_compute_loss(
+        self, labels, y_pred, smooth_epsilon=0.0, from_logits=True, reduce_loss=False
+    ):
         """CrossEntropyLoss that ignores pad tokens"""
         # Matt: As written, this loss is not XLA-compatible, but it's doing some very weird things
         #       and I don't feel comfortable converting it.
@@ -1346,14 +1469,18 @@ class TFRagTokenForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingLoss
 
         if from_logits is False:  # convert to logits
             eps = 1e-9
-            y_pred = tf.clip_by_value(y_pred, clip_value_min=eps, clip_value_max=1 - eps)
+            y_pred = tf.clip_by_value(
+                y_pred, clip_value_min=eps, clip_value_max=1 - eps
+            )
             y_pred = tf.math.log(y_pred)
 
         logits = y_pred
         melted_labels = tf.reshape(labels, (-1,))
         active_loss = tf.not_equal(melted_labels, self.config.generator.pad_token_id)
 
-        reduced_logits = tf.boolean_mask(tf.reshape(logits, (-1, logits.shape[2])), active_loss)
+        reduced_logits = tf.boolean_mask(
+            tf.reshape(logits, (-1, logits.shape[2])), active_loss
+        )
         labels = tf.boolean_mask(melted_labels, active_loss)
         nll_loss = loss_fn(labels, reduced_logits)
 
@@ -1422,7 +1549,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
 
     @unpack_inputs
     @add_start_docstrings_to_model_forward(RAG_FORWARD_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=TFRetrievAugLMMarginOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(
+        output_type=TFRetrievAugLMMarginOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         input_ids=None,
@@ -1444,7 +1573,7 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         reduce_loss=None,
         return_dict=None,
         training=False,
-        **kwargs  # needs kwargs for generation
+        **kwargs,  # needs kwargs for generation
     ):
         r"""
         exclude_bos_score (`bool`, *optional*):
@@ -1515,7 +1644,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
             "decoder_cached_states" not in kwargs
         ), "Please use past_key_values to cache intermediate outputs"  # from modeling_tf_bart.py
 
-        exclude_bos_score = exclude_bos_score if exclude_bos_score else self.config.exclude_bos_score
+        exclude_bos_score = (
+            exclude_bos_score if exclude_bos_score else self.config.exclude_bos_score
+        )
         reduce_loss = reduce_loss if reduce_loss else self.config.reduce_loss
 
         if labels is not None:
@@ -1572,11 +1703,24 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         )
 
     def get_nll(
-        self, seq_logits, doc_scores, target, reduce_loss=False, epsilon=0.0, exclude_bos_score=False, n_docs=None
+        self,
+        seq_logits,
+        doc_scores,
+        target,
+        reduce_loss=False,
+        epsilon=0.0,
+        exclude_bos_score=False,
+        n_docs=None,
     ):
         # shift tokens left
         target = tf.concat(
-            [target[:, 1:], tf.fill([target.shape[0], 1], tf.cast(self.config.generator.pad_token_id, target.dtype))],
+            [
+                target[:, 1:],
+                tf.fill(
+                    [target.shape[0], 1],
+                    tf.cast(self.config.generator.pad_token_id, target.dtype),
+                ),
+            ],
             axis=1,
         )
 
@@ -1587,7 +1731,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         use_bos = bos_token_id is not None and equal_bos_token_id_all
 
         def _mask_pads(ll, smooth_obj):
-            pad_mask = tf.equal(target, tf.cast(self.config.generator.pad_token_id, target.dtype))
+            pad_mask = tf.equal(
+                target, tf.cast(self.config.generator.pad_token_id, target.dtype)
+            )
             if tf.reduce_any(pad_mask):
                 ll = tf.where(pad_mask, 0.0, ll)
                 smooth_obj = tf.where(pad_mask, 0.0, smooth_obj)
@@ -1596,7 +1742,8 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         # seq_logits.shape = (batch*n_docs, tgt_len , vocabs)
         seq_logprobs = tf.nn.log_softmax(seq_logits, axis=-1)
         seq_logprobs = tf.reshape(
-            seq_logprobs, (seq_logits.shape[0] // n_docs, n_docs, -1, seq_logits.shape[-1])
+            seq_logprobs,
+            (seq_logits.shape[0] // n_docs, n_docs, -1, seq_logits.shape[-1]),
         )  # (batch_size, n_docs, tgt_len, vocabs)
         doc_logprobs = tf.nn.log_softmax(doc_scores, axis=1)
         doc_logprobs = tf.expand_dims(doc_logprobs, axis=-1)
@@ -1606,7 +1753,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         first_token_scores = seq_logprobs[:, :, :1, :]
         second_token_scores = seq_logprobs[:, :, 1:2, :]
         remainder = seq_logprobs[:, :, 2:, :]
-        rag_logprobs = tf.concat([first_token_scores, second_token_scores + doc_logprobs, remainder], axis=2)
+        rag_logprobs = tf.concat(
+            [first_token_scores, second_token_scores + doc_logprobs, remainder], axis=2
+        )
 
         # calculate loss
         target = tf.expand_dims(target, axis=1)  # n_docs dimension
@@ -1618,7 +1767,13 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         def torch_gather(param, id_tensor):
             # 2d-gather torch equivalent: https://stackoverflow.com/questions/52129909/tensorflow-equivalent-of-torch-gather
             def gather2d(target, id_tensor):
-                idx = tf.stack([tf.range(tf.shape(id_tensor)[0], dtype=id_tensor.dtype), id_tensor[:, 0]], axis=-1)
+                idx = tf.stack(
+                    [
+                        tf.range(tf.shape(id_tensor)[0], dtype=id_tensor.dtype),
+                        id_tensor[:, 0],
+                    ],
+                    axis=-1,
+                )
                 result = tf.gather_nd(target, idx)
                 return tf.expand_dims(result, axis=-1)
 
@@ -1630,7 +1785,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
             return tf.reshape(result, target_shape)
 
         ll = torch_gather(rag_logprobs, id_tensor=target)
-        smooth_obj = tf.reduce_sum(rag_logprobs, axis=-1, keepdims=True)  # total sum of all (normalised) logits
+        smooth_obj = tf.reduce_sum(
+            rag_logprobs, axis=-1, keepdims=True
+        )  # total sum of all (normalised) logits
 
         ll, smooth_obj = _mask_pads(ll, smooth_obj)
 
@@ -1666,7 +1823,7 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         num_return_sequences=None,  # defaults to 1
         num_beams=None,  # defaults to 1
         n_docs=None,
-        **model_kwargs
+        **model_kwargs,
     ):
         """
         Implements RAG sequence "thorough" decoding. Read the [`~generation_utils.GenerationMixin.generate`]`
@@ -1714,9 +1871,15 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         """
 
         n_docs = n_docs if n_docs is not None else self.config.n_docs
-        do_deduplication = do_deduplication if do_deduplication is not None else self.config.do_deduplication
+        do_deduplication = (
+            do_deduplication
+            if do_deduplication is not None
+            else self.config.do_deduplication
+        )
         num_doc_return_sequences = (
-            num_return_sequences if num_return_sequences is not None else self.config.num_return_sequences
+            num_return_sequences
+            if num_return_sequences is not None
+            else self.config.num_return_sequences
         )
         num_beams = num_beams if num_beams is not None else self.config.num_beams
 
@@ -1725,7 +1888,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
         ), " At least one of input_ids or context_input_ids must be given"
 
         if self.retriever is not None and context_input_ids is None:
-            question_hidden_states = self.question_encoder(input_ids, attention_mask=attention_mask)[0]
+            question_hidden_states = self.question_encoder(
+                input_ids, attention_mask=attention_mask
+            )[0]
             context_input_ids = self.retriever(
                 input_ids,
                 question_hidden_states.numpy(),
@@ -1736,14 +1901,22 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
 
         hypos = []
         model_kwargs["num_beams"] = num_beams
-        model_kwargs["num_return_sequences"] = num_beams  # put here so that not confused with num_doc_return_sequences
+        model_kwargs["num_return_sequences"] = (
+            num_beams  # put here so that not confused with num_doc_return_sequences
+        )
         model_kwargs["attention_mask"] = None
 
-        batch_size = input_ids.shape[0] if input_ids is not None else context_input_ids.shape[0] // n_docs
+        batch_size = (
+            input_ids.shape[0]
+            if input_ids is not None
+            else context_input_ids.shape[0] // n_docs
+        )
 
         for index in range(batch_size):
             # first, generate beams from documents:
-            generator_input_ids = context_input_ids[index * n_docs : (index + 1) * n_docs]  # (n_docs, max_len)
+            generator_input_ids = context_input_ids[
+                index * n_docs : (index + 1) * n_docs
+            ]  # (n_docs, max_len)
 
             output_sequences = self.generator.generate(
                 generator_input_ids,
@@ -1751,7 +1924,11 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
             )  # n_docs * n_beam, tgt_len
             if do_deduplication:
                 # do_deduplication -- for TF, work on Eager mode only!
-                output_sequences = tf.stack(list({str(k.numpy().tolist()): k for k in output_sequences}.values()))
+                output_sequences = tf.stack(
+                    list(
+                        {str(k.numpy().tolist()): k for k in output_sequences}.values()
+                    )
+                )
 
             num_candidates = output_sequences.shape[
                 0
@@ -1759,8 +1936,12 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
 
             # then, run model forwards to get nll scores:
             if input_ids is not None:
-                new_input_ids = tf.tile(input_ids[index : index + 1], (num_candidates, 1))
-                outputs = self(new_input_ids, labels=output_sequences, exclude_bos_score=True)
+                new_input_ids = tf.tile(
+                    input_ids[index : index + 1], (num_candidates, 1)
+                )
+                outputs = self(
+                    new_input_ids, labels=output_sequences, exclude_bos_score=True
+                )
             else:  # input_ids is None, need context_input_ids/mask and doc_scores
                 assert context_attention_mask is not None, (
                     "Make sure that `context_attention_mask` are passed, if no `input_ids` is set. Alternatively, you"
@@ -1775,11 +1956,19 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
                     generator_input_ids, (num_candidates, 1)
                 )  # (num_candidates*n_docs, max_len)
 
-                individual_attention_mask = context_attention_mask[index * n_docs : (index + 1) * n_docs]
-                individual_attention_mask = tf.tile(individual_attention_mask, (num_candidates, 1))
+                individual_attention_mask = context_attention_mask[
+                    index * n_docs : (index + 1) * n_docs
+                ]
+                individual_attention_mask = tf.tile(
+                    individual_attention_mask, (num_candidates, 1)
+                )
 
-                individual_doc_scores = doc_scores[index : (index + 1), :]  # doc_scores.shape = [batch, n_docs]
-                individual_doc_scores = tf.tile(individual_doc_scores, (num_candidates, 1))  # [num_candidates, n_docs]
+                individual_doc_scores = doc_scores[
+                    index : (index + 1), :
+                ]  # doc_scores.shape = [batch, n_docs]
+                individual_doc_scores = tf.tile(
+                    individual_doc_scores, (num_candidates, 1)
+                )  # [num_candidates, n_docs]
 
                 outputs = self(
                     input_ids=None,
@@ -1790,7 +1979,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
                     exclude_bos_score=True,
                 )
 
-            top_cand_inds = tf.math.top_k((-outputs["loss"]), k=num_doc_return_sequences)[1]
+            top_cand_inds = tf.math.top_k(
+                (-outputs["loss"]), k=num_doc_return_sequences
+            )[1]
 
             # add hypothesis
             hypos.append(tf.gather(output_sequences, top_cand_inds))
@@ -1803,7 +1994,9 @@ class TFRagSequenceForGeneration(TFRagPreTrainedModel, TFCausalLanguageModelingL
 
         # Initialize padded tensor with shape ( all_candidates , max_candidate_length ),
         # where all_candidates counted from all inputs
-        new_shape = sum([t.shape[0] for t in tensors]), max([t.shape[1] for t in tensors])
+        new_shape = sum([t.shape[0] for t in tensors]), max(
+            [t.shape[1] for t in tensors]
+        )
         output = tf.fill(new_shape, pad_token_id)
 
         # Normal tensor doesn't support slice assignment, so we need tf.Variable

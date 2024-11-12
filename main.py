@@ -1,6 +1,7 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
+from selecting_biasing_exp import selective_biasing_loop
 from abductive_reasoning import abductive_reasoning_loop
 from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
@@ -10,6 +11,8 @@ import pandas as pd
 
 DEFAULT_PATHS = {
     "dlp": "configs/defaults/dlp.yaml",
+    "stochastic_langevin": "configs/defaults/stoch_dlp.yaml",
+    "deterministic_masking_langevin": "configs/defaults/determ_dlp.yaml",
     "bolt": "configs/defaults/bolt.yaml",
     "exp": "configs/exp_conf.yaml",
 }
@@ -18,6 +21,8 @@ DEFAULT_PATHS = {
 def conf_subparser(subparser, sampler):
     default_conf = yaml.safe_load(open(DEFAULT_PATHS[sampler], "r"))
     for key, val in default_conf.items():
+        if key == "use_softmax_target":
+            print(type(val))
         subparser.add_argument(f"--{key}", type=type(val), default=val)
     return subparser
 
@@ -27,10 +32,18 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="sampler")
     dlp_sampler = subparsers.add_parser("dlp")
     bolt_sampler = subparsers.add_parser("bolt")
+    stoch_langevin = subparsers.add_parser("stochastic_langevin")
+    det_langevin = subparsers.add_parser("deterministic_masking_langevin")
     eval_only = subparsers.add_parser("eval_only")
     api_eval = subparsers.add_parser("api_eval")
-    experiments = ["sentiment", "detoxify", "keywords", "abductive_reasoning"]
-
+    experiments = [
+        "sentiment",
+        "detoxify",
+        "keywords",
+        "abductive_reasoning",
+        "selective_biasing",
+    ]
+    samplers = ["bolt", "dlp", "stochastic_langevin", "deterministic_masking_langevin"]
     # general arguments
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
     parser.add_argument("--save_dir", type=str, default="results")
@@ -39,12 +52,14 @@ if __name__ == "__main__":
     parser.add_argument("--eval_on_fin", action="store_true")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--conf_file", type=str, default=None)
-    parser.add_argument("--num_prompts", type=int, default=15)
+    parser.add_argument("--num_prompts", type=int, default=200)
     api_eval.add_argument("--rate_limit", type=int, default=60)
     eval_only.add_argument("--file_type", type=str, default="txt")
     conf_subparser(parser, "exp")
     conf_subparser(dlp_sampler, "dlp")
     conf_subparser(bolt_sampler, "bolt")
+    conf_subparser(stoch_langevin, "stochastic_langevin")
+    conf_subparser(det_langevin, "deterministic_masking_langevin")
     parser.add_argument("--start_idx", type=int, default=0)
     parser.add_argument("--end_idx", type=int, default=-1)
     args = parser.parse_args()
@@ -58,8 +73,9 @@ if __name__ == "__main__":
         args.device = cur_device
     if args.conf_file != None:
         args.__dict__.update(yaml.safe_load(open(args.conf_file, "r")))
+    print(args.use_softmax_target)
     total_conf = args.__dict__
-    if initial_mode == "bolt" or initial_mode == "dlp":
+    if initial_mode in samplers:
         print(args.exp)
         if args.exp == "sentiment":
             res = sentiment_exp_loop(total_conf)
@@ -69,7 +85,8 @@ if __name__ == "__main__":
             res = keywords_loop(total_conf)
         elif args.exp == "abductive_reasoning":
             res = abductive_reasoning_loop(total_conf)
-
+        elif args.exp == "selective_biasing":
+            res = selective_biasing_loop(total_conf)
         total_conf, generated_sentences = res
         if args.eval_on_fin:
             eval_loop(total_conf, generated_sentences)
@@ -79,14 +96,16 @@ if __name__ == "__main__":
             gen_sentences = clean_for_eval(
                 open(f"{initial_prev_run_dir}/output.txt", "r").readlines()
             )
-        else: 
+        else:
             gen_sentences = []
             gens_df = pd.read_json(f"{initial_prev_run_dir}/output.jsonl", lines=True)
             for i in range(len(gens_df)):
-                cur_prompt = gens_df.iloc[i]['prompt']['text']
-                for j in range(len(gens_df.iloc[i]['generations'])):
-                    gen_sentences.append(cur_prompt + gens_df.iloc[i]['generations'][j]['text'])
-            
+                cur_prompt = gens_df.iloc[i]["prompt"]["text"]
+                for j in range(len(gens_df.iloc[i]["generations"])):
+                    gen_sentences.append(
+                        cur_prompt + gens_df.iloc[i]["generations"][j]["text"]
+                    )
+
         print(f"num of sentences {len(gen_sentences)}")
         cur_batch = gen_sentences[args.start_idx : args.end_idx]
         total_conf["prev_run_dir"] = initial_prev_run_dir

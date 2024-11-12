@@ -89,8 +89,13 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         tokenizer = self.tokenizer_class(self.vocab_file)
 
         tokens = tokenizer.tokenize("こんにちは、世界。\nこんばんは、世界。")
-        self.assertListEqual(tokens, ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"])
-        self.assertListEqual(tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14])
+        self.assertListEqual(
+            tokens,
+            ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"],
+        )
+        self.assertListEqual(
+            tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14]
+        )
 
     def test_pickle_mecab_tokenizer(self):
         tokenizer = self.tokenizer_class(self.vocab_file, word_tokenizer_type="mecab")
@@ -98,8 +103,13 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         text = "こんにちは、世界。\nこんばんは、世界。"
         tokens = tokenizer.tokenize(text)
-        self.assertListEqual(tokens, ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"])
-        self.assertListEqual(tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14])
+        self.assertListEqual(
+            tokens,
+            ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"],
+        )
+        self.assertListEqual(
+            tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14]
+        )
 
         filename = os.path.join(self.tmpdirname, "tokenizer.bin")
         with open(filename, "wb") as handle:
@@ -117,7 +127,18 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップルストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
+            [
+                "アップルストア",
+                "で",
+                "iPhone",
+                "8",
+                "が",
+                "発売",
+                "さ",
+                "れ",
+                "た",
+                "。",
+            ],
         )
 
     def test_mecab_tokenizer_unidic_lite(self):
@@ -128,7 +149,19 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップル", "ストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
+            [
+                "アップル",
+                "ストア",
+                "で",
+                "iPhone",
+                "8",
+                "が",
+                "発売",
+                "さ",
+                "れ",
+                "た",
+                "。",
+            ],
         )
 
     def test_mecab_tokenizer_unidic(self):
@@ -139,7 +172,19 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップル", "ストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
+            [
+                "アップル",
+                "ストア",
+                "で",
+                "iPhone",
+                "8",
+                "が",
+                "発売",
+                "さ",
+                "れ",
+                "た",
+                "。",
+            ],
         )
 
     def test_mecab_tokenizer_lower(self):
@@ -147,13 +192,26 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップルストア", "で", "iphone", "8", "が", "発売", "さ", "れ", "た", "。"],
+            [
+                "アップルストア",
+                "で",
+                "iphone",
+                "8",
+                "が",
+                "発売",
+                "さ",
+                "れ",
+                "た",
+                "。",
+            ],
         )
 
     def test_mecab_tokenizer_with_option(self):
         try:
             tokenizer = MecabTokenizer(
-                do_lower_case=True, normalize_text=False, mecab_option="-d /usr/local/lib/mecab/dic/jumandic"
+                do_lower_case=True,
+                normalize_text=False,
+                mecab_option="-d /usr/local/lib/mecab/dic/jumandic",
             )
         except RuntimeError:
             # if dict doesn't exist in the system, previous code raises this error.
@@ -161,7 +219,18 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["ｱｯﾌﾟﾙストア", "で", "iPhone", "８", "が", "発売", "さ", "れた", "\u3000", "。"],
+            [
+                "ｱｯﾌﾟﾙストア",
+                "で",
+                "iPhone",
+                "８",
+                "が",
+                "発売",
+                "さ",
+                "れた",
+                "\u3000",
+                "。",
+            ],
         )
 
     def test_mecab_tokenizer_no_normalize(self):
@@ -169,11 +238,34 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["ｱｯﾌﾟﾙストア", "で", "iPhone", "８", "が", "発売", "さ", "れ", "た", "　", "。"],
+            [
+                "ｱｯﾌﾟﾙストア",
+                "で",
+                "iPhone",
+                "８",
+                "が",
+                "発売",
+                "さ",
+                "れ",
+                "た",
+                "　",
+                "。",
+            ],
         )
 
     def test_wordpiece_tokenizer(self):
-        vocab_tokens = ["[UNK]", "[CLS]", "[SEP]", "こんにちは", "こん", "にちは", "ばんは", "##こん", "##にちは", "##ばんは"]
+        vocab_tokens = [
+            "[UNK]",
+            "[CLS]",
+            "[SEP]",
+            "こんにちは",
+            "こん",
+            "にちは",
+            "ばんは",
+            "##こん",
+            "##にちは",
+            "##ばんは",
+        ]
 
         vocab = {}
         for i, token in enumerate(vocab_tokens):
@@ -186,7 +278,10 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(tokenizer.tokenize("こんばんは"), ["こん", "##ばんは"])
 
-        self.assertListEqual(tokenizer.tokenize("こんばんは こんばんにちは こんにちは"), ["こん", "##ばんは", "[UNK]", "こんにちは"])
+        self.assertListEqual(
+            tokenizer.tokenize("こんばんは こんばんにちは こんにちは"),
+            ["こん", "##ばんは", "[UNK]", "こんにちは"],
+        )
 
     def test_sequence_builders(self):
         tokenizer = self.tokenizer_class.from_pretrained("cl-tohoku/bert-base-japanese")
@@ -211,14 +306,30 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
     def setUp(self):
         super().setUp()
 
-        vocab_tokens = ["[UNK]", "[CLS]", "[SEP]", "こ", "ん", "に", "ち", "は", "ば", "世", "界", "、", "。"]
+        vocab_tokens = [
+            "[UNK]",
+            "[CLS]",
+            "[SEP]",
+            "こ",
+            "ん",
+            "に",
+            "ち",
+            "は",
+            "ば",
+            "世",
+            "界",
+            "、",
+            "。",
+        ]
 
         self.vocab_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["vocab_file"])
         with open(self.vocab_file, "w", encoding="utf-8") as vocab_writer:
             vocab_writer.write("".join([x + "\n" for x in vocab_tokens]))
 
     def get_tokenizer(self, **kwargs):
-        return BertJapaneseTokenizer.from_pretrained(self.tmpdirname, subword_tokenizer_type="character", **kwargs)
+        return BertJapaneseTokenizer.from_pretrained(
+            self.tmpdirname, subword_tokenizer_type="character", **kwargs
+        )
 
     def get_input_output_texts(self, tokenizer):
         input_text = "こんにちは、世界。 \nこんばんは、世界。"
@@ -235,18 +346,55 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
         pass  # TODO add if relevant
 
     def test_full_tokenizer(self):
-        tokenizer = self.tokenizer_class(self.vocab_file, subword_tokenizer_type="character")
+        tokenizer = self.tokenizer_class(
+            self.vocab_file, subword_tokenizer_type="character"
+        )
 
         tokens = tokenizer.tokenize("こんにちは、世界。 \nこんばんは、世界。")
         self.assertListEqual(
-            tokens, ["こ", "ん", "に", "ち", "は", "、", "世", "界", "。", "こ", "ん", "ば", "ん", "は", "、", "世", "界", "。"]
+            tokens,
+            [
+                "こ",
+                "ん",
+                "に",
+                "ち",
+                "は",
+                "、",
+                "世",
+                "界",
+                "。",
+                "こ",
+                "ん",
+                "ば",
+                "ん",
+                "は",
+                "、",
+                "世",
+                "界",
+                "。",
+            ],
         )
         self.assertListEqual(
-            tokenizer.convert_tokens_to_ids(tokens), [3, 4, 5, 6, 7, 11, 9, 10, 12, 3, 4, 8, 4, 7, 11, 9, 10, 12]
+            tokenizer.convert_tokens_to_ids(tokens),
+            [3, 4, 5, 6, 7, 11, 9, 10, 12, 3, 4, 8, 4, 7, 11, 9, 10, 12],
         )
 
     def test_character_tokenizer(self):
-        vocab_tokens = ["[UNK]", "[CLS]", "[SEP]", "こ", "ん", "に", "ち", "は", "ば", "世", "界", "、", "。"]
+        vocab_tokens = [
+            "[UNK]",
+            "[CLS]",
+            "[SEP]",
+            "こ",
+            "ん",
+            "に",
+            "ち",
+            "は",
+            "ば",
+            "世",
+            "界",
+            "、",
+            "。",
+        ]
 
         vocab = {}
         for i, token in enumerate(vocab_tokens):
@@ -255,12 +403,18 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
 
         self.assertListEqual(tokenizer.tokenize(""), [])
 
-        self.assertListEqual(tokenizer.tokenize("こんにちは"), ["こ", "ん", "に", "ち", "は"])
+        self.assertListEqual(
+            tokenizer.tokenize("こんにちは"), ["こ", "ん", "に", "ち", "は"]
+        )
 
-        self.assertListEqual(tokenizer.tokenize("こんにちほ"), ["こ", "ん", "に", "ち", "[UNK]"])
+        self.assertListEqual(
+            tokenizer.tokenize("こんにちほ"), ["こ", "ん", "に", "ち", "[UNK]"]
+        )
 
     def test_sequence_builders(self):
-        tokenizer = self.tokenizer_class.from_pretrained("cl-tohoku/bert-base-japanese-char")
+        tokenizer = self.tokenizer_class.from_pretrained(
+            "cl-tohoku/bert-base-japanese-char"
+        )
 
         text = tokenizer.encode("ありがとう。", add_special_tokens=False)
         text_2 = tokenizer.encode("どういたしまして。", add_special_tokens=False)

@@ -29,7 +29,11 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_camembert": ["CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "CamembertConfig", "CamembertOnnxConfig"],
+    "configuration_camembert": [
+        "CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "CamembertConfig",
+        "CamembertOnnxConfig",
+    ],
 }
 
 try:
@@ -84,7 +88,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_camembert import CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, CamembertConfig, CamembertOnnxConfig
+    from .configuration_camembert import (
+        CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        CamembertConfig,
+        CamembertOnnxConfig,
+    )
 
     try:
         if not is_sentencepiece_available():
@@ -139,4 +147,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

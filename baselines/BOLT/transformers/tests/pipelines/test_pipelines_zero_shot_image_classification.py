@@ -40,7 +40,9 @@ else:
 
 @require_vision
 @is_pipeline_test
-class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMeta):
+class ZeroShotImageClassificationPipelineTests(
+    unittest.TestCase, metaclass=PipelineTestCaseMeta
+):
     # Deactivating auto tests since we don't have a good MODEL_FOR_XX mapping,
     # and only CLIP would be there for now.
     # model_mapping = {CLIPConfig: CLIPModel}
@@ -80,10 +82,16 @@ class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=Pipe
 
         self.assertEqual(
             nested_simplify(output),
-            [{"score": 0.333, "label": "a"}, {"score": 0.333, "label": "b"}, {"score": 0.333, "label": "c"}],
+            [
+                {"score": 0.333, "label": "a"},
+                {"score": 0.333, "label": "b"},
+                {"score": 0.333, "label": "c"},
+            ],
         )
 
-        output = image_classifier([image] * 5, candidate_labels=["A", "B", "C"], batch_size=2)
+        output = image_classifier(
+            [image] * 5, candidate_labels=["A", "B", "C"], batch_size=2
+        )
         self.assertEqual(
             nested_simplify(output),
             # Pipeline outputs are supposed to be deterministic and
@@ -124,17 +132,24 @@ class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=Pipe
     @require_tf
     def test_small_model_tf(self):
         image_classifier = pipeline(
-            model="hf-internal-testing/tiny-random-clip-zero-shot-image-classification", framework="tf"
+            model="hf-internal-testing/tiny-random-clip-zero-shot-image-classification",
+            framework="tf",
         )
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
         output = image_classifier(image, candidate_labels=["a", "b", "c"])
 
         self.assertEqual(
             nested_simplify(output),
-            [{"score": 0.333, "label": "a"}, {"score": 0.333, "label": "b"}, {"score": 0.333, "label": "c"}],
+            [
+                {"score": 0.333, "label": "a"},
+                {"score": 0.333, "label": "b"},
+                {"score": 0.333, "label": "c"},
+            ],
         )
 
-        output = image_classifier([image] * 5, candidate_labels=["A", "B", "C"], batch_size=2)
+        output = image_classifier(
+            [image] * 5, candidate_labels=["A", "B", "C"], batch_size=2
+        )
         self.assertEqual(
             nested_simplify(output),
             # Pipeline outputs are supposed to be deterministic and
@@ -192,7 +207,9 @@ class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=Pipe
             ],
         )
 
-        output = image_classifier([image] * 5, candidate_labels=["cat", "plane", "remote"], batch_size=2)
+        output = image_classifier(
+            [image] * 5, candidate_labels=["cat", "plane", "remote"], batch_size=2
+        )
         self.assertEqual(
             nested_simplify(output),
             [
@@ -209,7 +226,9 @@ class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=Pipe
     @require_tf
     def test_large_model_tf(self):
         image_classifier = pipeline(
-            task="zero-shot-image-classification", model="openai/clip-vit-base-patch32", framework="tf"
+            task="zero-shot-image-classification",
+            model="openai/clip-vit-base-patch32",
+            framework="tf",
         )
         # This is an image of 2 cats with remotes and no planes
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
@@ -223,7 +242,9 @@ class ZeroShotImageClassificationPipelineTests(unittest.TestCase, metaclass=Pipe
             ],
         )
 
-        output = image_classifier([image] * 5, candidate_labels=["cat", "plane", "remote"], batch_size=2)
+        output = image_classifier(
+            [image] * 5, candidate_labels=["cat", "plane", "remote"], batch_size=2
+        )
         self.assertEqual(
             nested_simplify(output),
             [

@@ -37,6 +37,7 @@ class DonutProcessor(ProcessorMixin):
         tokenizer ([`XLMRobertaTokenizer`/`XLMRobertaTokenizerFast`]):
             An instance of [`XLMRobertaTokenizer`/`XLMRobertaTokenizerFast`]. The tokenizer is a required input.
     """
+
     feature_extractor_class = "AutoFeatureExtractor"
     tokenizer_class = "AutoTokenizer"
 
@@ -63,7 +64,9 @@ class DonutProcessor(ProcessorMixin):
             args = args[1:]
 
         if images is None and text is None:
-            raise ValueError("You need to specify either an `images` or `text` input to process.")
+            raise ValueError(
+                "You need to specify either an `images` or `text` input to process."
+            )
 
         if images is not None:
             inputs = self.feature_extractor(images, *args, **kwargs)
@@ -127,7 +130,11 @@ class DonutProcessor(ProcessorMixin):
                 end_token = end_token.group()
                 start_token_escaped = re.escape(start_token)
                 end_token_escaped = re.escape(end_token)
-                content = re.search(f"{start_token_escaped}(.*?){end_token_escaped}", tokens, re.IGNORECASE)
+                content = re.search(
+                    f"{start_token_escaped}(.*?){end_token_escaped}",
+                    tokens,
+                    re.IGNORECASE,
+                )
                 if content is not None:
                     content = content.group(1).strip()
                     if r"<s_" in content and r"</s_" in content:  # non-leaf node
@@ -140,7 +147,11 @@ class DonutProcessor(ProcessorMixin):
                         output[key] = []
                         for leaf in content.split(r"<sep/>"):
                             leaf = leaf.strip()
-                            if leaf in self.tokenizer.get_added_vocab() and leaf[0] == "<" and leaf[-2:] == "/>":
+                            if (
+                                leaf in self.tokenizer.get_added_vocab()
+                                and leaf[0] == "<"
+                                and leaf[-2:] == "/>"
+                            ):
                                 leaf = leaf[1:-2]  # for categorical special tokens
                             output[key].append(leaf)
                         if len(output[key]) == 1:

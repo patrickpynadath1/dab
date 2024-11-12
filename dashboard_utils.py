@@ -15,8 +15,11 @@ def search_config(sampler, exp, res_dir="results", **kwargs):
         config = yaml.load(
             open(f"{base_path}/{run}/conf.yaml", "r"), Loader=yaml.FullLoader
         )
-        if all([config[k] == v for k, v in kwargs.items()]):
-            matching_paths.append(f"{base_path}/{run}")
+        try:
+            if all([config[k] == v for k, v in kwargs.items()]):
+                matching_paths.append(f"{base_path}/{run}")
+        except Exception as ex:
+            continue
     return matching_paths
 
 

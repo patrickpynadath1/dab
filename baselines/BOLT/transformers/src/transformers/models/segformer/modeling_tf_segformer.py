@@ -26,8 +26,17 @@ from ...file_utils import (
     add_start_docstrings_to_model_forward,
     replace_return_docstrings,
 )
-from ...modeling_tf_outputs import TFBaseModelOutput, TFSemanticSegmenterOutput, TFSequenceClassifierOutput
-from ...modeling_tf_utils import TFPreTrainedModel, TFSequenceClassificationLoss, keras_serializable, unpack_inputs
+from ...modeling_tf_outputs import (
+    TFBaseModelOutput,
+    TFSemanticSegmenterOutput,
+    TFSequenceClassifierOutput,
+)
+from ...modeling_tf_utils import (
+    TFPreTrainedModel,
+    TFSequenceClassificationLoss,
+    keras_serializable,
+    unpack_inputs,
+)
 from ...tf_utils import shape_list, stable_softmax
 from ...utils import logging
 from .configuration_segformer import SegformerConfig
@@ -81,10 +90,16 @@ class TFSegformerOverlapPatchEmbeddings(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.padding = tf.keras.layers.ZeroPadding2D(padding=patch_size // 2)
         self.proj = tf.keras.layers.Conv2D(
-            filters=hidden_size, kernel_size=patch_size, strides=stride, padding="VALID", name="proj"
+            filters=hidden_size,
+            kernel_size=patch_size,
+            strides=stride,
+            padding="VALID",
+            name="proj",
         )
 
-        self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=1e-05, name="layer_norm")
+        self.layer_norm = tf.keras.layers.LayerNormalization(
+            epsilon=1e-05, name="layer_norm"
+        )
 
     def call(self, pixel_values: tf.Tensor) -> Tuple[tf.Tensor, int, int]:
         embeddings = self.proj(self.padding(pixel_values))
@@ -108,7 +123,7 @@ class TFSegformerEfficientSelfAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         sequence_reduction_ratio: int,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.hidden_size = hidden_size
@@ -133,15 +148,23 @@ class TFSegformerEfficientSelfAttention(tf.keras.layers.Layer):
         self.sr_ratio = sequence_reduction_ratio
         if sequence_reduction_ratio > 1:
             self.sr = tf.keras.layers.Conv2D(
-                filters=hidden_size, kernel_size=sequence_reduction_ratio, strides=sequence_reduction_ratio, name="sr"
+                filters=hidden_size,
+                kernel_size=sequence_reduction_ratio,
+                strides=sequence_reduction_ratio,
+                name="sr",
             )
-            self.layer_norm = tf.keras.layers.LayerNormalization(epsilon=1e-05, name="layer_norm")
+            self.layer_norm = tf.keras.layers.LayerNormalization(
+                epsilon=1e-05, name="layer_norm"
+            )
 
     def transpose_for_scores(self, tensor: tf.Tensor) -> tf.Tensor:
         # Reshape from [batch_size, seq_length, all_head_size]
         # to [batch_size, seq_length, num_attention_heads, attention_head_size]
         batch_size = shape_list(tensor)[0]
-        tensor = tf.reshape(tensor=tensor, shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        tensor = tf.reshape(
+            tensor=tensor,
+            shape=(batch_size, -1, self.num_attention_heads, self.attention_head_size),
+        )
 
         # Transpose the tensor from [batch_size, seq_length, num_attention_heads, attention_head_size]
         # to [batch_size, num_attention_heads, seq_length, attention_head_size]
@@ -162,7 +185,9 @@ class TFSegformerEfficientSelfAttention(tf.keras.layers.Layer):
 
         if self.sr_ratio > 1:
             # Reshape to (batch_size, height, width, num_channels)
-            hidden_states = tf.reshape(hidden_states, (batch_size, height, width, num_channels))
+            hidden_states = tf.reshape(
+                hidden_states, (batch_size, height, width, num_channels)
+            )
             # Apply sequence reduction
             hidden_states = self.sr(hidden_states)
             # Reshape back to (batch_size, seq_len, num_channels)
@@ -191,7 +216,9 @@ class TFSegformerEfficientSelfAttention(tf.keras.layers.Layer):
         # (batch_size, seq_len_q, all_head_size)
         context_layer = tf.reshape(context_layer, (batch_size, -1, self.all_head_size))
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
         return outputs
 
 
@@ -214,7 +241,7 @@ class TFSegformerAttention(tf.keras.layers.Layer):
         hidden_size: int,
         num_attention_heads: int,
         sequence_reduction_ratio: int,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.self = TFSegformerEfficientSelfAttention(
@@ -224,15 +251,23 @@ class TFSegformerAttention(tf.keras.layers.Layer):
             sequence_reduction_ratio=sequence_reduction_ratio,
             name="self",
         )
-        self.dense_output = TFSegformerSelfOutput(config, hidden_size=hidden_size, name="output")
+        self.dense_output = TFSegformerSelfOutput(
+            config, hidden_size=hidden_size, name="output"
+        )
 
     def call(
-        self, hidden_states: tf.Tensor, height: int, width: int, output_attentions: bool = False
+        self,
+        hidden_states: tf.Tensor,
+        height: int,
+        width: int,
+        output_attentions: bool = False,
     ) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]:
         self_outputs = self.self(hidden_states, height, width, output_attentions)
 
         attention_output = self.dense_output(self_outputs[0])
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
@@ -240,19 +275,28 @@ class TFSegformerDWConv(tf.keras.layers.Layer):
     def __init__(self, dim: int = 768, **kwargs):
         super().__init__(**kwargs)
         self.depthwise_convolution = tf.keras.layers.Conv2D(
-            filters=dim, kernel_size=3, strides=1, padding="same", groups=dim, name="dwconv"
+            filters=dim,
+            kernel_size=3,
+            strides=1,
+            padding="same",
+            groups=dim,
+            name="dwconv",
         )
 
     def call(self, hidden_states: tf.Tensor, height: int, width: int) -> tf.Tensor:
         batch_size = shape_list(hidden_states)[0]
         num_channels = shape_list(hidden_states)[-1]
-        hidden_states = tf.reshape(hidden_states, (batch_size, height, width, num_channels))
+        hidden_states = tf.reshape(
+            hidden_states, (batch_size, height, width, num_channels)
+        )
         hidden_states = self.depthwise_convolution(hidden_states)
 
         new_height = shape_list(hidden_states)[1]
         new_width = shape_list(hidden_states)[2]
         num_channels = shape_list(hidden_states)[3]
-        hidden_states = tf.reshape(hidden_states, (batch_size, new_height * new_width, num_channels))
+        hidden_states = tf.reshape(
+            hidden_states, (batch_size, new_height * new_width, num_channels)
+        )
         return hidden_states
 
 
@@ -263,7 +307,7 @@ class TFSegformerMixFFN(tf.keras.layers.Layer):
         in_features: int,
         hidden_features: int = None,
         out_features: int = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         out_features = out_features or in_features
@@ -276,7 +320,9 @@ class TFSegformerMixFFN(tf.keras.layers.Layer):
         self.dense2 = tf.keras.layers.Dense(out_features, name="dense2")
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
-    def call(self, hidden_states: tf.Tensor, height: int, width: int, training: bool = False) -> tf.Tensor:
+    def call(
+        self, hidden_states: tf.Tensor, height: int, width: int, training: bool = False
+    ) -> tf.Tensor:
         hidden_states = self.dense1(hidden_states)
         hidden_states = self.depthwise_convolution(hidden_states, height, width)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -297,10 +343,12 @@ class TFSegformerLayer(tf.keras.layers.Layer):
         drop_path: float,
         sequence_reduction_ratio: int,
         mlp_ratio: int,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
-        self.layer_norm_1 = tf.keras.layers.LayerNormalization(epsilon=1e-05, name="layer_norm_1")
+        self.layer_norm_1 = tf.keras.layers.LayerNormalization(
+            epsilon=1e-05, name="layer_norm_1"
+        )
         self.attention = TFSegformerAttention(
             config,
             hidden_size=hidden_size,
@@ -308,10 +356,18 @@ class TFSegformerLayer(tf.keras.layers.Layer):
             sequence_reduction_ratio=sequence_reduction_ratio,
             name="attention",
         )
-        self.drop_path = TFSegformerDropPath(drop_path) if drop_path > 0.0 else tf.keras.layers.Activation("linear")
-        self.layer_norm_2 = tf.keras.layers.LayerNormalization(epsilon=1e-05, name="layer_norm_2")
+        self.drop_path = (
+            TFSegformerDropPath(drop_path)
+            if drop_path > 0.0
+            else tf.keras.layers.Activation("linear")
+        )
+        self.layer_norm_2 = tf.keras.layers.LayerNormalization(
+            epsilon=1e-05, name="layer_norm_2"
+        )
         mlp_hidden_size = int(hidden_size * mlp_ratio)
-        self.mlp = TFSegformerMixFFN(config, in_features=hidden_size, hidden_features=mlp_hidden_size, name="mlp")
+        self.mlp = TFSegformerMixFFN(
+            config, in_features=hidden_size, hidden_features=mlp_hidden_size, name="mlp"
+        )
 
     def call(
         self,
@@ -322,7 +378,9 @@ class TFSegformerLayer(tf.keras.layers.Layer):
         training: bool = False,
     ) -> Tuple:
         self_attention_outputs = self.attention(
-            self.layer_norm_1(hidden_states),  # in Segformer, layernorm is applied before self-attention
+            self.layer_norm_1(
+                hidden_states
+            ),  # in Segformer, layernorm is applied before self-attention
             height,
             width,
             output_attentions=output_attentions,
@@ -330,7 +388,9 @@ class TFSegformerLayer(tf.keras.layers.Layer):
         )
 
         attention_output = self_attention_outputs[0]
-        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+        outputs = self_attention_outputs[
+            1:
+        ]  # add self attentions if we output attention weights
 
         # first residual connection (with stochastic depth)
         attention_output = self.drop_path(attention_output, training=training)
@@ -352,7 +412,10 @@ class TFSegformerEncoder(tf.keras.layers.Layer):
         self.config = config
 
         # stochastic depth decay rule
-        drop_path_decays = [x.numpy() for x in tf.linspace(0.0, config.drop_path_rate, sum(config.depths))]
+        drop_path_decays = [
+            x.numpy()
+            for x in tf.linspace(0.0, config.drop_path_rate, sum(config.depths))
+        ]
 
         # patch embeddings
         embeddings = []
@@ -434,17 +497,27 @@ class TFSegformerEncoder(tf.keras.layers.Layer):
             hidden_states = norm_layer(hidden_states)
 
             # fourth, optionally reshape back to (batch_size, height, width, num_channels)
-            if idx != len(self.embeddings) - 1 or (idx == len(self.embeddings) - 1 and self.config.reshape_last_stage):
+            if idx != len(self.embeddings) - 1 or (
+                idx == len(self.embeddings) - 1 and self.config.reshape_last_stage
+            ):
                 num_channels = shape_list(hidden_states)[-1]
-                hidden_states = tf.reshape(hidden_states, (batch_size, height, width, num_channels))
+                hidden_states = tf.reshape(
+                    hidden_states, (batch_size, height, width, num_channels)
+                )
 
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_self_attentions]
+                if v is not None
+            )
         return TFBaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_self_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
         )
 
 
@@ -468,11 +541,19 @@ class TFSegformerMainLayer(tf.keras.layers.Layer):
         return_dict: Optional[bool] = None,
         training: bool = False,
     ) -> Union[Tuple, TFBaseModelOutput]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # When running on CPU, `tf.keras.layers.Conv2D` doesn't support `NCHW` format.
         # So change the input format from `NCHW` to `NHWC`.
@@ -492,18 +573,24 @@ class TFSegformerMainLayer(tf.keras.layers.Layer):
 
         # Change the other hidden state outputs to NCHW as well
         if output_hidden_states:
-            hidden_states = tuple([tf.transpose(h, perm=(0, 3, 1, 2)) for h in encoder_outputs[1]])
+            hidden_states = tuple(
+                [tf.transpose(h, perm=(0, 3, 1, 2)) for h in encoder_outputs[1]]
+            )
 
         if not return_dict:
             if tf.greater(len(encoder_outputs[1:]), 0):
-                transposed_encoder_outputs = tuple(tf.transpose(v, perm=[0, 3, 1, 2]) for v in encoder_outputs[1:][0])
+                transposed_encoder_outputs = tuple(
+                    tf.transpose(v, perm=[0, 3, 1, 2]) for v in encoder_outputs[1:][0]
+                )
                 return (sequence_output,) + (transposed_encoder_outputs,)
             else:
                 return (sequence_output,) + encoder_outputs[1:]
 
         return TFBaseModelOutput(
             last_hidden_state=sequence_output,
-            hidden_states=hidden_states if output_hidden_states else encoder_outputs.hidden_states,
+            hidden_states=(
+                hidden_states if output_hidden_states else encoder_outputs.hidden_states
+            ),
             attentions=encoder_outputs.attentions,
         )
 
@@ -526,13 +613,17 @@ class TFSegformerPreTrainedModel(TFPreTrainedModel):
         Returns:
             `Dict[str, tf.Tensor]`: The dummy inputs.
         """
-        VISION_DUMMY_INPUTS = tf.random.uniform(shape=(3, self.config.num_channels, 512, 512), dtype=tf.float32)
+        VISION_DUMMY_INPUTS = tf.random.uniform(
+            shape=(3, self.config.num_channels, 512, 512), dtype=tf.float32
+        )
         return {"pixel_values": tf.constant(VISION_DUMMY_INPUTS)}
 
     @tf.function(
         input_signature=[
             {
-                "pixel_values": tf.TensorSpec((None, None, None, None), tf.float32, name="pixel_values"),
+                "pixel_values": tf.TensorSpec(
+                    (None, None, None, None), tf.float32, name="pixel_values"
+                ),
             }
         ]
     )
@@ -604,7 +695,9 @@ class TFSegformerModel(TFSegformerPreTrainedModel):
         self.segformer = TFSegformerMainLayer(config, name="segformer")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(SEGFORMER_INPUTS_DOCSTRING.format("(batch_size, sequence_length)"))
+    @add_start_docstrings_to_model_forward(
+        SEGFORMER_INPUTS_DOCSTRING.format("(batch_size, sequence_length)")
+    )
     @add_code_sample_docstrings(
         processor_class=_FEAT_EXTRACTOR_FOR_DOC,
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -646,7 +739,9 @@ class TFSegformerModel(TFSegformerPreTrainedModel):
     """,
     SEGFORMER_START_DOCSTRING,
 )
-class TFSegformerForImageClassification(TFSegformerPreTrainedModel, TFSequenceClassificationLoss):
+class TFSegformerForImageClassification(
+    TFSegformerPreTrainedModel, TFSequenceClassificationLoss
+):
     def __init__(self, config: SegformerConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
@@ -657,7 +752,9 @@ class TFSegformerForImageClassification(TFSegformerPreTrainedModel, TFSequenceCl
         self.classifier = tf.keras.layers.Dense(config.num_labels, name="classifier")
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(SEGFORMER_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
+    @add_start_docstrings_to_model_forward(
+        SEGFORMER_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
     @add_code_sample_docstrings(
         processor_class=_FEAT_EXTRACTOR_FOR_DOC,
         checkpoint=_IMAGE_CLASS_CHECKPOINT,
@@ -685,27 +782,40 @@ class TFSegformerForImageClassification(TFSegformerPreTrainedModel, TFSequenceCl
         # convert last hidden states to (batch_size, height*width, hidden_size)
         batch_size = shape_list(sequence_output)[0]
         sequence_output = tf.transpose(sequence_output, perm=[0, 2, 3, 1])
-        sequence_output = tf.reshape(sequence_output, (batch_size, -1, self.config.hidden_sizes[-1]))
+        sequence_output = tf.reshape(
+            sequence_output, (batch_size, -1, self.config.hidden_sizes[-1])
+        )
 
         # global average pooling
         sequence_output = tf.reduce_mean(sequence_output, axis=1)
 
         logits = self.classifier(sequence_output)
 
-        loss = None if labels is None else self.hf_compute_loss(labels=labels, logits=logits)
+        loss = (
+            None
+            if labels is None
+            else self.hf_compute_loss(labels=labels, logits=logits)
+        )
 
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return TFSequenceClassifierOutput(
-            loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
+    def serving_output(
+        self, output: TFSequenceClassifierOutput
+    ) -> TFSequenceClassifierOutput:
         # hidden_states and attention not converted to Tensor with tf.convert_to_tensor as they are all of different dimensions
         return TFSequenceClassifierOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
+            logits=output.logits,
+            hidden_states=output.hidden_states,
+            attentions=output.attentions,
         )
 
 
@@ -739,13 +849,20 @@ class TFSegformerDecodeHead(TFSegformerPreTrainedModel):
 
         # the following 3 layers implement the ConvModule of the original implementation
         self.linear_fuse = tf.keras.layers.Conv2D(
-            filters=config.decoder_hidden_size, kernel_size=1, use_bias=False, name="linear_fuse"
+            filters=config.decoder_hidden_size,
+            kernel_size=1,
+            use_bias=False,
+            name="linear_fuse",
         )
-        self.batch_norm = tf.keras.layers.BatchNormalization(epsilon=1e-5, momentum=0.1, name="batch_norm")
+        self.batch_norm = tf.keras.layers.BatchNormalization(
+            epsilon=1e-5, momentum=0.1, name="batch_norm"
+        )
         self.activation = tf.keras.layers.Activation("relu")
 
         self.dropout = tf.keras.layers.Dropout(config.classifier_dropout_prob)
-        self.classifier = tf.keras.layers.Conv2D(filters=config.num_labels, kernel_size=1, name="classifier")
+        self.classifier = tf.keras.layers.Conv2D(
+            filters=config.num_labels, kernel_size=1, name="classifier"
+        )
 
         self.config = config
 
@@ -754,22 +871,33 @@ class TFSegformerDecodeHead(TFSegformerPreTrainedModel):
 
         all_hidden_states = ()
         for encoder_hidden_state, mlp in zip(encoder_hidden_states, self.mlps):
-            if self.config.reshape_last_stage is False and len(shape_list(encoder_hidden_state)) == 3:
-                height = tf.math.sqrt(tf.cast(shape_list(encoder_hidden_state)[1], tf.float32))
+            if (
+                self.config.reshape_last_stage is False
+                and len(shape_list(encoder_hidden_state)) == 3
+            ):
+                height = tf.math.sqrt(
+                    tf.cast(shape_list(encoder_hidden_state)[1], tf.float32)
+                )
                 height = width = tf.cast(height, tf.int32)
-                encoder_hidden_state = tf.reshape(encoder_hidden_state, (batch_size, height, width, -1))
+                encoder_hidden_state = tf.reshape(
+                    encoder_hidden_state, (batch_size, height, width, -1)
+                )
 
             # unify channel dimension
             encoder_hidden_state = tf.transpose(encoder_hidden_state, perm=[0, 2, 3, 1])
             height = shape_list(encoder_hidden_state)[1]
             width = shape_list(encoder_hidden_state)[2]
             encoder_hidden_state = mlp(encoder_hidden_state)
-            encoder_hidden_state = tf.reshape(encoder_hidden_state, (batch_size, height, width, -1))
+            encoder_hidden_state = tf.reshape(
+                encoder_hidden_state, (batch_size, height, width, -1)
+            )
 
             # upsample
             temp_state = tf.transpose(encoder_hidden_states[0], perm=[0, 2, 3, 1])
             upsample_resolution = shape_list(temp_state)[1:-1]
-            encoder_hidden_state = tf.image.resize(encoder_hidden_state, size=upsample_resolution, method="bilinear")
+            encoder_hidden_state = tf.image.resize(
+                encoder_hidden_state, size=upsample_resolution, method="bilinear"
+            )
             all_hidden_states += (encoder_hidden_state,)
 
         hidden_states = self.linear_fuse(tf.concat(all_hidden_states[::-1], axis=-1))
@@ -798,13 +926,20 @@ class TFSegformerForSemanticSegmentation(TFSegformerPreTrainedModel):
         # `labels` is of shape (batch_size, height, width)
         label_interp_shape = shape_list(labels)[1:]
 
-        upsampled_logits = tf.image.resize(logits, size=label_interp_shape, method="bilinear")
+        upsampled_logits = tf.image.resize(
+            logits, size=label_interp_shape, method="bilinear"
+        )
         # compute weighted loss
-        loss_fct = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction="none")
+        loss_fct = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True, reduction="none"
+        )
 
         def masked_loss(real, pred):
             unmasked_loss = loss_fct(real, pred)
-            mask = tf.cast(real != self.config.semantic_loss_ignore_index, dtype=unmasked_loss.dtype)
+            mask = tf.cast(
+                real != self.config.semantic_loss_ignore_index,
+                dtype=unmasked_loss.dtype,
+            )
             masked_loss = unmasked_loss * mask
             # Reduction strategy in the similar spirit with
             # https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_tf_utils.py#L210
@@ -814,8 +949,12 @@ class TFSegformerForSemanticSegmentation(TFSegformerPreTrainedModel):
         return masked_loss(labels, upsampled_logits)
 
     @unpack_inputs
-    @add_start_docstrings_to_model_forward(SEGFORMER_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
-    @replace_return_docstrings(output_type=TFSemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(
+        SEGFORMER_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+    )
+    @replace_return_docstrings(
+        output_type=TFSemanticSegmenterOutput, config_class=_CONFIG_FOR_DOC
+    )
     def call(
         self,
         pixel_values: tf.Tensor,
@@ -852,9 +991,13 @@ class TFSegformerForSemanticSegmentation(TFSegformerPreTrainedModel):
         >>> list(logits.shape)
         [1, 150, 128, 128]
         ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
 
         outputs = self.segformer(
@@ -893,8 +1036,12 @@ class TFSegformerForSemanticSegmentation(TFSegformerPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def serving_output(self, output: TFSemanticSegmenterOutput) -> TFSemanticSegmenterOutput:
+    def serving_output(
+        self, output: TFSemanticSegmenterOutput
+    ) -> TFSemanticSegmenterOutput:
         # hidden_states and attention not converted to Tensor with tf.convert_to_tensor as they are all of different dimensions
         return TFSemanticSegmenterOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
+            logits=output.logits,
+            hidden_states=output.hidden_states,
+            attentions=output.attentions,
         )

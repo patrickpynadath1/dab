@@ -10,8 +10,8 @@ class EmbeddingTuning_GPTNeoModel(nn.Module):
     def __init__(self, model_name):
         super().__init__()
         self.generator = pipeline(
-            'text-generation',
-            model=model_name.replace("embedding_tuning-", ""))
+            "text-generation", model=model_name.replace("embedding_tuning-", "")
+        )
         self.tokenizer = self.generator.tokenizer
         self.model = self.generator.model
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -21,9 +21,8 @@ class EmbeddingTuning_GPTNeoModel(nn.Module):
 
     def forward(self, input_ids, attention_mask, steer_values):
         output = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=input_ids)
+            input_ids=input_ids, attention_mask=attention_mask, labels=input_ids
+        )
         return output
 
     def parameters(self):
@@ -43,16 +42,31 @@ class EmbeddingTuning_GPTNeoModel(nn.Module):
     def regularization_term(self):
         return torch.tensor(0)
 
-    def generate(self, prompt, steer_values, min_length=20, max_length=100,
-                 seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
-                 temperature=1, top_p=1):
+    def generate(
+        self,
+        prompt,
+        steer_values,
+        min_length=20,
+        max_length=100,
+        seed=None,
+        num_beams=1,
+        num_beam_groups=1,
+        do_sample=True,
+        temperature=1,
+        top_p=1,
+    ):
         if seed is not None:
             set_seed(seed)
         with torch.no_grad():
             text = self.generator(
-                prompt, num_beams=num_beams, num_beam_groups=num_beam_groups,
-                do_sample=do_sample, temperature=temperature, top_p=top_p,
-                min_length=min_length, max_length=max_length,
+                prompt,
+                num_beams=num_beams,
+                num_beam_groups=num_beam_groups,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                min_length=min_length,
+                max_length=max_length,
                 pad_token_id=self.tokenizer.pad_token_id,
             )
             text = text[0]["generated_text"]

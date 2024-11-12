@@ -42,11 +42,13 @@ def register_loss(name):
 
     return register_loss_cls
 
+
 def build_loss(lossname, model, tokenizer, args):
     if lossname in LOSS_REGISTRY:
         return LOSS_REGISTRY[lossname](model, tokenizer, args)
     else:
         raise ValueError(f"This loss module does not exist: {lossname}")
+
 
 # automatically import any Python files in the losses/ directory
 losses_dir = os.path.dirname(__file__)

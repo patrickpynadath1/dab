@@ -42,7 +42,9 @@ if is_torch_available():
     from torch import nn
 
     from transformers import GroupViTModel, GroupViTTextModel, GroupViTVisionModel
-    from transformers.models.groupvit.modeling_groupvit import GROUPVIT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from transformers.models.groupvit.modeling_groupvit import (
+        GROUPVIT_PRETRAINED_MODEL_ARCHIVE_LIST,
+    )
 
 
 if is_vision_available():
@@ -95,7 +97,9 @@ class GroupViTVisionModelTester:
         self.seq_length = num_patches
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.image_size, self.image_size]
+        )
         config = self.get_config()
 
         return config, pixel_values
@@ -123,9 +127,12 @@ class GroupViTVisionModelTester:
         with torch.no_grad():
             result = model(pixel_values)
         self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.num_output_groups[-1], self.hidden_size)
+            result.last_hidden_state.shape,
+            (self.batch_size, self.num_output_groups[-1], self.hidden_size),
         )
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
+        self.parent.assertEqual(
+            result.pooler_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -151,7 +158,10 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def setUp(self):
         self.model_tester = GroupViTVisionModelTester(self)
         self.config_tester = ConfigTester(
-            self, config_class=GroupViTVisionConfig, has_text_modality=False, hidden_size=37
+            self,
+            config_class=GroupViTVisionConfig,
+            has_text_modality=False,
+            hidden_size=37,
         )
 
     def test_config(self):
@@ -192,7 +202,9 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         seq_len = getattr(self.model_tester, "seq_length", None)
 
-        expected_num_attention_outputs = sum(g > 0 for g in self.model_tester.num_group_tokens)
+        expected_num_attention_outputs = sum(
+            g > 0 for g in self.model_tester.num_group_tokens
+        )
 
         for model_class in self.all_model_classes:
             inputs_dict["output_attentions"] = True
@@ -205,7 +217,9 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             # GroupViT returns attention grouping of each stage
-            self.assertEqual(len(attentions), sum(g > 0 for g in self.model_tester.num_group_tokens))
+            self.assertEqual(
+                len(attentions), sum(g > 0 for g in self.model_tester.num_group_tokens)
+            )
 
             # check that output_attentions also work using config
             del inputs_dict["output_attentions"]
@@ -245,7 +259,11 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
                     list(self_attentions[i].shape[-2:]),
                     [
                         self.model_tester.num_output_groups[i],
-                        self.model_tester.num_output_groups[i - 1] if i > 0 else seq_len,
+                        (
+                            self.model_tester.num_output_groups[i - 1]
+                            if i > 0
+                            else seq_len
+                        ),
                     ],
                 )
 
@@ -255,11 +273,15 @@ class GroupViTVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_training_gradient_checkpointing(self):
         pass
 
-    @unittest.skip(reason="GroupViTVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="GroupViTVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="GroupViTVisionModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="GroupViTVisionModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -405,8 +427,13 @@ class GroupViTTextModelTester:
         with torch.no_grad():
             result = model(input_ids, attention_mask=input_mask)
             result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
-        self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
+        self.parent.assertEqual(
+            result.pooler_output.shape, (self.batch_size, self.hidden_size)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -424,7 +451,9 @@ class GroupViTTextModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = GroupViTTextModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=GroupViTTextConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=GroupViTTextConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -443,11 +472,15 @@ class GroupViTTextModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip(reason="GroupViTTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="GroupViTTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip(reason="GroupViTTextModel has no base class and is not available in MODEL_MAPPING")
+    @unittest.skip(
+        reason="GroupViTTextModel has no base class and is not available in MODEL_MAPPING"
+    )
     def test_save_load_fast_init_to_base(self):
         pass
 
@@ -466,8 +499,12 @@ class GroupViTModelTester:
         self.is_training = is_training
 
     def prepare_config_and_inputs(self):
-        text_config, input_ids, attention_mask = self.text_model_tester.prepare_config_and_inputs()
-        vision_config, pixel_values = self.vision_model_tester.prepare_config_and_inputs()
+        text_config, input_ids, attention_mask = (
+            self.text_model_tester.prepare_config_and_inputs()
+        )
+        vision_config, pixel_values = (
+            self.vision_model_tester.prepare_config_and_inputs()
+        )
 
         config = self.get_config()
 
@@ -475,7 +512,9 @@ class GroupViTModelTester:
 
     def get_config(self):
         return GroupViTConfig.from_text_vision_configs(
-            self.text_model_tester.get_config(), self.vision_model_tester.get_config(), projection_dim=64
+            self.text_model_tester.get_config(),
+            self.vision_model_tester.get_config(),
+            projection_dim=64,
         )
 
     def create_and_check_model(self, config, input_ids, attention_mask, pixel_values):
@@ -483,10 +522,12 @@ class GroupViTModelTester:
         with torch.no_grad():
             result = model(input_ids, pixel_values, attention_mask)
         self.parent.assertEqual(
-            result.logits_per_image.shape, (self.vision_model_tester.batch_size, self.text_model_tester.batch_size)
+            result.logits_per_image.shape,
+            (self.vision_model_tester.batch_size, self.text_model_tester.batch_size),
         )
         self.parent.assertEqual(
-            result.logits_per_text.shape, (self.text_model_tester.batch_size, self.vision_model_tester.batch_size)
+            result.logits_per_text.shape,
+            (self.text_model_tester.batch_size, self.vision_model_tester.batch_size),
         )
 
     def prepare_config_and_inputs_for_common(self):
@@ -570,7 +611,9 @@ class GroupViTModelTest(ModelTesterMixin, unittest.TestCase):
 
             try:
                 input_ids = inputs_dict["input_ids"]
-                pixel_values = inputs_dict["pixel_values"]  # GROUPVIT needs pixel_values
+                pixel_values = inputs_dict[
+                    "pixel_values"
+                ]  # GROUPVIT needs pixel_values
                 traced_model = torch.jit.trace(model, (input_ids, pixel_values))
             except RuntimeError:
                 self.fail("Couldn't trace module.")
@@ -597,7 +640,9 @@ class GroupViTModelTest(ModelTesterMixin, unittest.TestCase):
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(
+                set(model_state_dict.keys()), set(loaded_model_state_dict.keys())
+            )
 
             models_equal = True
             for layer_name, p1 in model_state_dict.items():
@@ -614,7 +659,9 @@ class GroupViTModelTest(ModelTesterMixin, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             config.save_pretrained(tmp_dir_name)
             vision_config = GroupViTVisionConfig.from_pretrained(tmp_dir_name)
-            self.assertDictEqual(config.vision_config.to_dict(), vision_config.to_dict())
+            self.assertDictEqual(
+                config.vision_config.to_dict(), vision_config.to_dict()
+            )
 
         # Save GroupViTConfig and check if we can load GroupViTTextConfig from it
         with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -647,7 +694,10 @@ class GroupViTModelIntegrationTest(unittest.TestCase):
 
         image = prepare_img()
         inputs = processor(
-            text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="pt"
+            text=["a photo of a cat", "a photo of a dog"],
+            images=image,
+            padding=True,
+            return_tensors="pt",
         )
 
         # forward pass
@@ -666,4 +716,6 @@ class GroupViTModelIntegrationTest(unittest.TestCase):
 
         expected_logits = torch.tensor([[13.3523, 6.3629]])
 
-        self.assertTrue(torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))
+        self.assertTrue(
+            torch.allclose(outputs.logits_per_image, expected_logits, atol=1e-3)
+        )

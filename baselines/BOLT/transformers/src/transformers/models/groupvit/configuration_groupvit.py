@@ -89,6 +89,7 @@ class GroupViTTextConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "groupvit_text_model"
 
     def __init__(
@@ -108,9 +109,14 @@ class GroupViTTextConfig(PretrainedConfig):
         pad_token_id=1,
         bos_token_id=0,
         eos_token_id=2,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs,
+        )
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -126,15 +132,23 @@ class GroupViTTextConfig(PretrainedConfig):
         self.attention_dropout = attention_dropout
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> "PretrainedConfig":
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
 
         # get the text config dict if we are loading from GroupViTConfig
         if config_dict.get("model_type") == "groupvit":
             config_dict = config_dict["text_config"]
 
-        if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
+        if (
+            "model_type" in config_dict
+            and hasattr(cls, "model_type")
+            and config_dict["model_type"] != cls.model_type
+        ):
             logger.warning(
                 f"You are using a model of type {config_dict['model_type']} to instantiate a model of type "
                 f"{cls.model_type}. This is not supported for all configurations of models and can yield errors."
@@ -222,7 +236,7 @@ class GroupViTVisionConfig(PretrainedConfig):
         assign_eps=1.0,
         assign_mlp_ratio=[0.5, 4],
         qkv_bias=True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
@@ -252,15 +266,23 @@ class GroupViTVisionConfig(PretrainedConfig):
         self.qkv_bias = qkv_bias
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> "PretrainedConfig":
 
-        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        config_dict, kwargs = cls.get_config_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
 
         # get the vision config dict if we are loading from GroupViTConfig
         if config_dict.get("model_type") == "groupvit":
             config_dict = config_dict["vision_config"]
 
-        if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
+        if (
+            "model_type" in config_dict
+            and hasattr(cls, "model_type")
+            and config_dict["model_type"] != cls.model_type
+        ):
             logger.warning(
                 f"You are using a model of type {config_dict['model_type']} to instantiate a model of type "
                 f"{cls.model_type}. This is not supported for all configurations of models and can yield errors."
@@ -304,17 +326,25 @@ class GroupViTConfig(PretrainedConfig):
         projection_dim=256,
         projection_intermediate_dim=4096,
         logit_scale_init_value=2.6592,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(text_config_dict=text_config_dict, vision_config_dict=vision_config_dict, **kwargs)
+        super().__init__(
+            text_config_dict=text_config_dict,
+            vision_config_dict=vision_config_dict,
+            **kwargs,
+        )
 
         if text_config_dict is None:
             text_config_dict = {}
-            logger.info("text_config_dict is None. Initializing the GroupViTTextConfig with default values.")
+            logger.info(
+                "text_config_dict is None. Initializing the GroupViTTextConfig with default values."
+            )
 
         if vision_config_dict is None:
             vision_config_dict = {}
-            logger.info("vision_config_dict is None. initializing the GroupViTVisionConfig with default values.")
+            logger.info(
+                "vision_config_dict is None. initializing the GroupViTVisionConfig with default values."
+            )
 
         self.text_config = GroupViTTextConfig(**text_config_dict)
         self.vision_config = GroupViTVisionConfig(**vision_config_dict)
@@ -327,7 +357,12 @@ class GroupViTConfig(PretrainedConfig):
         self.output_segmentation = False
 
     @classmethod
-    def from_text_vision_configs(cls, text_config: GroupViTTextConfig, vision_config: GroupViTVisionConfig, **kwargs):
+    def from_text_vision_configs(
+        cls,
+        text_config: GroupViTTextConfig,
+        vision_config: GroupViTVisionConfig,
+        **kwargs,
+    ):
         r"""
         Instantiate a [`GroupViTConfig`] (or a derived class) from groupvit text model configuration and groupvit
         vision model configuration.
@@ -336,7 +371,11 @@ class GroupViTConfig(PretrainedConfig):
             [`GroupViTConfig`]: An instance of a configuration object
         """
 
-        return cls(text_config_dict=text_config.to_dict(), vision_config_dict=vision_config.to_dict(), **kwargs)
+        return cls(
+            text_config_dict=text_config.to_dict(),
+            vision_config_dict=vision_config.to_dict(),
+            **kwargs,
+        )
 
     def to_dict(self):
         """
@@ -358,7 +397,10 @@ class GroupViTOnnxConfig(OnnxConfig):
         return OrderedDict(
             [
                 ("input_ids", {0: "batch", 1: "sequence"}),
-                ("pixel_values", {0: "batch", 1: "num_channels", 2: "height", 3: "width"}),
+                (
+                    "pixel_values",
+                    {0: "batch", 1: "num_channels", 2: "height", 3: "width"},
+                ),
                 ("attention_mask", {0: "batch", 1: "sequence"}),
             ]
         )
@@ -384,8 +426,12 @@ class GroupViTOnnxConfig(OnnxConfig):
         framework: Optional["TensorType"] = None,
     ) -> Mapping[str, Any]:
 
-        text_input_dict = super().generate_dummy_inputs(processor.tokenizer, framework=framework)
-        image_input_dict = super().generate_dummy_inputs(processor.feature_extractor, framework=framework)
+        text_input_dict = super().generate_dummy_inputs(
+            processor.tokenizer, framework=framework
+        )
+        image_input_dict = super().generate_dummy_inputs(
+            processor.feature_extractor, framework=framework
+        )
         return {**text_input_dict, **image_input_dict}
 
     @property

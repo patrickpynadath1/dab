@@ -65,13 +65,13 @@ def sentiment_exp_loop(
     for prompt in prompts[: total_conf["num_prompts"]]:
         if total_conf["seq_len"] > 20:
             batch_size = 10
-            repeats = 2 
+            repeats = 2
         else:
             batch_size = 20
             repeats = 1
         sentences_to_store = []
         for r in range(repeats):
-            prefixs = [prompt] * batch_size 
+            prefixs = [prompt] * batch_size
             inputs = tokenizer(prefixs, return_tensors="pt")
             inputs = inputs.to(total_conf["device"])
             start = time.time()
@@ -101,7 +101,7 @@ def sentiment_exp_loop(
                     sentences,
                     minimum_loss,
                     stored_sentence,
-                    iter=i
+                    iter=i,
                 )
             all_output_ids.append(cur_prompt_output_ids)
             end = time.time()

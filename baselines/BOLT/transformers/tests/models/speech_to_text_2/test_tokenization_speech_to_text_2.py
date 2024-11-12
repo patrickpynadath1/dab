@@ -19,7 +19,9 @@ import tempfile
 import unittest
 
 from transformers.models.speech_to_text_2 import Speech2Text2Tokenizer
-from transformers.models.speech_to_text_2.tokenization_speech_to_text_2 import VOCAB_FILES_NAMES
+from transformers.models.speech_to_text_2.tokenization_speech_to_text_2 import (
+    VOCAB_FILES_NAMES,
+)
 
 from ...test_tokenization_common import TokenizerTesterMixin
 
@@ -31,15 +33,24 @@ class SpeechToTextTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
     def setUp(self):
         super().setUp()
 
-        vocab = "<s> <pad> </s> <unk> here@@ a couple of@@ words for the he@@ re@@ vocab".split(" ")
+        vocab = "<s> <pad> </s> <unk> here@@ a couple of@@ words for the he@@ re@@ vocab".split(
+            " "
+        )
         merges = ["he re</w> 123", "here a 1456"]
         vocab_tokens = dict(zip(vocab, range(len(vocab))))
 
-        self.special_tokens_map = {"pad_token": "<pad>", "unk_token": "<unk>", "bos_token": "<s>", "eos_token": "</s>"}
+        self.special_tokens_map = {
+            "pad_token": "<pad>",
+            "unk_token": "<unk>",
+            "bos_token": "<s>",
+            "eos_token": "</s>",
+        }
 
         self.tmpdirname = tempfile.mkdtemp()
         self.vocab_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["vocab_file"])
-        self.merges_file = os.path.join(self.tmpdirname, VOCAB_FILES_NAMES["merges_file"])
+        self.merges_file = os.path.join(
+            self.tmpdirname, VOCAB_FILES_NAMES["merges_file"]
+        )
 
         with open(self.vocab_file, "w", encoding="utf-8") as fp:
             fp.write(json.dumps(vocab_tokens) + "\n")
@@ -93,5 +104,8 @@ class SpeechToTextTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         tokenizer = self.get_tokenizer()
 
         for parameter_name, parameter in signature.parameters.items():
-            if parameter.default != inspect.Parameter.empty and parameter_name != "merges_file":
+            if (
+                parameter.default != inspect.Parameter.empty
+                and parameter_name != "merges_file"
+            ):
                 self.assertIn(parameter_name, tokenizer.init_kwargs)

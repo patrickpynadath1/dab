@@ -88,7 +88,9 @@ class GPTNeoXModelTester:
 
         token_labels = None
         if self.use_labels:
-            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            token_labels = ids_tensor(
+                [self.batch_size, self.seq_length], self.num_labels
+            )
 
         config = self.get_config()
 
@@ -123,7 +125,10 @@ class GPTNeoXModelTester:
         model.eval()
         _ = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
     def create_and_check_model_as_decoder(self, config, input_ids, input_mask):
         config.add_cross_attention = True
@@ -131,16 +136,25 @@ class GPTNeoXModelTester:
         model.to(torch_device)
         model.eval()
         result = model(input_ids, attention_mask=input_mask)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
 
-    def create_and_check_for_causal_lm(self, config, input_ids, input_mask, token_labels):
+    def create_and_check_for_causal_lm(
+        self, config, input_ids, input_mask, token_labels
+    ):
         model = GPTNeoXForCausalLM(config=config)
         model.to(torch_device)
         model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
 
-    def create_and_check_decoder_model_past_large_inputs(self, config, input_ids, input_mask):
+    def create_and_check_decoder_model_past_large_inputs(
+        self, config, input_ids, input_mask
+    ):
         config.is_decoder = True
         model = GPTNeoXForCausalLM(config=config)
         model.to(torch_device)
@@ -158,7 +172,11 @@ class GPTNeoXModelTester:
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
         next_attention_mask = torch.cat([input_mask, next_mask], dim=-1)
 
-        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask, output_hidden_states=True)
+        output_from_no_past = model(
+            next_input_ids,
+            attention_mask=next_attention_mask,
+            output_hidden_states=True,
+        )
         output_from_no_past = output_from_no_past["hidden_states"][0]
         output_from_past = model(
             next_tokens,
@@ -169,13 +187,17 @@ class GPTNeoXModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -3:, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -187,7 +209,9 @@ class GPTNeoXModelTester:
 @require_torch
 class GPTNeoXModelTest(ModelTesterMixin, unittest.TestCase):
 
-    all_model_classes = (GPTNeoXModel, GPTNeoXForCausalLM) if is_torch_available() else ()
+    all_model_classes = (
+        (GPTNeoXModel, GPTNeoXForCausalLM) if is_torch_available() else ()
+    )
     all_generative_model_classes = (GPTNeoXForCausalLM,) if is_torch_available() else ()
     test_pruning = False
     test_missing_keys = False
@@ -196,30 +220,46 @@ class GPTNeoXModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = GPTNeoXModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=GPTNeoXConfig, hidden_size=37)
+        self.config_tester = ConfigTester(
+            self, config_class=GPTNeoXConfig, hidden_size=37
+        )
 
     def test_config(self):
         self.config_tester.run_common_tests()
 
     def test_model(self):
-        config, input_ids, input_mask, token_labels = self.model_tester.prepare_config_and_inputs()
+        config, input_ids, input_mask, token_labels = (
+            self.model_tester.prepare_config_and_inputs()
+        )
         self.model_tester.create_and_check_model(config, input_ids, input_mask)
 
     def test_model_as_decoder(self):
-        config, input_ids, input_mask, token_labels = self.model_tester.prepare_config_and_inputs_for_decoder()
-        self.model_tester.create_and_check_model_as_decoder(config, input_ids, input_mask)
+        config, input_ids, input_mask, token_labels = (
+            self.model_tester.prepare_config_and_inputs_for_decoder()
+        )
+        self.model_tester.create_and_check_model_as_decoder(
+            config, input_ids, input_mask
+        )
 
     def test_model_as_decoder_with_default_input_mask(self):
         # This regression test was failing with PyTorch < 1.3
-        config, input_ids, input_mask, token_labels = self.model_tester.prepare_config_and_inputs_for_decoder()
+        config, input_ids, input_mask, token_labels = (
+            self.model_tester.prepare_config_and_inputs_for_decoder()
+        )
 
         input_mask = None
 
-        self.model_tester.create_and_check_model_as_decoder(config, input_ids, input_mask)
+        self.model_tester.create_and_check_model_as_decoder(
+            config, input_ids, input_mask
+        )
 
     def test_decoder_model_past_large_inputs(self):
-        config, input_ids, input_mask, token_labels = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_decoder_model_past_large_inputs(config, input_ids, input_mask)
+        config, input_ids, input_mask, token_labels = (
+            self.model_tester.prepare_config_and_inputs()
+        )
+        self.model_tester.create_and_check_decoder_model_past_large_inputs(
+            config, input_ids, input_mask
+        )
 
     def test_model_for_causal_lm(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

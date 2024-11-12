@@ -18,7 +18,12 @@
 from typing import TYPE_CHECKING
 
 # rely on isort to merge the imports
-from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_flax_available, is_torch_available
+from ...utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_flax_available,
+    is_torch_available,
+)
 
 
 _import_structure = {
@@ -33,7 +38,9 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["modeling_vision_text_dual_encoder"] = ["VisionTextDualEncoderModel"]
+    _import_structure["modeling_vision_text_dual_encoder"] = [
+        "VisionTextDualEncoderModel"
+    ]
 
 
 try:
@@ -42,7 +49,9 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["modeling_flax_vision_text_dual_encoder"] = ["FlaxVisionTextDualEncoderModel"]
+    _import_structure["modeling_flax_vision_text_dual_encoder"] = [
+        "FlaxVisionTextDualEncoderModel"
+    ]
 
 
 if TYPE_CHECKING:
@@ -69,4 +78,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure
+    )

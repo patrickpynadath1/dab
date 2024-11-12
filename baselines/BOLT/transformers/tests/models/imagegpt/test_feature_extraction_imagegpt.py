@@ -77,9 +77,13 @@ class ImageGPTFeatureExtractionTester(unittest.TestCase):
 
 @require_torch
 @require_vision
-class ImageGPTFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.TestCase):
+class ImageGPTFeatureExtractionTest(
+    FeatureExtractionSavingTestMixin, unittest.TestCase
+):
 
-    feature_extraction_class = ImageGPTFeatureExtractor if is_vision_available() else None
+    feature_extraction_class = (
+        ImageGPTFeatureExtractor if is_vision_available() else None
+    )
 
     def setUp(self):
         self.feature_extract_tester = ImageGPTFeatureExtractionTester(self)
@@ -110,7 +114,9 @@ class ImageGPTFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
         with tempfile.TemporaryDirectory() as tmpdirname:
             json_file_path = os.path.join(tmpdirname, "feat_extract.json")
             feat_extract_first.to_json_file(json_file_path)
-            feat_extract_second = self.feature_extraction_class.from_json_file(json_file_path).to_dict()
+            feat_extract_second = self.feature_extraction_class.from_json_file(
+                json_file_path
+            ).to_dict()
 
         feat_extract_first = feat_extract_first.to_dict()
         for key, value in feat_extract_first.items():
@@ -124,7 +130,9 @@ class ImageGPTFeatureExtractionTest(FeatureExtractionSavingTestMixin, unittest.T
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             feat_extract_first.save_pretrained(tmpdirname)
-            feat_extract_second = self.feature_extraction_class.from_pretrained(tmpdirname).to_dict()
+            feat_extract_second = self.feature_extraction_class.from_pretrained(
+                tmpdirname
+            ).to_dict()
 
         feat_extract_first = feat_extract_first.to_dict()
         for key, value in feat_extract_first.items():
@@ -154,7 +162,9 @@ def prepare_images():
 class ImageGPTFeatureExtractorIntegrationTest(unittest.TestCase):
     @slow
     def test_image(self):
-        feature_extractor = ImageGPTFeatureExtractor.from_pretrained("openai/imagegpt-small")
+        feature_extractor = ImageGPTFeatureExtractor.from_pretrained(
+            "openai/imagegpt-small"
+        )
 
         images = prepare_images()
 

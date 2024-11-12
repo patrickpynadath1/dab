@@ -22,13 +22,23 @@ from transformers.testing_utils import require_torch, slow, torch_device
 
 from ...generation.test_generation_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_common import (
+    ModelTesterMixin,
+    floats_tensor,
+    ids_tensor,
+    random_attention_mask,
+)
 
 
 if is_torch_available():
     import torch
 
-    from transformers import XGLM_PRETRAINED_MODEL_ARCHIVE_LIST, XGLMForCausalLM, XGLMModel, XGLMTokenizer
+    from transformers import (
+        XGLM_PRETRAINED_MODEL_ARCHIVE_LIST,
+        XGLMForCausalLM,
+        XGLMModel,
+        XGLMTokenizer,
+    )
 
 
 class XGLMModelTester:
@@ -77,9 +87,14 @@ class XGLMModelTester:
         return XGLMConfig.from_pretrained("facebook/xglm-564M")
 
     def prepare_config_and_inputs(
-        self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
+        self,
+        gradient_checkpointing=False,
+        scale_attn_by_inverse_layer_idx=False,
+        reorder_and_upcast_attn=False,
     ):
-        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size).clamp(3)
+        input_ids = ids_tensor(
+            [self.batch_size, self.seq_length], self.vocab_size
+        ).clamp(3)
 
         input_mask = None
         if self.use_input_mask:
@@ -97,7 +112,10 @@ class XGLMModelTester:
         )
 
     def get_config(
-        self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
+        self,
+        gradient_checkpointing=False,
+        scale_attn_by_inverse_layer_idx=False,
+        reorder_and_upcast_attn=False,
     ):
         return XGLMConfig(
             vocab_size=self.vocab_size,
@@ -125,8 +143,12 @@ class XGLMModelTester:
             head_mask,
         ) = self.prepare_config_and_inputs()
 
-        encoder_hidden_states = floats_tensor([self.batch_size, self.seq_length, self.hidden_size])
-        encoder_attention_mask = ids_tensor([self.batch_size, self.seq_length], vocab_size=2)
+        encoder_hidden_states = floats_tensor(
+            [self.batch_size, self.seq_length, self.hidden_size]
+        )
+        encoder_attention_mask = ids_tensor(
+            [self.batch_size, self.seq_length], vocab_size=2
+        )
 
         return (
             config,
@@ -137,7 +159,9 @@ class XGLMModelTester:
             encoder_attention_mask,
         )
 
-    def create_and_check_xglm_model(self, config, input_ids, input_mask, head_mask, *args):
+    def create_and_check_xglm_model(
+        self, config, input_ids, input_mask, head_mask, *args
+    ):
         model = XGLMModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -145,10 +169,15 @@ class XGLMModelTester:
         result = model(input_ids, head_mask=head_mask)
         result = model(input_ids)
 
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.last_hidden_state.shape,
+            (self.batch_size, self.seq_length, self.hidden_size),
+        )
         self.parent.assertEqual(len(result.past_key_values), config.num_hidden_layers)
 
-    def create_and_check_xglm_model_past(self, config, input_ids, input_mask, head_mask, *args):
+    def create_and_check_xglm_model_past(
+        self, config, input_ids, input_mask, head_mask, *args
+    ):
         model = XGLMModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -172,13 +201,19 @@ class XGLMModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -1, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, 0, random_slice_idx].detach()
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
-    def create_and_check_xglm_model_attention_mask_past(self, config, input_ids, input_mask, head_mask, *args):
+    def create_and_check_xglm_model_attention_mask_past(
+        self, config, input_ids, input_mask, head_mask, *args
+    ):
         model = XGLMModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -197,23 +232,38 @@ class XGLMModelTester:
         # append to next input_ids and attn_mask
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
         attn_mask = torch.cat(
-            [attn_mask, torch.zeros((attn_mask.shape[0], 1), dtype=torch.long, device=torch_device)],
+            [
+                attn_mask,
+                torch.zeros(
+                    (attn_mask.shape[0], 1), dtype=torch.long, device=torch_device
+                ),
+            ],
             dim=1,
         )
 
         # get two different outputs
-        output_from_no_past = model(next_input_ids, attention_mask=attn_mask)["last_hidden_state"]
-        output_from_past = model(next_tokens, past_key_values=past, attention_mask=attn_mask)["last_hidden_state"]
+        output_from_no_past = model(next_input_ids, attention_mask=attn_mask)[
+            "last_hidden_state"
+        ]
+        output_from_past = model(
+            next_tokens, past_key_values=past, attention_mask=attn_mask
+        )["last_hidden_state"]
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -1, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, 0, random_slice_idx].detach()
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
-    def create_and_check_xglm_model_past_large_inputs(self, config, input_ids, input_mask, head_mask, *args):
+    def create_and_check_xglm_model_past_large_inputs(
+        self, config, input_ids, input_mask, head_mask, *args
+    ):
         model = XGLMModel(config=config)
         model.to(torch_device)
         model.eval()
@@ -231,31 +281,47 @@ class XGLMModelTester:
         next_input_ids = torch.cat([input_ids, next_tokens], dim=-1)
         next_attention_mask = torch.cat([input_mask, next_mask], dim=-1)
 
-        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
-        output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past)[
+        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)[
             "last_hidden_state"
         ]
+        output_from_past = model(
+            next_tokens, attention_mask=next_attention_mask, past_key_values=past
+        )["last_hidden_state"]
         self.parent.assertTrue(output_from_past.shape[1] == next_tokens.shape[1])
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
+        output_from_no_past_slice = output_from_no_past[
+            :, -3:, random_slice_idx
+        ].detach()
         output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(
+            torch.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
+        )
 
-    def create_and_check_lm_head_model(self, config, input_ids, input_mask, head_mask, *args):
+    def create_and_check_lm_head_model(
+        self, config, input_ids, input_mask, head_mask, *args
+    ):
         model = XGLMForCausalLM(config)
         model.to(torch_device)
         model.eval()
 
         result = model(input_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
 
     def create_and_check_forward_and_backwards(
-        self, config, input_ids, input_mask, head_mask, *args, gradient_checkpointing=False
+        self,
+        config,
+        input_ids,
+        input_mask,
+        head_mask,
+        *args,
+        gradient_checkpointing=False
     ):
         model = XGLMForCausalLM(config)
         model.to(torch_device)
@@ -264,16 +330,24 @@ class XGLMModelTester:
 
         result = model(input_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size)
+        )
         result.loss.backward()
 
     def create_and_check_xglm_weight_initialization(self, config, *args):
         model = XGLMModel(config)
-        model_std = model.config.initializer_range / math.sqrt(2 * model.config.num_hidden_layers)
+        model_std = model.config.initializer_range / math.sqrt(
+            2 * model.config.num_hidden_layers
+        )
         for key in model.state_dict().keys():
             if "c_proj" in key and "weight" in key:
-                self.parent.assertLessEqual(abs(torch.std(model.state_dict()[key]) - model_std), 0.001)
-                self.parent.assertLessEqual(abs(torch.mean(model.state_dict()[key]) - 0.0), 0.01)
+                self.parent.assertLessEqual(
+                    abs(torch.std(model.state_dict()[key]) - model_std), 0.001
+                )
+                self.parent.assertLessEqual(
+                    abs(torch.mean(model.state_dict()[key]) - 0.0), 0.01
+                )
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -319,11 +393,15 @@ class XGLMModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     def test_xglm_model_att_mask_past(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_xglm_model_attention_mask_past(*config_and_inputs)
+        self.model_tester.create_and_check_xglm_model_attention_mask_past(
+            *config_and_inputs
+        )
 
     def test_xglm_model_past_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_xglm_model_past_large_inputs(*config_and_inputs)
+        self.model_tester.create_and_check_xglm_model_past_large_inputs(
+            *config_and_inputs
+        )
 
     def test_xglm_lm_head_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -331,11 +409,15 @@ class XGLMModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     def test_xglm_gradient_checkpointing(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_forward_and_backwards(*config_and_inputs, gradient_checkpointing=True)
+        self.model_tester.create_and_check_forward_and_backwards(
+            *config_and_inputs, gradient_checkpointing=True
+        )
 
     def test_xglm_weight_initialization(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_xglm_weight_initialization(*config_and_inputs)
+        self.model_tester.create_and_check_xglm_weight_initialization(
+            *config_and_inputs
+        )
 
     @slow
     def test_batch_generation(self):
@@ -359,15 +441,26 @@ class XGLMModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             attention_mask=inputs["attention_mask"].to(torch_device),
         )
 
-        inputs_non_padded = tokenizer(sentences[0], return_tensors="pt").input_ids.to(torch_device)
+        inputs_non_padded = tokenizer(sentences[0], return_tensors="pt").input_ids.to(
+            torch_device
+        )
         output_non_padded = model.generate(input_ids=inputs_non_padded)
 
-        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().cpu().item()
-        inputs_padded = tokenizer(sentences[1], return_tensors="pt").input_ids.to(torch_device)
-        output_padded = model.generate(input_ids=inputs_padded, max_length=model.config.max_length - num_paddings)
+        num_paddings = (
+            inputs_non_padded.shape[-1]
+            - inputs["attention_mask"][-1].long().sum().cpu().item()
+        )
+        inputs_padded = tokenizer(sentences[1], return_tensors="pt").input_ids.to(
+            torch_device
+        )
+        output_padded = model.generate(
+            input_ids=inputs_padded, max_length=model.config.max_length - num_paddings
+        )
 
         batch_out_sentence = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        non_padded_sentence = tokenizer.decode(output_non_padded[0], skip_special_tokens=True)
+        non_padded_sentence = tokenizer.decode(
+            output_non_padded[0], skip_special_tokens=True
+        )
         padded_sentence = tokenizer.decode(output_padded[0], skip_special_tokens=True)
 
         expected_output_sentence = [
@@ -375,7 +468,9 @@ class XGLMModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             "Today, I am going to share with you a few of my favorite things",
         ]
         self.assertListEqual(expected_output_sentence, batch_out_sentence)
-        self.assertListEqual(expected_output_sentence, [non_padded_sentence, padded_sentence])
+        self.assertListEqual(
+            expected_output_sentence, [non_padded_sentence, padded_sentence]
+        )
 
     @slow
     def test_model_from_pretrained(self):
@@ -397,7 +492,9 @@ class XGLMModelLanguageGenerationTest(unittest.TestCase):
         else:
             model.gradient_checkpointing_disable()
         model.to(torch_device)
-        input_ids = torch.tensor([[2, 268, 9865]], dtype=torch.long, device=torch_device)  # The dog
+        input_ids = torch.tensor(
+            [[2, 268, 9865]], dtype=torch.long, device=torch_device
+        )  # The dog
         # </s> The dog is a very friendly dog. He is very affectionate and loves to play with other
         # fmt: off
         expected_output_ids = [2, 268, 9865, 67, 11, 1988, 57252, 9865, 5, 984, 67, 1988, 213838, 1658, 53, 70446, 33, 6657, 278, 1581]
@@ -425,7 +522,9 @@ class XGLMModelLanguageGenerationTest(unittest.TestCase):
         output_ids = model.generate(input_ids, do_sample=True, num_beams=1)
         output_str = tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
-        EXPECTED_OUTPUT_STR = "Today is a nice day and the sun is shining. A nice day with warm rainy"
+        EXPECTED_OUTPUT_STR = (
+            "Today is a nice day and the sun is shining. A nice day with warm rainy"
+        )
         self.assertEqual(output_str, EXPECTED_OUTPUT_STR)
 
     @slow
@@ -453,13 +552,17 @@ class XGLMModelLanguageGenerationTest(unittest.TestCase):
         self.assertLess(duration, datetime.timedelta(seconds=1.5 * MAX_TIME))
 
         start = datetime.datetime.now()
-        model.generate(input_ids, do_sample=False, num_beams=2, max_time=MAX_TIME, max_length=256)
+        model.generate(
+            input_ids, do_sample=False, num_beams=2, max_time=MAX_TIME, max_length=256
+        )
         duration = datetime.datetime.now() - start
         self.assertGreater(duration, datetime.timedelta(seconds=MAX_TIME))
         self.assertLess(duration, datetime.timedelta(seconds=1.5 * MAX_TIME))
 
         start = datetime.datetime.now()
-        model.generate(input_ids, do_sample=True, num_beams=2, max_time=MAX_TIME, max_length=256)
+        model.generate(
+            input_ids, do_sample=True, num_beams=2, max_time=MAX_TIME, max_length=256
+        )
         duration = datetime.datetime.now() - start
         self.assertGreater(duration, datetime.timedelta(seconds=MAX_TIME))
         self.assertLess(duration, datetime.timedelta(seconds=1.5 * MAX_TIME))

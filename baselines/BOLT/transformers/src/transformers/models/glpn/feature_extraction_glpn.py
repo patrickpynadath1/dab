@@ -49,7 +49,14 @@ class GLPNFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
     model_input_names = ["pixel_values"]
 
-    def __init__(self, do_resize=True, size_divisor=32, resample=Image.BILINEAR, do_rescale=True, **kwargs):
+    def __init__(
+        self,
+        do_resize=True,
+        size_divisor=32,
+        resample=Image.BILINEAR,
+        do_rescale=True,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.do_resize = do_resize
         self.size_divisor = size_divisor
@@ -61,14 +68,20 @@ class GLPNFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
             image = self.to_pil_image(image)
 
         width, height = image.size
-        new_h, new_w = height // size_divisor * size_divisor, width // size_divisor * size_divisor
+        new_h, new_w = (
+            height // size_divisor * size_divisor,
+            width // size_divisor * size_divisor,
+        )
 
         image = self.resize(image, size=(new_w, new_h), resample=resample)
 
         return image
 
     def __call__(
-        self, images: ImageInput, return_tensors: Optional[Union[str, TensorType]] = None, **kwargs
+        self,
+        images: ImageInput,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        **kwargs
     ) -> BatchFeature:
         """
         Main method to prepare for the model one or several image(s).
@@ -107,7 +120,11 @@ class GLPNFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         if isinstance(images, (Image.Image, np.ndarray)) or is_torch_tensor(images):
             valid_images = True
         elif isinstance(images, (list, tuple)):
-            if len(images) == 0 or isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]):
+            if (
+                len(images) == 0
+                or isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            ):
                 valid_images = True
 
         if not valid_images:
@@ -118,7 +135,10 @@ class GLPNFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
 
         is_batched = bool(
             isinstance(images, (list, tuple))
-            and (isinstance(images[0], (Image.Image, np.ndarray)) or is_torch_tensor(images[0]))
+            and (
+                isinstance(images[0], (Image.Image, np.ndarray))
+                or is_torch_tensor(images[0])
+            )
         )
 
         if not is_batched:
@@ -127,7 +147,10 @@ class GLPNFeatureExtractor(FeatureExtractionMixin, ImageFeatureExtractionMixin):
         # transformations (resizing + rescaling)
         if self.do_resize and self.size_divisor is not None:
             images = [
-                self._resize(image=image, size_divisor=self.size_divisor, resample=self.resample) for image in images
+                self._resize(
+                    image=image, size_divisor=self.size_divisor, resample=self.resample
+                )
+                for image in images
             ]
         if self.do_rescale:
             images = [self.to_numpy_array(image=image) for image in images]

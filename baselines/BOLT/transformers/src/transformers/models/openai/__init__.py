@@ -28,7 +28,10 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_openai": ["OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP", "OpenAIGPTConfig"],
+    "configuration_openai": [
+        "OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "OpenAIGPTConfig",
+    ],
     "tokenization_openai": ["OpenAIGPTTokenizer"],
 }
 
@@ -74,7 +77,10 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_openai import OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP, OpenAIGPTConfig
+    from .configuration_openai import (
+        OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        OpenAIGPTConfig,
+    )
     from .tokenization_openai import OpenAIGPTTokenizer
 
     try:
@@ -120,4 +126,6 @@ if TYPE_CHECKING:
 else:
     import sys
 
-    sys.modules[__name__] = _LazyModule(__name__, globals()["__file__"], _import_structure, module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )

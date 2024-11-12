@@ -23,7 +23,13 @@ from transformers import (
     T5Config,
     pipeline,
 )
-from transformers.testing_utils import is_pipeline_test, require_tf, require_torch, slow, torch_device
+from transformers.testing_utils import (
+    is_pipeline_test,
+    require_tf,
+    require_torch,
+    slow,
+    torch_device,
+)
 from transformers.tokenization_utils import TruncationStrategy
 
 from .test_pipelines_common import ANY, PipelineTestCaseMeta
@@ -39,7 +45,10 @@ class SummarizationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMe
 
     def get_test_pipeline(self, model, tokenizer, feature_extractor):
         summarizer = SummarizationPipeline(model=model, tokenizer=tokenizer)
-        return summarizer, ["(CNN)The Palestinian Authority officially became", "Some other text"]
+        return summarizer, [
+            "(CNN)The Palestinian Authority officially became",
+            "Some other text",
+        ]
 
     def run_pipeline_test(self, summarizer, _):
         model = summarizer.model
@@ -64,7 +73,9 @@ class SummarizationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMe
 
     @require_torch
     def test_small_model_pt(self):
-        summarizer = pipeline(task="summarization", model="sshleifer/tiny-mbart", framework="pt")
+        summarizer = pipeline(
+            task="summarization", model="sshleifer/tiny-mbart", framework="pt"
+        )
         outputs = summarizer("This is a small test")
         self.assertEqual(
             outputs,
@@ -77,7 +88,9 @@ class SummarizationPipelineTests(unittest.TestCase, metaclass=PipelineTestCaseMe
 
     @require_tf
     def test_small_model_tf(self):
-        summarizer = pipeline(task="summarization", model="sshleifer/tiny-mbart", framework="tf")
+        summarizer = pipeline(
+            task="summarization", model="sshleifer/tiny-mbart", framework="tf"
+        )
         outputs = summarizer("This is a small test")
         self.assertEqual(
             outputs,

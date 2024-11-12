@@ -35,7 +35,11 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
-from .configuration_groupvit import GroupViTConfig, GroupViTTextConfig, GroupViTVisionConfig
+from .configuration_groupvit import (
+    GroupViTConfig,
+    GroupViTTextConfig,
+    GroupViTVisionConfig,
+)
 
 
 logger = logging.get_logger(__name__)
@@ -60,13 +64,17 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
 
     inverted_mask = 1.0 - expanded_mask
 
-    return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
+    return inverted_mask.masked_fill(
+        inverted_mask.to(torch.bool), torch.finfo(dtype).min
+    )
 
 
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/GroupViT.html
 def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
-    return nn.functional.cross_entropy(logits, torch.arange(len(logits), device=logits.device))
+    return nn.functional.cross_entropy(
+        logits, torch.arange(len(logits), device=logits.device)
+    )
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->groupvit
@@ -80,13 +88,17 @@ def hard_softmax(logits: torch.Tensor, dim: int):
     y_soft = logits.softmax(dim)
     # Straight through.
     index = y_soft.max(dim, keepdim=True)[1]
-    y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
+    y_hard = torch.zeros_like(
+        logits, memory_format=torch.legacy_contiguous_format
+    ).scatter_(dim, index, 1.0)
     ret = y_hard - y_soft.detach() + y_soft
 
     return ret
 
 
-def gumbel_softmax(logits: torch.Tensor, tau: float = 1, hard: bool = False, dim: int = -1) -> torch.Tensor:
+def gumbel_softmax(
+    logits: torch.Tensor, tau: float = 1, hard: bool = False, dim: int = -1
+) -> torch.Tensor:
     # more stable https://github.com/pytorch/pytorch/issues/41663
     gumbel_dist = torch.distributions.gumbel.Gumbel(
         torch.tensor(0.0, device=logits.device, dtype=logits.dtype),
@@ -100,7 +112,9 @@ def gumbel_softmax(logits: torch.Tensor, tau: float = 1, hard: bool = False, dim
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdim=True)[1]
-        y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
+        y_hard = torch.zeros_like(
+            logits, memory_format=torch.legacy_contiguous_format
+        ).scatter_(dim, index, 1.0)
         ret = y_hard - y_soft.detach() + y_soft
     else:
         # Reparametrization trick.
@@ -158,7 +172,9 @@ def get_grouping_from_attentions(attentions, hw_shape):
             else:
                 prev_attn_masks = prev_attn_masks @ attn_masks
             # [batch_size, heightxwidth, num_groups] -> [batch_size, num_groups, heightxwidth] -> [batch_size, num_groups, height, width]
-            cur_attn_map = resize_attention_map(prev_attn_masks.permute(0, 2, 1).contiguous(), *hw_shape)
+            cur_attn_map = resize_attention_map(
+                prev_attn_masks.permute(0, 2, 1).contiguous(), *hw_shape
+            )
             attn_maps.append(cur_attn_map)
 
     # [batch_size, num_groups, height, width]
@@ -243,16 +259,24 @@ class GroupViTTokenAssign(nn.Module):
             if isinstance(config.assign_mlp_ratio, collections.abc.Iterable)
             else (config.assign_mlp_ratio, config.assign_mlp_ratio)
         )
-        tokens_dim, channels_dim = [int(x * config.hidden_size) for x in assign_mlp_ratio]
-        self.mlp_inter = GroupViTMixerMLP(config, num_group_token, tokens_dim, num_output_group)
-        self.norm_post_tokens = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        tokens_dim, channels_dim = [
+            int(x * config.hidden_size) for x in assign_mlp_ratio
+        ]
+        self.mlp_inter = GroupViTMixerMLP(
+            config, num_group_token, tokens_dim, num_output_group
+        )
+        self.norm_post_tokens = nn.LayerNorm(
+            config.hidden_size, eps=config.layer_norm_eps
+        )
         # norm on x
         self.norm_x = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.pre_assign_attn = GroupViTCrossAttentionLayer(config)
 
         self.assign = GroupViTAssignAttention(config)
         self.norm_new_x = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.mlp_channels = GroupViTMLP(config, config.hidden_size, channels_dim, config.hidden_size)
+        self.mlp_channels = GroupViTMLP(
+            config, config.hidden_size, channels_dim, config.hidden_size
+        )
 
     def project_group_token(self, group_tokens):
         """
@@ -278,11 +302,15 @@ class GroupViTTokenAssign(nn.Module):
         image_tokens = self.norm_x(image_tokens)
         # [batch_size, num_output_groups, channels]
         projected_group_tokens = self.project_group_token(group_tokens)
-        projected_group_tokens = self.pre_assign_attn(projected_group_tokens, image_tokens)
+        projected_group_tokens = self.pre_assign_attn(
+            projected_group_tokens, image_tokens
+        )
         new_image_tokens, attention = self.assign(projected_group_tokens, image_tokens)
         new_image_tokens += projected_group_tokens
 
-        new_image_tokens = new_image_tokens + self.mlp_channels(self.norm_new_x(new_image_tokens))
+        new_image_tokens = new_image_tokens + self.mlp_channels(
+            self.norm_new_x(new_image_tokens)
+        )
 
         return new_image_tokens, attention
 
@@ -333,7 +361,11 @@ class GroupViTModelOutput(ModelOutput):
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
+            (
+                self[k]
+                if k not in ["text_model_output", "vision_model_output"]
+                else getattr(self, k).to_tuple()
+            )
             for k in self.keys()
         )
 
@@ -351,16 +383,30 @@ class GroupViTPatchEmbeddings(nn.Module):
         embed_dim: int = 768,
     ):
         super().__init__()
-        image_size = image_size if isinstance(image_size, collections.abc.Iterable) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
-        num_patches = (image_size[1] // patch_size[1]) * (image_size[0] // patch_size[0])
+        image_size = (
+            image_size
+            if isinstance(image_size, collections.abc.Iterable)
+            else (image_size, image_size)
+        )
+        patch_size = (
+            patch_size
+            if isinstance(patch_size, collections.abc.Iterable)
+            else (patch_size, patch_size)
+        )
+        num_patches = (image_size[1] // patch_size[1]) * (
+            image_size[0] // patch_size[0]
+        )
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.projection = nn.Conv2d(
+            num_channels, embed_dim, kernel_size=patch_size, stride=patch_size
+        )
 
-    def forward(self, pixel_values: torch.Tensor, interpolate_pos_encoding: bool = False) -> torch.Tensor:
+    def forward(
+        self, pixel_values: torch.Tensor, interpolate_pos_encoding: bool = False
+    ) -> torch.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         if not interpolate_pos_encoding:
             if height != self.image_size[0] or width != self.image_size[1]:
@@ -383,12 +429,16 @@ class GroupViTVisionEmbeddings(nn.Module):
             embed_dim=config.hidden_size,
         )
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = nn.Parameter(torch.zeros(1, num_patches, config.hidden_size))
+        self.position_embeddings = nn.Parameter(
+            torch.zeros(1, num_patches, config.hidden_size)
+        )
         self.dropout = nn.Dropout(config.dropout)
         self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.config = config
 
-    def interpolate_pos_encoding(self, embeddings: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    def interpolate_pos_encoding(
+        self, embeddings: torch.Tensor, height: int, width: int
+    ) -> torch.Tensor:
         """
         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher
         resolution images.
@@ -409,9 +459,9 @@ class GroupViTVisionEmbeddings(nn.Module):
         # see discussion at https://github.com/facebookresearch/dino/issues/8
         feat_height, feat_width = feat_height + 0.1, feat_width + 0.1
         original_height = original_width = math.sqrt(num_original_pos_embed)
-        reshaped_patch_pos_embed = patch_pos_embed.reshape(1, int(original_height), int(original_width), dim).permute(
-            0, 3, 1, 2
-        )
+        reshaped_patch_pos_embed = patch_pos_embed.reshape(
+            1, int(original_height), int(original_width), dim
+        ).permute(0, 3, 1, 2)
         scale_factor = (feat_height / original_height, feat_width / original_width)
         patch_pos_embed = nn.functional.interpolate(
             reshaped_patch_pos_embed,
@@ -422,9 +472,13 @@ class GroupViTVisionEmbeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return patch_pos_embed
 
-    def forward(self, pixel_values: torch.Tensor, interpolate_pos_encoding: bool = False) -> torch.Tensor:
+    def forward(
+        self, pixel_values: torch.Tensor, interpolate_pos_encoding: bool = False
+    ) -> torch.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
-        embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
+        embeddings = self.patch_embeddings(
+            pixel_values, interpolate_pos_encoding=interpolate_pos_encoding
+        )
 
         embeddings = self.layernorm(embeddings)
 
@@ -432,7 +486,9 @@ class GroupViTVisionEmbeddings(nn.Module):
 
         # add positional encoding to each token
         if interpolate_pos_encoding:
-            embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
+            embeddings = embeddings + self.interpolate_pos_encoding(
+                embeddings, height, width
+            )
         else:
             embeddings = embeddings + self.position_embeddings
 
@@ -448,10 +504,14 @@ class GroupViTTextEmbeddings(nn.Module):
         embed_dim = config.hidden_size
 
         self.token_embedding = nn.Embedding(config.vocab_size, embed_dim)
-        self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
+        self.position_embedding = nn.Embedding(
+            config.max_position_embeddings, embed_dim
+        )
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.register_buffer(
+            "position_ids", torch.arange(config.max_position_embeddings).expand((1, -1))
+        )
 
     def forward(
         self,
@@ -459,7 +519,9 @@ class GroupViTTextEmbeddings(nn.Module):
         position_ids: Optional[torch.LongTensor] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
     ) -> torch.Tensor:
-        seq_length = input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
+        seq_length = (
+            input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
+        )
 
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
@@ -488,11 +550,15 @@ class GroupViTStage(nn.Module):
         self.depth = depth
         self.num_group_token = num_group_token
         if num_group_token > 0:
-            self.group_token = nn.Parameter(torch.zeros(1, num_group_token, config.hidden_size))
+            self.group_token = nn.Parameter(
+                torch.zeros(1, num_group_token, config.hidden_size)
+            )
         else:
             self.group_token = None
         self.gradient_checkpointing = False
-        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(depth)])
+        self.layers = nn.ModuleList(
+            [GroupViTEncoderLayer(config) for _ in range(depth)]
+        )
 
         if num_group_token > 0:
             self.downsample = GroupViTTokenAssign(
@@ -506,7 +572,12 @@ class GroupViTStage(nn.Module):
         if num_prev_group_token > 0 and num_group_token > 0:
             self.group_projector = nn.Sequential(
                 nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps),
-                GroupViTMixerMLP(config, num_prev_group_token, config.hidden_size // 2, num_group_token),
+                GroupViTMixerMLP(
+                    config,
+                    num_prev_group_token,
+                    config.hidden_size // 2,
+                    num_group_token,
+                ),
             )
         else:
             self.group_projector = None
@@ -521,7 +592,9 @@ class GroupViTStage(nn.Module):
         else:
             return x, None
 
-    def concat_x(self, x: torch.Tensor, group_token: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def concat_x(
+        self, x: torch.Tensor, group_token: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         if group_token is None:
             return x
         return torch.cat([x, group_token], dim=1)
@@ -580,7 +653,11 @@ class GroupViTMLP(nn.Module):
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
         hidden_size = hidden_size if hidden_size is not None else config.hidden_size
-        intermediate_size = intermediate_size if intermediate_size is not None else config.intermediate_size
+        intermediate_size = (
+            intermediate_size
+            if intermediate_size is not None
+            else config.intermediate_size
+        )
         output_size = output_size if output_size is not None else hidden_size
         self.fc1 = nn.Linear(hidden_size, intermediate_size)
         self.fc2 = nn.Linear(intermediate_size, output_size)
@@ -621,7 +698,11 @@ class GroupViTAttention(nn.Module):
         self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return (
+            tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+            .contiguous()
+        )
 
     def forward(
         self,
@@ -666,7 +747,10 @@ class GroupViTAttention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is"
                     f" {causal_attention_mask.size()}"
                 )
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + causal_attention_mask
+            attn_weights = (
+                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+                + causal_attention_mask
+            )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if attention_mask is not None:
@@ -674,7 +758,10 @@ class GroupViTAttention(nn.Module):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
                 )
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
+            attn_weights = (
+                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+                + attention_mask
+            )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn_weights = nn.functional.softmax(attn_weights, dim=-1)
@@ -684,12 +771,18 @@ class GroupViTAttention(nn.Module):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
+            attn_weights_reshaped = attn_weights.view(
+                bsz, self.num_heads, tgt_len, src_len
+            )
+            attn_weights = attn_weights_reshaped.view(
+                bsz * self.num_heads, tgt_len, src_len
+            )
         else:
             attn_weights_reshaped = None
 
-        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(
+            attn_weights, p=self.dropout, training=self.training
+        )
 
         attn_output = torch.bmm(attn_probs, value_states)
 
@@ -790,7 +883,11 @@ class GroupViTPreTrainedModel(PreTrainedModel):
             module.position_embedding.weight.data.normal_(mean=0.0, std=factor * 0.02)
         elif isinstance(module, GroupViTAttention):
             factor = self.config.initializer_factor
-            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            in_proj_std = (
+                (module.embed_dim**-0.5)
+                * ((2 * module.config.num_hidden_layers) ** -0.5)
+                * factor
+            )
             out_proj_std = (module.embed_dim**-0.5) * factor
             nn.init.normal_(module.q_proj.weight, std=in_proj_std)
             nn.init.normal_(module.k_proj.weight, std=in_proj_std)
@@ -799,7 +896,9 @@ class GroupViTPreTrainedModel(PreTrainedModel):
         elif isinstance(module, GroupViTMLP):
             factor = self.config.initializer_factor
             in_proj_std = (
-                (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+                (module.config.hidden_size**-0.5)
+                * ((2 * module.config.num_hidden_layers) ** -0.5)
+                * factor
             )
             fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
             nn.init.normal_(module.fc1.weight, std=fc_std)
@@ -917,7 +1016,9 @@ class GroupViTVisionEncoder(nn.Module):
                     depth=config.depths[i],
                     num_group_token=config.num_group_tokens[i],
                     num_output_group=config.num_output_groups[i],
-                    num_prev_group_token=config.num_output_groups[i - 1] if i > 0 else 0,
+                    num_prev_group_token=(
+                        config.num_output_groups[i - 1] if i > 0 else 0
+                    ),
                 )
                 for i in range(len(config.depths))
             ]
@@ -932,11 +1033,19 @@ class GroupViTVisionEncoder(nn.Module):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutput]:
 
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         all_hidden_states = () if output_hidden_states else None
         all_groupings = () if output_attentions else None
@@ -959,9 +1068,15 @@ class GroupViTVisionEncoder(nn.Module):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, all_hidden_states, all_groupings] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, all_hidden_states, all_groupings]
+                if v is not None
+            )
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_groupings
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_groupings,
         )
 
 
@@ -977,7 +1092,9 @@ class GroupViTTextEncoder(nn.Module):
     def __init__(self, config: GroupViTTextConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.ModuleList([GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList(
+            [GroupViTEncoderLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
     def forward(
@@ -1018,11 +1135,19 @@ class GroupViTTextEncoder(nn.Module):
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1062,9 +1187,15 @@ class GroupViTTextEncoder(nn.Module):
             encoder_states = encoder_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
+            return tuple(
+                v
+                for v in [hidden_states, encoder_states, all_attentions]
+                if v is not None
+            )
         return BaseModelOutput(
-            last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
+            last_hidden_state=hidden_states,
+            hidden_states=encoder_states,
+            attentions=all_attentions,
         )
 
 
@@ -1079,7 +1210,9 @@ class GroupViTTextTransformer(nn.Module):
         self.final_layer_norm = nn.LayerNorm(embed_dim)
 
     @add_start_docstrings_to_model_forward(GROUPVIT_TEXT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=GroupViTTextConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=GroupViTTextConfig
+    )
     def forward(
         self,
         input_ids: Optional[torch.Tensor] = None,
@@ -1093,11 +1226,19 @@ class GroupViTTextTransformer(nn.Module):
         Returns:
 
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if input_ids is None:
             raise ValueError("You have to specify either input_ids")
@@ -1110,9 +1251,9 @@ class GroupViTTextTransformer(nn.Module):
         bsz, seq_len = input_shape
         # CLIP's text model uses causal mask, prepare it here.
         # https://github.com/openai/CLIP/blob/cfcffb90e69f37bf2ff1e988237a0fbe41f33c04/clip/model.py#L324
-        causal_attention_mask = self._build_causal_attention_mask(bsz, seq_len, hidden_states.dtype).to(
-            hidden_states.device
-        )
+        causal_attention_mask = self._build_causal_attention_mask(
+            bsz, seq_len, hidden_states.dtype
+        ).to(hidden_states.device)
         # expand attention_mask
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
@@ -1134,7 +1275,8 @@ class GroupViTTextTransformer(nn.Module):
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         # casting to torch.int for onnx compatibility: argmax doesn't support int64 inputs with opset 14
         pooled_output = last_hidden_state[
-            torch.arange(last_hidden_state.shape[0]), input_ids.to(torch.int).argmax(dim=-1)
+            torch.arange(last_hidden_state.shape[0]),
+            input_ids.to(torch.int).argmax(dim=-1),
         ]
 
         if not return_dict:
@@ -1173,7 +1315,9 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
         self.text_model.embeddings.token_embedding = value
 
     @add_start_docstrings_to_model_forward(GROUPVIT_TEXT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=GroupViTTextConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=GroupViTTextConfig
+    )
     def forward(
         self,
         input_ids: Optional[torch.Tensor] = None,
@@ -1221,7 +1365,9 @@ class GroupViTVisionTransformer(nn.Module):
         self.layernorm = nn.LayerNorm(embed_dim)
 
     @add_start_docstrings_to_model_forward(GROUPVIT_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=GroupViTVisionConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=GroupViTVisionConfig
+    )
     def forward(
         self,
         pixel_values: Optional[torch.FloatTensor] = None,
@@ -1233,11 +1379,19 @@ class GroupViTVisionTransformer(nn.Module):
         Returns:
 
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -1282,7 +1436,9 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
         return self.vision_model.embeddings.patch_embeddings
 
     @add_start_docstrings_to_model_forward(GROUPVIT_VISION_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=BaseModelOutputWithPooling, config_class=GroupViTVisionConfig)
+    @replace_return_docstrings(
+        output_type=BaseModelOutputWithPooling, config_class=GroupViTVisionConfig
+    )
     def forward(
         self,
         pixel_values: Optional[torch.FloatTensor] = None,
@@ -1351,7 +1507,9 @@ class GroupViTModel(GroupViTPreTrainedModel):
         self.vision_model = GroupViTVisionTransformer(vision_config)
 
         self.visual_projection = nn.Sequential(
-            nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, bias=True),
+            nn.Linear(
+                self.vision_embed_dim, self.projection_intermediate_dim, bias=True
+            ),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(inplace=True),
             nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
@@ -1362,7 +1520,9 @@ class GroupViTModel(GroupViTPreTrainedModel):
             nn.ReLU(inplace=True),
             nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
-        self.logit_scale = nn.Parameter(torch.ones([]) * self.config.logit_scale_init_value)
+        self.logit_scale = nn.Parameter(
+            torch.ones([]) * self.config.logit_scale_init_value
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1394,11 +1554,19 @@ class GroupViTModel(GroupViTPreTrainedModel):
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         text_outputs = self.text_model(
             input_ids=input_ids,
@@ -1445,11 +1613,19 @@ class GroupViTModel(GroupViTPreTrainedModel):
         >>> image_features = model.get_image_features(**inputs)
         ```"""
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
@@ -1464,7 +1640,9 @@ class GroupViTModel(GroupViTPreTrainedModel):
         return image_features
 
     @add_start_docstrings_to_model_forward(GROUPVIT_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=GroupViTModelOutput, config_class=GroupViTConfig)
+    @replace_return_docstrings(
+        output_type=GroupViTModelOutput, config_class=GroupViTConfig
+    )
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -1502,16 +1680,26 @@ class GroupViTModel(GroupViTPreTrainedModel):
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
         ```"""
         # Use GROUPVIT model's config for some fields (if specified) instead of those of vision & text components.
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_segmentation = (
-            output_segmentation if output_segmentation is not None else self.config.output_segmentation
+            output_segmentation
+            if output_segmentation is not None
+            else self.config.output_segmentation
         )
         if output_segmentation:
             output_attentions = True
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
@@ -1550,7 +1738,9 @@ class GroupViTModel(GroupViTPreTrainedModel):
             # [batch_size_image, num_group, hidden_size]
             image_group_embeds = vision_outputs[0]
             # [batch_size_image*num_group, hidden_size]
-            image_group_embeds = self.visual_projection(image_group_embeds.reshape(-1, image_group_embeds.shape[-1]))
+            image_group_embeds = self.visual_projection(
+                image_group_embeds.reshape(-1, image_group_embeds.shape[-1])
+            )
             if output_hidden_states:
                 attentions = vision_outputs[3]
             else:
@@ -1559,21 +1749,32 @@ class GroupViTModel(GroupViTPreTrainedModel):
             grouping = get_grouping_from_attentions(attentions, pixel_values.shape[2:])
 
             # normalized features
-            image_group_embeds = image_group_embeds / image_group_embeds.norm(dim=-1, keepdim=True)
+            image_group_embeds = image_group_embeds / image_group_embeds.norm(
+                dim=-1, keepdim=True
+            )
             # [batch_size_image x num_group, batch_size_text]
-            logits_per_image_group = torch.matmul(image_group_embeds, text_embeds.t()) * logit_scale
+            logits_per_image_group = (
+                torch.matmul(image_group_embeds, text_embeds.t()) * logit_scale
+            )
             # [batch_size_image, batch_size_text, num_group]
             logits_per_image_group = logits_per_image_group.reshape(
                 image_embeds.shape[0], -1, text_embeds.shape[0]
             ).permute(0, 2, 1)
 
             # [batch_size_image, batch_size_text, height x width]
-            flatten_grouping = grouping.reshape(grouping.shape[0], grouping.shape[1], -1)
+            flatten_grouping = grouping.reshape(
+                grouping.shape[0], grouping.shape[1], -1
+            )
 
             # [batch_size_image, batch_size_text, height, width]
-            seg_logits = torch.matmul(logits_per_image_group, flatten_grouping) * logit_scale
+            seg_logits = (
+                torch.matmul(logits_per_image_group, flatten_grouping) * logit_scale
+            )
             seg_logits = seg_logits.reshape(
-                seg_logits.shape[0], seg_logits.shape[1], grouping.shape[2], grouping.shape[3]
+                seg_logits.shape[0],
+                seg_logits.shape[1],
+                grouping.shape[2],
+                grouping.shape[3],
             )
 
         loss = None
@@ -1592,7 +1793,14 @@ class GroupViTModel(GroupViTPreTrainedModel):
                     vision_outputs,
                 )
             else:
-                output = (logits_per_image, logits_per_text, text_embeds, image_embeds, text_outputs, vision_outputs)
+                output = (
+                    logits_per_image,
+                    logits_per_text,
+                    text_embeds,
+                    image_embeds,
+                    text_outputs,
+                    vision_outputs,
+                )
             return ((loss,) + output) if loss is not None else output
 
         return GroupViTModelOutput(

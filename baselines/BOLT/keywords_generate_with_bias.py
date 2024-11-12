@@ -20,18 +20,19 @@ from keywords_model_with_biases import GPTPromptTuningWithbiasesModelLM
 prompt_file = "./keywords/prompts_15.txt"
 
 keywords_dict = {
-    "computer" : ["router", "Linux", "keyboard", "server"],
-    "legal" : ["plea", "subpoena", "transcript", "bankrupt"],
-    "military" : ["torpedo", "headquarters", "infantry", "battlefield"],
-    "politics" : ["court", "culture", "communism", "capitalism"],
-    "religion" : ["Bible", "church", "priest", "saint"],
-    "science" : ["microscope", "mass", "mineral", "scientist"],
-    "space" : ["meteor", "planet", "satellite", "astronaut"],
+    "computer": ["router", "Linux", "keyboard", "server"],
+    "legal": ["plea", "subpoena", "transcript", "bankrupt"],
+    "military": ["torpedo", "headquarters", "infantry", "battlefield"],
+    "politics": ["court", "culture", "communism", "capitalism"],
+    "religion": ["Bible", "church", "priest", "saint"],
+    "science": ["microscope", "mass", "mineral", "scientist"],
+    "space": ["meteor", "planet", "satellite", "astronaut"],
 }
 
 seq_len = int(sys.argv[1])
 topic = sys.argv[2]
 output_file = "./keywords/topic/" + topic + ".txt.len" + str(seq_len)
+
 
 class Config:
     num_train_epochs = 50
@@ -40,17 +41,19 @@ class Config:
     lr_scheduler_type = "linear"
     num_warmup_steps = 5
     max_train_steps = num_train_epochs
-    
+
     # Prompt-tuning
     # number of prompt tokens
     n_prompt_tokens = 10
     init_from_vocab = True
+
+
 args = Config()
 
 batch_size = 20
 
 with open(prompt_file, "r") as f, open(output_file, "w") as g:
-    prompts_list = [line.strip() for line in f] 
+    prompts_list = [line.strip() for line in f]
     tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
     # Initialize GPT2LM with soft prompt
     model = GPTPromptTuningWithbiasesModelLM.from_pretrained(
@@ -62,10 +65,12 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
     model.cuda()
 
     for prompt in tqdm(prompts_list):
-        keywords_word = [' '.join(keywords_dict[topic])] * batch_size
+        keywords_word = [" ".join(keywords_dict[topic])] * batch_size
         prefixs = [prompt] * batch_size
         inputs = tokenizer(prefixs, return_tensors="pt")
-        keywords = tokenizer([w for w in keywords_word], return_tensors="pt")['input_ids']
+        keywords = tokenizer([w for w in keywords_word], return_tensors="pt")[
+            "input_ids"
+        ]
         inputs = inputs.to("cuda")
         keywords = keywords.to("cuda")
         model.set_biases(batch_size, seq_len + inputs.input_ids.shape[1])
@@ -82,13 +87,23 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
         start_time = time.time()
         for i in range(100):
             print("#################")
-            loss, output_ids = model.soft_forward(**inputs, labels=inputs.input_ids, use_full_prompt=False, keywords=keywords)
+            loss, output_ids = model.soft_forward(
+                **inputs,
+                labels=inputs.input_ids,
+                use_full_prompt=False,
+                keywords=keywords
+            )
             print(keywords_word)
             sentences = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             print(sentences)
             for idx in range(batch_size):
                 if success_idx[idx] == -1:
-                    if any([keyword in sentences[idx] for keyword in keywords_word[0].split(' ')]):
+                    if any(
+                        [
+                            keyword in sentences[idx]
+                            for keyword in keywords_word[0].split(" ")
+                        ]
+                    ):
                         success_idx[idx] = i
                         stored_sentence[idx] = sentences[idx]
             if all([idx != -1 for idx in success_idx]):
@@ -97,14 +112,22 @@ with open(prompt_file, "r") as f, open(output_file, "w") as g:
             loss.backward()
             if i % 1 == 0:
                 optimizer.step()
-                noise = [torch.normal(mean=0.01, std=0.01, size=model.biases[0].shape,
-                                     device='cuda', requires_grad=False) for _ in range(len(model.biases))]
+                noise = [
+                    torch.normal(
+                        mean=0.01,
+                        std=0.01,
+                        size=model.biases[0].shape,
+                        device="cuda",
+                        requires_grad=False,
+                    )
+                    for _ in range(len(model.biases))
+                ]
                 for i in range(len(model.biases)):
                     model.biases[i].data = model.biases[i].data + noise[i]
-            
+
         end_time = time.time()
         print("success_idx: ", success_idx)
         print("stored_sentence: ", stored_sentence)
         print("time: ", end_time - start_time)
-        g.write('\n'.join(stored_sentence) + "\n\n")
+        g.write("\n".join(stored_sentence) + "\n\n")
         g.flush()

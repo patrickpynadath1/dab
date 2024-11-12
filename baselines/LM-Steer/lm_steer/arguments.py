@@ -6,8 +6,7 @@ from .utils import set_seed
 def parse_args():
     # Model related
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str,
-                        default='EleutherAI/gpt-neo-2.7B')
+    parser.add_argument("--model_name", type=str, default="EleutherAI/gpt-neo-2.7B")
     parser.add_argument("--adaptor_class", type=str, default="multiply")
     parser.add_argument("--adapted_component", type=str, default="final_layer")
     parser.add_argument("--epsilon", type=float, default=1e-3)

@@ -26,7 +26,13 @@ from unittest import mock
 import torch
 
 from accelerate.utils import write_basic_config
-from transformers.testing_utils import TestCasePlus, get_gpu_count, run_command, slow, torch_device
+from transformers.testing_utils import (
+    TestCasePlus,
+    get_gpu_count,
+    run_command,
+    slow,
+    torch_device,
+)
 from transformers.utils import is_apex_available
 
 
@@ -251,7 +257,9 @@ class ExamplesTestsNoTrainer(TestCasePlus):
         self.assertGreaterEqual(result["eval_rougeL"], 7)
         self.assertGreaterEqual(result["eval_rougeLsum"], 7)
         self.assertTrue(os.path.exists(os.path.join(tmp_dir, "epoch_0")))
-        self.assertTrue(os.path.exists(os.path.join(tmp_dir, "summarization_no_trainer")))
+        self.assertTrue(
+            os.path.exists(os.path.join(tmp_dir, "summarization_no_trainer"))
+        )
 
     @slow
     @mock.patch.dict(os.environ, {"WANDB_MODE": "offline"})
@@ -330,4 +338,6 @@ class ExamplesTestsNoTrainer(TestCasePlus):
         # The base model scores a 25%
         self.assertGreaterEqual(result["eval_accuracy"], 0.6)
         self.assertTrue(os.path.exists(os.path.join(tmp_dir, "step_1")))
-        self.assertTrue(os.path.exists(os.path.join(tmp_dir, "image_classification_no_trainer")))
+        self.assertTrue(
+            os.path.exists(os.path.join(tmp_dir, "image_classification_no_trainer"))
+        )
