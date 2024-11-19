@@ -73,7 +73,6 @@ if __name__ == "__main__":
         args.device = cur_device
     if args.conf_file != None:
         args.__dict__.update(yaml.safe_load(open(args.conf_file, "r")))
-    print(args.use_softmax_target)
     total_conf = args.__dict__
     if initial_mode in samplers:
         print(args.exp)

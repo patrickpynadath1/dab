@@ -134,6 +134,7 @@ class SelectiveMaskingDLP:
         onehot.requires_grad = True
         grad, losses = self.calc_grad(onehot, model.discriminator)
         # grad = self.calc_grad(loss, onehot)
+        self.grad = grad
         topk_ids = torch.topk(logits, self.k_val, dim=-1).indices
         unfiltered_dist = self.get_unfiltered_dist(grad, gen_tokens)[
             :, -logits.size(1) :, :
@@ -180,6 +181,7 @@ class SelectiveMaskingDLP:
         )
         constraint_dist = self._apply_filter(constraint_dist, total_topk_ids)
         gpt_dist = self._apply_filter(logits, total_topk_ids)
+        self.compute_all_metrics(gpt_dist, constraint_dist)
         if self.acceptance_method == "random":
             accepted = self.compute_acceptance_naive(step_idx, generated_ids.size(1))
         elif self.acceptance_method == "spec":
@@ -194,15 +196,14 @@ class SelectiveMaskingDLP:
             accepted = self.compute_acceptance_both_entropy(
                 constraint_dist, gpt_dist, step_idx
             )
-
-        if self.stop_sampling or step_idx == self.max_attempts - 1:
+        elif self.acceptance_method == "exp_est_change":
+            accepted = self.compute_acceptance_expected_estimated_change(
+                gpt_dist, total_topk_ids, generated_ids.shape[1], step_idx
+            )
+        if self.stop_sampling or step_idx >= self.max_attempts - 1:
             self.complete_inprogress_generations.append(self.cur_prompt_gens)
-
-            print(len(self.cur_prompt_gens))
-            self.cur_prompt_gens = []
             return generated_ids
         resample_idx = accepted.argmin(dim=-1).long()
-
         # computing metadata for grad
         generated_ids = self.sample_new_tokens(
             generated_ids,
@@ -227,6 +228,23 @@ class SelectiveMaskingDLP:
             self.mean_entropy_initial = dist_logits.mean(dim=-1)
         # bias the logits towards picking positions earlier on
         accepted = (dist_logits < self.mean_entropy_initial) * 1.0
+        return accepted
+
+    # main idea: sample based on the coordinates
+    def compute_acceptance_expected_estimated_change(
+        self, gpt_dist, topk_ids, generation_length, step_idx
+    ):
+        # expecting grad to be cached
+        grad = self.grad
+        filtered_grad = self._apply_filter(grad, topk_ids)
+        est_change = filtered_grad - filtered_grad[:, :, 0].unsqueeze(dim=-1)
+        pos_change = est_change * ((est_change > 0) * 1.0)
+        accepted = torch.ones(size=(1, generation_length))
+        expected_est_change = (est_change * (gpt_dist).softmax(dim=1)).sum(dim=-1)
+
+        self.expected_estimated_change.append(expected_est_change.tolist())
+        rejected = expected_est_change.argmin(dim=-1)
+        accepted[0, rejected] = 0
         return accepted
 
     def compute_acceptance_both_entropy(self, constraint_dist, gpt_dist, step_idx):
@@ -352,10 +370,32 @@ class SelectiveMaskingDLP:
         self.pos_neg_grad_dot = []
         self.lm_entropy_total = []
         self.constraint_entropy_total = []
+        self.expected_estimated_change = []
         return
 
-    def compute_all_metrics(self):
+    def compute_all_metrics(self, gpt_dist, constraint_dist):
+        self.compute_gpt_entropy(gpt_dist)
+        self.compute_constraint_entropy(constraint_dist)
+        return
+
+    def compute_gpt_entropy(self, gpt_dist):
+        dist_logits = (gpt_dist.log_softmax(dim=-1) * gpt_dist.softmax(dim=-1)).sum(
+            dim=-1
+        )
+        self.lm_entropy.append(dist_logits.tolist())
+        return
+
+    def compute_constraint_entropy(self, constraint_dist):
+        dist_logits = (
+            constraint_dist.log_softmax(dim=-1) * constraint_dist.softmax(dim=-1)
+        ).sum(dim=-1)
+        self.constraint_entropy.append(dist_logits.tolist())
         return
 
     def get_sampling_metrics(self):
-        return {"all_gens": self.complete_inprogress_generations}
+        return {
+            "all_gens": self.cur_prompt_gens,
+            "constraint_entropy": self.constraint_entropy,
+            "lm_entropy": self.lm_entropy,
+            "exp_est_change": self.expected_estimated_change,
+        }

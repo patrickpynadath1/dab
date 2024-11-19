@@ -3,7 +3,7 @@ base_model_args:
   initialize_from_vocab: true 
   use_full_prompt: false
   pretrained_model_name_or_path: gpt2-large
-sentiment_prompts: prompts/sentiment_prompts_15.txt 
+sentiment_prompts: prompts/gpt4_gen_prompts_200.txt 
 detoxic_prompts: prompts/detoxic_prompts_1k.txt
 keyword_prompts: prompts/keywords_prompts_15.txt
 selective_biasing_prompts: prompts/sentiment_prompts_15.txt

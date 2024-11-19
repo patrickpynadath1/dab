@@ -44,7 +44,7 @@ def selective_biasing_loop(
     ### initializing samplers
     Sampler = get_sampler(total_conf["sampler"])
     print(total_conf["use_softmax_target"])
-    sampler = Sampler(target_seq_len=20, max_attempts=20, **total_conf)
+    sampler = Sampler(target_seq_len=20, **total_conf)
     times = []
     prompts = [
         line.strip() for line in open(total_conf["selective_biasing_prompts"], "r")
@@ -53,7 +53,10 @@ def selective_biasing_loop(
     total_sentence_ids = []
 
     batch_size = 1
-    pg_bar = tqdm(total=len(prompts) * batch_size * 20, desc="Sampling Steps remaining")
+    pg_bar = tqdm(
+        total=len(prompts) * batch_size * sampler.max_attempts,
+        desc="Sampling Steps remaining",
+    )
     # keep track of the total sentences
     total_sentence_ids = []
     total_zero_counts = []
@@ -63,7 +66,7 @@ def selective_biasing_loop(
     acceptance_std = []
     lm_entropy = []
     constraint_entropy = []
-    for prompt in prompts[: total_conf["num_prompts"]]:
+    for prompt in prompts:
         sampler.prompt_length = len(prompt)
 
         model.set_biases(
@@ -85,7 +88,7 @@ def selective_biasing_loop(
             num_attempts = 0
             cur_gen_sents = []
             sampler.stop_sampling = False
-            while not sampler.stop_sampling and num_attempts < 20:
+            while not sampler.stop_sampling and num_attempts < sampler.max_attempts:
                 new_gen = sampler.step(prev_gen, model, num_attempts)
                 prev_gen = torch.concatenate([prev_gen, new_gen], dim=-1)
                 cur_gen_sents.append(prev_gen.tolist())
