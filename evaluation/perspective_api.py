@@ -16,7 +16,9 @@ import os
 
 # from utils.constants import PERSPECTIVE_API_ATTRIBUTES, PERSPECTIVE_API_KEY
 # from utils.utils import batchify, load_cache
-PERSPECTIVE_API_KEY = "AIzaSyBrt7heMQ2suJxtsqCCSA5bXkjhFgBRb0w"
+
+# PUT PERSPECTIVE API HERE
+PERSPECTIVE_API_KEY = ""
 PERSPECTIVE_API_ATTRIBUTES = (
     "TOXICITY",
     "SEVERE_TOXICITY",
