@@ -2,7 +2,7 @@
 </a></h2>
 <div align="center">
 
-[![arxiv](https://img.shields.io/badge/arXiv-2502.03685-red)](https://arxiv.org/pdf/2410.06625v2)
+[![arxiv](https://img.shields.io/badge/arXiv-2502.03685-red)](https://www.arxiv.org/abs/2502.03685)
 
 </div>
 
