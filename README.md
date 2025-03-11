@@ -3,6 +3,7 @@
 <div align="center">
 
 [![arxiv](https://img.shields.io/badge/arXiv-2502.03685-red)](https://www.arxiv.org/abs/2502.03685)
+[![project](https://img.shields.io/badge/Project-Page-blue)](https://patrickpynadath1.github.io/dab/)
 
 </div>
 
