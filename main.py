@@ -1,7 +1,6 @@
 from sentiment import sentiment_exp_loop
 from keywords import keywords_loop
 from detoxify import detoxify_loop
-from abductive_reasoning import abductive_reasoning_loop
 from eval import eval_loop, compute_perspective_scores, clean_for_eval
 import argparse
 import yaml
@@ -28,7 +27,7 @@ if __name__ == "__main__":
     bolt_sampler = subparsers.add_parser("bolt")
     eval_only = subparsers.add_parser("eval_only")
     api_eval = subparsers.add_parser("api_eval")
-    experiments = ["sentiment", "detoxify", "keywords", "abductive_reasoning"]
+    experiments = ["sentiment", "detoxify", "keywords"]
 
     # general arguments
     parser.add_argument("--prev_run_dir", default=None, type=str, required=False)
@@ -65,9 +64,6 @@ if __name__ == "__main__":
             res = detoxify_loop(total_conf)
         elif args.exp == "keywords":
             res = keywords_loop(total_conf)
-        elif args.exp == "abductive_reasoning":
-            res = abductive_reasoning_loop(total_conf)
-
         total_conf, generated_sentences = res
         if args.eval_on_fin:
             eval_loop(total_conf, generated_sentences)
