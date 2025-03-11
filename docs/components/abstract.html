@@ -1,0 +1,19 @@
+<div class="abstract-section">
+  <h2 class="abstract-title">Abstract</h2>
+  <p>
+    Controlled text generation allows for enforcing user-defined constraints on large language model outputs—critical as LLMs become increasingly prevalent. While energy-based decoding methods combine multiple constraints through weighted averages, they often struggle to balance fluency with constraint satisfaction.
+  </p>
+  
+  <p>
+    We identify that this suboptimal balance stems from sampling in continuous space rather than the natural discrete space of text tokens. Our solution, <span class="highlight-method">Discrete Auto-regressive Biasing (DAB)</span>, leverages gradients while operating entirely in the discrete text domain.
+  </p>
+  
+  <p>
+    DAB introduces a novel formulation by defining a joint distribution over the generated sequence and an auxiliary bias sequence. To efficiently sample from this distribution, we propose a Langevin-within-Gibbs sampling algorithm using gradient-based discrete MCMC.
+  </p>
+  
+  <p class="results-highlight">
+    Our method significantly improves constraint satisfaction while maintaining superior fluency—all with reduced computational costs. Experiments demonstrate DAB's advantages on sentiment control, language detoxification, and keyword-guided generation tasks.
+  </p>
+</div>
+<div><img src="static/dab_diagram.png" alt="DAB Overview" width="800"></div>

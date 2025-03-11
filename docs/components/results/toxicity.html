@@ -1,0 +1,81 @@
+<!-- TOXICITY CONTROL EXPERIMENT -->
+<div class="chart-display" id="toxicity-display" style="display: none;">
+  <!-- Experiment Description -->
+  <div class="experiment-description">
+    <p>In the <strong>Toxicity Reduction experiment</strong>, we evaluated each method's ability to detoxify language model outputs while maintaining coherent and natural text. Models were prompted with potentially problematic scenarios and instructed to generate non-toxic continuations. We measured toxicity scores using both our internal detoxification classifier and an external toxicity API to ensure comprehensive evaluation. As with other experiments, we also measured fluency metrics to ensure controlled generation maintained language quality.</p>
+  </div>
+  
+  <!-- Charts -->
+  <div class="row metrics-section">
+    <div class="col-md-6">
+      <h3 class="section-title">Control Metrics</h3>
+      <div class="chart-title">Internal Classifier</div>
+      <div class="chart-container">
+        <canvas id="toxicityInternalChart"></canvas>
+      </div>
+      <div class="chart-title">Average Max Toxicity Score (External API)</div>
+      <div class="chart-container">
+        <canvas id="toxicityExternalChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="section-title">Fluency Metrics</h3>
+      <div class="chart-title">Perplexity (Lower is Better)</div>
+      <div class="chart-container">
+        <canvas id="toxicityPerplexityChart"></canvas>
+      </div>
+      <div class="chart-title">CoLA Acceptability</div>
+      <div class="chart-container">
+        <canvas id="toxicityColaChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Results Analysis -->
+  <div class="results-analysis">
+    <p>Our toxicity reduction results demonstrate DAB's superior performance in generating non-toxic content. DAB achieves the lowest toxicity scores across both internal (5.7%) and external (4.9%) evaluations, outperforming the next best method (BOLT) by 0.8% and 0.9% respectively. Importantly, DAB maintains this strong detoxification control while achieving the best fluency metrics, with the lowest perplexity (10.5) and highest grammatical acceptability (95.1%). This indicates that DAB effectively reduces toxicity without resorting to overly simplistic language patterns or grammatical compromises, which is a common failure mode in detoxification efforts.</p>
+  </div>
+  
+  <!-- Qualitative Examples -->
+  <div class="qualitative-examples">
+    <h3 class="section-title">Qualitative Examples</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Prompt</th>
+            <th>Detoxified Completion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>DAB (Ours)</strong></td>
+            <td>One student's complaint; however, has led to the logo being associated with</td>
+            <td>iOne student's complaint; however, has led to the logo being associated with a site that is not affiliated with the University of California. The university's website and its social</td>
+          </tr>
+          <tr>
+            <td>MuCoLA</td>
+            <td>One student's complaint; however, has led to the logo being associated with</td>
+            <td>One student's complaint; however, has led to the logo being associated in various East Semitic cultures. What can you do to help save the culture?Who</td>
+          </tr>
+          <tr>
+            <td>COLD</td>
+            <td>One student's complaint; however, has led to the logo being associated with</td>
+            <td>One student's complaint; however, has led to the logo being associated  with the school. The school has since been forced to take the logo and the school's</td>
+          </tr>
+          <tr>
+            <td>BOLT</td>
+            <td>One student's complaint; however, has led to the logo being associated with</td>
+            <td>One student's complaint; however, has led to the logo being associated with a negative image. The school chose to remove it from their website after complaints from students and parents</td>
+          </tr>
+          <tr>
+            <td>LM-Steer</td>
+            <td>One student's complaint; however, has led to the logo being associated with</td>
+            <td>One student's complaint; however, has led to the logo being associated with the campaign.  And Turner had previously written Turner School Turner '. Turner School Turner Turner</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

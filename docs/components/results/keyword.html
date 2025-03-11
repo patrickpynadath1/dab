@@ -1,0 +1,76 @@
+<!-- KEYWORD INCLUSION EXPERIMENT -->
+<div class="chart-display" id="keyword-display" style="display: none;">
+  <!-- Experiment Description -->
+  <div class="experiment-description">
+    <p>In the <strong>Keyword Inclusion experiment</strong>, we evaluated each method's ability to incorporate specific keywords into generated text while maintaining natural and coherent content. Models were provided with a set of key phrases or terms and instructed to include them in their generations. We measured both direct keyword inclusion rates and semantic similarity using BERTScore to evaluate how effectively the models incorporated the requested concepts. As with other experiments, fluency metrics were tracked to ensure language quality was maintained.</p>
+  </div>
+  
+  <!-- Charts -->
+  <div class="row metrics-section">
+    <div class="col-md-6">
+      <h3 class="section-title">Control Metrics</h3>
+      <div class="chart-title">Keyword Inclusion</div>
+      <div class="chart-container">
+        <canvas id="keywordInclusionChart"></canvas>
+      </div>
+      <div class="chart-title">BERTScore</div>
+      <div class="chart-container">
+        <canvas id="keywordBertscoreChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="section-title">Fluency Metrics</h3>
+      <div class="chart-title">Perplexity (Lower is Better)</div>
+      <div class="chart-container">
+        <canvas id="keywordPerplexityChart"></canvas>
+      </div>
+      <div class="chart-title">CoLA Acceptability</div>
+      <div class="chart-container">
+        <canvas id="keywordColaChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Results Analysis -->
+  <div class="results-analysis">
+    <p>Our keyword inclusion results highlight DAB's effectiveness in guided content generation. DAB achieves the highest keyword inclusion rate (83.03%) and BERTScore (0.928), outperforming the next best method (BOLT) by 0.1% and 0.013 respectively. Notably, DAB again maintains the best fluency metrics, with the lowest perplexity (11.3) and highest grammatical acceptability (94.8%). This demonstrates that DAB can effectively incorporate specific content requirements without sacrificing natural language flow or grammatical correctness, which is crucial for applications like guided content creation, marketing copy generation, and educational content development.</p>
+  </div>
+  
+  <!-- Qualitative Examples -->
+  <div class="qualitative-examples">
+    <h3 class="section-title">Qualitative Examples</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Prompt</th>
+            <th>Target Keywords: "torpedo, headquarters, infantry, battlefield"</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>DAB (Ours)</strong></td>
+            <td>Once upon a time,</td>
+            <td>Once upon a time, there was a small group of officers who were in charge of the modern <b>infantry</b> and logistics. They.</td>
+          </tr>
+          <tr>
+            <td>MuCoLA</td>
+            <td>Once upon a time,</td>
+            <td>Once upon a time, the world was a world of the great <b>battlefield</b> the powerful <b>headquarters</b> a <b>torpedo</b>of the good and <b>infantry</b></td>
+          </tr>
+          <tr>
+            <td>COLD</td>
+            <td>Once upon a time,</td>
+            <td>Once upon a time, the world was a peaceful place. People were <b>headquarters</b> of the world <b>headquarters</b> of the world <b>torpedo</b>-</td>
+          </tr>
+          <tr>
+            <td>BOLT</td>
+            <td>Once upon a time,</td>
+            <td>Once upon a time, there was a man named John Smith who had a dream that he would be able to <b>infantry</b> his</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

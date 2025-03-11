@@ -38,3 +38,13 @@ python main.py --exp detoxify dlp
 ```
 python main.py --exp keywords dlp
 ```
+
+If you find this project useful for your own research, please cite: 
+```
+@article{pynadath2025controlled,
+  title={Controlled LLM Decoding via Discrete Auto-regressive Biasing},
+  author={Pynadath, Patrick and Zhang, Ruqi},
+  journal={ICLR},
+  year={2025}
+}
+```

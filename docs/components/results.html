@@ -1,0 +1,42 @@
+<h2 class="title is-3">Empirical Results</h2>
+<div class="content has-text-justified">
+  <p>
+    We compared DAB with several baseline methods across different control tasks.
+  </p>
+</div>
+
+<!-- Tab-like navigation for charts -->
+<div class="chart-tabs">
+  <div class="chart-tab active" data-chart="sentiment">Sentiment Control</div>
+  <div class="chart-tab" data-chart="toxicity">Toxicity Reduction</div>
+  <div class="chart-tab" data-chart="keyword">Keyword Inclusion</div>
+</div>
+
+<!-- Charts container - direct inclusion of chart content instead of component loading -->
+<div class="chart-displays">
+  <div id="sentiment-container"></div>
+  <div id="toxicity-container"></div>
+  <div id="keyword-container"></div>
+</div>
+
+<script>
+  // Load result components directly to avoid nested component loading
+  document.addEventListener('DOMContentLoaded', function() {
+    const containers = [
+      {id: 'sentiment-container', path: './components/results/sentiment.html'},
+      {id: 'toxicity-container', path: './components/results/toxicity.html'},
+      {id: 'keyword-container', path: './components/results/keyword.html'}
+    ];
+    
+    containers.forEach(item => {
+      fetch(item.path)
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById(item.id).innerHTML = html;
+        })
+        .catch(error => {
+          console.error(`Failed to load ${item.path}:`, error);
+        });
+    });
+  });
+</script>

@@ -1,0 +1,81 @@
+<!-- SENTIMENT CONTROL EXPERIMENT -->
+<div class="chart-display" id="sentiment-display" style="display: block;">
+  <!-- Experiment Description -->
+  <div class="experiment-description">
+    <p>In the <strong>Sentiment Control experiment</strong>, we evaluated each method's ability to steer language model generations toward positive or negative sentiment. Models were prompted with neutral text and instructed to continue with either positive or negative sentiment. Performance was measured using both our internal sentiment classifier and an external benchmark classifier to ensure robust evaluation. We also measured fluency metrics to ensure controlled generation maintained language quality.</p>
+  </div>
+  
+  <!-- Charts -->
+  <div class="row metrics-section">
+    <div class="col-md-6">
+      <h3 class="section-title">Control Metrics</h3>
+      <div class="chart-title">Internal Classifier</div>
+      <div class="chart-container">
+        <canvas id="sentimentInternalChart"></canvas>
+      </div>
+      <div class="chart-title">External Classifier</div>
+      <div class="chart-container">
+        <canvas id="sentimentExternalChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="section-title">Fluency Metrics</h3>
+      <div class="chart-title">Perplexity (Lower is Better)</div>
+      <div class="chart-container">
+        <canvas id="sentimentPerplexityChart"></canvas>
+      </div>
+      <div class="chart-title">CoLA Acceptability</div>
+      <div class="chart-container">
+        <canvas id="sentimentColaChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Results Analysis -->
+  <div class="results-analysis">
+    <p>As shown in the charts above, DAB consistently outperforms baseline methods across both control and fluency metrics. For sentiment control accuracy, DAB achieves 99.2% with the internal classifier and 97.5% with the external classifier, surpassing the next best method (LM-Steer) by 0.2% and 0.7% respectively. Notably, DAB also maintains the lowest perplexity (12.2) and highest grammatical acceptability (94.5%), indicating that our method achieves superior control without sacrificing language quality. This demonstrates DAB's ability to effectively balance strong control with natural language generation.</p>
+  </div>
+  
+  <!-- Qualitative Examples -->
+  <div class="qualitative-examples">
+    <h3 class="section-title">Qualitative Examples</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Prompt</th>
+            <th>Positive Sentiment Control</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>DAB (Ours)</strong></td>
+            <td>The horse</td>
+            <td>The horse is also a very good and reliable companion. It has been used to carry the family's two-</td>
+          </tr>
+          <tr>
+            <td>MuCoLA</td>
+            <td>The horse</td>
+            <td>The horse is not only a beautiful and well-crafted piece of art, but it is also a great way</td>
+          </tr>
+          <tr>
+            <td>COLD</td>
+            <td>The horse</td>
+            <td>The horse head was still in the water, but the horse still had a good head. The horse</td>
+          </tr>
+          <tr>
+            <td>BOLT</td>
+            <td>The horse</td>
+            <td>The horseback riding course is a great way to get acquainted with the trails and the terrain. The course is</td>
+          </tr>
+          <tr>
+            <td>LM-Steer</td>
+            <td>The horse</td>
+            <td>The horseman delivers a stunningly beautiful, wonderfully lyrical, beautifully tender, powerfully moving, beautifully lyrical</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
